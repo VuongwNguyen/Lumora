@@ -34,7 +34,7 @@ function applySubLocks() {
     overlay.innerHTML = `<div style="font-size:28px;margin-bottom:12px">🔒</div>
       <div style="font-size:14px;color:rgba(237,233,248,0.7);margin-bottom:6px">${desc}</div>
       <div style="font-size:12px;color:rgba(237,233,248,0.4);margin-bottom:20px">Yêu cầu gói <strong style="color:#c4b5fd">${label}</strong></div>
-      <a href="/portal/upgrade" style="display:inline-block;padding:9px 20px;background:#8b5cf6;color:#fff;border-radius:8px;font-size:13px;text-decoration:none">Nâng cấp →</a>`;
+      <a href="/portal/?tab=subscription" style="display:inline-block;padding:9px 20px;background:#8b5cf6;color:#fff;border-radius:8px;font-size:13px;text-decoration:none">Nâng cấp →</a>`;
     pane.replaceChildren(overlay);
   });
 }

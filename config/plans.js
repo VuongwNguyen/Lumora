@@ -8,8 +8,8 @@ const PLANS = {
     maxGalaxies: 3,
   },
   pro: {
-    monthly: 19000,
-    yearly: 159000,
+    monthly: 29000,
+    yearly: 189000,
     features: ['themes', 'music', 'text'],
     label: 'Pro',
     maxGalaxies: 10,

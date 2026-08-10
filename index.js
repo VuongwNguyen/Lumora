@@ -86,7 +86,8 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { status: false, message: "Too many requests, please try again later.", statusCode: 429 },
-  skip: () => isDev,
+  // /activity has its own user-aware limiter after optional auth.
+  skip: req => isDev || req.path === "/activity" || req.path.startsWith("/activity/"),
 });
 
 // ── Body parsing ──────────────────────────────────

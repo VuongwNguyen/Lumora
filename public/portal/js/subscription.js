@@ -4,7 +4,7 @@
 
   const PLANS = {
     plus: { label: 'Plus',  monthly: 10000, yearly: 109000, features: () => [window.t.subFeatureThemes] },
-    pro:  { label: 'Pro',   monthly: 19000, yearly: 159000, features: () => [window.t.subFeatureThemes, window.t.subFeatureMusic, window.t.subFeatureCaption] },
+    pro:  { label: 'Pro',   monthly: 29000, yearly: 189000, features: () => [window.t.subFeatureThemes, window.t.subFeatureMusic, window.t.subFeatureCaption] },
   };
   const PLAN_RANK = { plus: 1, pro: 2 };
 

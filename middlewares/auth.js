@@ -34,6 +34,20 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
+// Activity collection also accepts anonymous visitors. A valid signed JWT adds
+// user context; missing, expired or invalid tokens continue anonymously.
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+  try {
+    const decoded = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET);
+    req.user = decoded;
+  } catch {
+    // Tracking must never block the product flow because auth context is stale.
+  }
+  next();
+};
+
 const requireAdmin = (req, res, next) => {
   requireAuth(req, res, (err) => {
     if (err) return next(err);
@@ -43,4 +57,4 @@ const requireAdmin = (req, res, next) => {
   });
 };
 
-module.exports = { requireAuth, requireAdmin };
+module.exports = { requireAuth, requireAdmin, optionalAuth };

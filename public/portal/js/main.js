@@ -34,16 +34,31 @@ document.getElementById('btn-goto-account').addEventListener('click', function()
 });
 
 // Tab switching
+function activateTab(tab) {
+  const btn = Array.from(document.querySelectorAll('.tab-btn[data-tab]'))
+    .find(function(candidate) { return candidate.getAttribute('data-tab') === tab; });
+  const panel = document.getElementById('panel-' + tab);
+  if (!btn || !panel) return false;
+
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  btn.classList.add('active');
+  panel.classList.add('active');
+  if (tab === 'subscription' && window._loadSubscription) window._loadSubscription();
+  if (tab === 'account') loadSessions();
+  return true;
+}
+
 document.querySelectorAll('.tab-btn[data-tab]').forEach(function(btn) {
   btn.addEventListener('click', function() {
-    const tab = btn.getAttribute('data-tab');
-    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-    btn.classList.add('active');
-    document.getElementById('panel-' + tab).classList.add('active');
-    if (tab === 'subscription' && window._loadSubscription) window._loadSubscription();
-    if (tab === 'account') loadSessions();
+    activateTab(btn.getAttribute('data-tab'));
   });
+});
+
+// Cho phép CTA từ màn hình setup mở thẳng tab Subscription.
+document.addEventListener('DOMContentLoaded', function() {
+  const requestedTab = new URLSearchParams(window.location.search).get('tab');
+  if (requestedTab) activateTab(requestedTab);
 });
 
 function clearLocalSession() {

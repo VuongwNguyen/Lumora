@@ -7,6 +7,7 @@
   "scripts": {
     "start": "NODE_ENV=production node index.js",
     "dev": "nodemon index.js",
+    "test:activity": "node --test tests/activity-core.test.js",
     "deploy": "git push origin main",
     "redeploy": "gh workflow run deploy.yml --ref main"
   },
