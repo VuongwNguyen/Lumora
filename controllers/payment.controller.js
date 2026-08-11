@@ -2,6 +2,8 @@
 const PaymentService = require('../services/payment.service');
 const { successfullyResponse, errorResponse } = require('../context/responseHandle');
 const { safeLog } = require('../middlewares/activityTracking');
+const { getComplianceConfig } = require('../config/compliance');
+const { isDevelopmentBypass } = require('../config/runtime');
 
 class PaymentController {
   async createPaymentLink(req, res, next) {
@@ -9,16 +11,54 @@ class PaymentController {
     if (!plan || !period) {
       return next(new errorResponse({ message: 'plan and period are required', statusCode: 400 }));
     }
-    const baseUrl = req.protocol + '://' + req.get('host');
+    if (!getComplianceConfig().payments.enabled) {
+      return next(new errorResponse({
+        message: 'Tính năng thanh toán đang được hoàn thiện',
+        statusCode: 503,
+      }));
+    }
+    const idempotencyKey = req.get('Idempotency-Key');
+    if (!idempotencyKey) {
+      return next(new errorResponse({ message: 'Idempotency-Key is required', statusCode: 400 }));
+    }
+    const baseUrl = (process.env.APP_URL || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
     const result = await PaymentService.createPaymentLink({
       userId: req.user._id,
       userEmail: req.user.email,
       plan,
       period,
+      idempotencyKey,
       returnUrl: baseUrl + '/portal/?payment=success',
       cancelUrl: baseUrl + '/payment/cancel',
     });
     return new successfullyResponse({ message: 'Payment link created', meta: result }).json(res);
+  }
+
+  async devActivate(req, res, next) {
+    if (!isDevelopmentBypass()) {
+      return next(new errorResponse({ message: 'Not found', statusCode: 404 }));
+    }
+    const { plan, period } = req.body;
+    if (!plan || !period) {
+      return next(new errorResponse({ message: 'plan and period are required', statusCode: 400 }));
+    }
+    const idempotencyKey = req.get('Idempotency-Key');
+    if (!idempotencyKey) {
+      return next(new errorResponse({ message: 'Idempotency-Key is required', statusCode: 400 }));
+    }
+    const result = await PaymentService.devActivate({
+      userId: req.user._id,
+      userEmail: req.user.email,
+      plan,
+      period,
+      idempotencyKey,
+    });
+    safeLog({
+      action: result.extended ? 'Development Subscription Extended' : 'Development Subscription Activated',
+      feature: 'subscription', status: 1, paymentId: result.paymentId,
+      metadata: { plan, period, simulated: true, reused: result.reused },
+    }, req, { dedupKey: `subscription:dev-activated:${result.paymentId}` });
+    return new successfullyResponse({ message: 'Development subscription activated', meta: result }).json(res);
   }
 
   async webhook(req, res, next) {
@@ -63,12 +103,12 @@ class PaymentController {
   }
 
   async getStatus(req, res, next) {
-    const sub = await PaymentService.getStatus(req.user._id);
+    const sub = await PaymentService.getStatus(req.user._id, req.user.role);
     return new successfullyResponse({ message: 'Subscription status fetched', meta: sub }).json(res);
   }
 
   async getHistory(req, res, next) {
-    const history = await PaymentService.getHistory(req.user._id);
+    const history = await PaymentService.getHistory(req.user._id, req.query);
     return new successfullyResponse({ message: 'Payment history fetched', meta: history }).json(res);
   }
 
@@ -83,7 +123,7 @@ class PaymentController {
         }, req, { dedupKey: `payment:cancelled:${payment._id}` });
       }
     }
-    const baseUrl = req.protocol + '://' + req.get('host');
+    const baseUrl = (process.env.APP_URL || (req.protocol + '://' + req.get('host'))).replace(/\/$/, '');
     return res.redirect(baseUrl + '/portal/?payment=cancel');
   }
 }

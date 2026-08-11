@@ -251,6 +251,7 @@
       border-radius: var(--r-sm); overflow: hidden;
       border: 2px solid var(--border); cursor: pointer;
       transition: border-color 0.2s; position: relative;
+      background: rgba(255,255,255,0.025); color: var(--text);
     }
     .theme-card.selected { border-color: var(--accent); }
     .theme-card img { width: 100%; display: block; aspect-ratio: 16/9; object-fit: cover; }
@@ -259,6 +260,23 @@
       background: rgba(0,0,0,0.4); text-align: center;
     }
     .theme-card.selected .theme-name { color: var(--accent-light); }
+    .universe-card {
+      width: 100%; margin-bottom: 10px; padding: 16px;
+      text-align: left; font: inherit;
+      transition: border-color 0.2s, background 0.2s, opacity 0.2s;
+    }
+    .universe-card:hover { background: rgba(139,92,246,0.08); border-color: var(--border-accent); }
+    .universe-card.selected { background: var(--accent-dim); }
+    .universe-card.locked { opacity: 0.72; border-style: dashed; }
+    .universe-card.locked:hover { opacity: 1; }
+    .universe-card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .universe-card-name { min-width: 0; color: var(--text); font-size: 14px; font-weight: 500; }
+    .universe-card-desc { margin-top: 5px; color: var(--text-sub); font-size: 12px; line-height: 1.45; }
+    .universe-plan-badge {
+      flex-shrink: 0; padding: 3px 7px; border: 1px solid var(--border-accent);
+      border-radius: 999px; background: var(--accent-dim); color: var(--accent-light);
+      font-size: 9px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase;
+    }
     .theme-no {
       border: 1.5px dashed var(--border); border-radius: var(--r-sm);
       padding: 20px 8px; text-align: center; cursor: pointer;
@@ -482,6 +500,7 @@
         <button class="tab-btn active" data-tab="story">Story</button>
         <button class="tab-btn ge-tab" data-tab="photos">Ảnh</button>
         <button class="tab-btn ge-tab" data-tab="theme">Theme</button>
+        <button class="tab-btn ge-tab" data-tab="universe">Vũ trụ</button>
         <button class="tab-btn ge-tab" data-tab="music">Nhạc</button>
         <button class="tab-btn ge-tab" data-tab="caption">Caption</button>
       </div>
@@ -501,6 +520,12 @@
           <div class="upload-progress-fill" id="upload-progress-fill"></div>
         </div>
         <div class="gallery-grid" id="gallery-grid"></div>
+      </div>
+
+      <!-- Universe tab -->
+      <div class="tab-pane" id="tab-universe">
+        <p class="caption-hint">Chọn trải nghiệm không gian khi người nhận mở galaxy.</p>
+        <div id="universe-options"></div>
       </div>
 
       <!-- Theme tab -->

@@ -2,8 +2,10 @@
 const { PayOS } = require('@payos/node');
 const SubscriptionModel = require('../models/subscription');
 const PaymentModel = require('../models/payment');
-const { PLANS } = require('../config/plans');
+const { PLANS, PLAN_KEYS, PLAN_RANK } = require('../config/plans');
+const { isDevelopmentBypass, getEntitlementBypassMode } = require('../config/runtime');
 const { errorResponse } = require('../context/responseHandle');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const payos = new PayOS({
@@ -14,12 +16,36 @@ const payos = new PayOS({
 });
 
 class PaymentService {
-  async createPaymentLink({ userId, userEmail, plan, period, returnUrl, cancelUrl }) {
+  validateIdempotencyKey(value) {
+    const key = String(value || '').trim();
+    if (!/^[A-Za-z0-9._:-]{16,128}$/.test(key)) {
+      throw new errorResponse({ message: 'Invalid Idempotency-Key', statusCode: 400 });
+    }
+    return key;
+  }
+
+  async createPaymentLink({ userId, userEmail, plan, period, idempotencyKey, returnUrl, cancelUrl }) {
     if (!PLANS[plan]) {
       throw new errorResponse({ message: 'Invalid plan', statusCode: 400 });
     }
     if (!['monthly', 'yearly'].includes(period)) {
       throw new errorResponse({ message: 'Invalid period', statusCode: 400 });
+    }
+
+    const key = this.validateIdempotencyKey(idempotencyKey);
+    const idempotencyKeyHash = crypto.createHash('sha256').update(`${userId}:${key}`).digest('hex');
+    const existing = await PaymentModel.findOne({ userId, idempotencyKeyHash })
+      .select('+checkoutUrl +idempotencyKeyHash');
+    if (existing) {
+      if (existing.status === 'pending' && existing.checkoutUrl) {
+        return { checkoutUrl: existing.checkoutUrl, orderCode: existing.payosOrderCode, reused: true };
+      }
+      throw new errorResponse({
+        message: existing.status === 'pending'
+          ? 'Yêu cầu thanh toán đang được xử lý'
+          : 'Yêu cầu thanh toán này đã được xử lý',
+        statusCode: 409,
+      });
     }
 
     const amount = PLANS[plan][period];
@@ -28,16 +54,29 @@ class PaymentService {
     // PayOS orderCode must be a unique integer
     const orderCode = parseInt(String(Date.now()).slice(-8) + String(Math.floor(Math.random() * 100)).padStart(2, '0'));
 
-    const payment = await PaymentModel.create({
-      userId,
-      payosOrderCode: orderCode,
-      plan,
-      period,
-      amount,
-      status: 'pending',
-      buyerEmail: userEmail,
-      description,
-    });
+    let payment;
+    try {
+      payment = await PaymentModel.create({
+        userId,
+        payosOrderCode: orderCode,
+        plan,
+        period,
+        amount,
+        status: 'pending',
+        buyerEmail: userEmail,
+        description,
+        idempotencyKeyHash,
+      });
+    } catch (err) {
+      if (err?.code === 11000) {
+        const duplicate = await PaymentModel.findOne({ userId, idempotencyKeyHash }).select('+checkoutUrl');
+        if (duplicate?.checkoutUrl) {
+          return { checkoutUrl: duplicate.checkoutUrl, orderCode: duplicate.payosOrderCode, reused: true };
+        }
+        throw new errorResponse({ message: 'Yêu cầu thanh toán đang được xử lý', statusCode: 409 });
+      }
+      throw err;
+    }
 
     let payosResponse;
     try {
@@ -49,11 +88,99 @@ class PaymentService {
         cancelUrl,
       });
     } catch (err) {
-      await PaymentModel.findByIdAndDelete(payment._id);
-      throw new errorResponse({ message: 'PayOS error: ' + err.message, statusCode: 502 });
+      await PaymentModel.findByIdAndUpdate(payment._id, { status: 'failed' });
+      throw new errorResponse({ message: 'Không thể tạo yêu cầu thanh toán với PayOS', statusCode: 502 });
     }
 
-    return { checkoutUrl: payosResponse.checkoutUrl, orderCode };
+    await PaymentModel.findByIdAndUpdate(payment._id, { checkoutUrl: payosResponse.checkoutUrl });
+
+    return { checkoutUrl: payosResponse.checkoutUrl, orderCode, reused: false };
+  }
+
+  async devActivate({ userId, userEmail, plan, period, idempotencyKey }) {
+    if (!isDevelopmentBypass()) {
+      throw new errorResponse({ message: 'Not found', statusCode: 404 });
+    }
+    if (!PLANS[plan]) {
+      throw new errorResponse({ message: 'Invalid plan', statusCode: 400 });
+    }
+    if (!['monthly', 'yearly'].includes(period)) {
+      throw new errorResponse({ message: 'Invalid period', statusCode: 400 });
+    }
+
+    const key = this.validateIdempotencyKey(idempotencyKey);
+    const idempotencyKeyHash = crypto.createHash('sha256').update(`${userId}:${key}`).digest('hex');
+    const existingPayment = await PaymentModel.findOne({ userId, idempotencyKeyHash });
+    if (existingPayment) {
+      if (existingPayment.status === 'paid') {
+        return {
+          status: 'paid', paymentId: existingPayment._id, subscriptionId: existingPayment.subscriptionId,
+          plan: existingPayment.plan, period: existingPayment.period, amount: existingPayment.amount,
+          reused: true, simulated: true,
+        };
+      }
+      throw new errorResponse({ message: 'Yêu cầu DEV này đã được xử lý', statusCode: 409 });
+    }
+
+    const amount = PLANS[plan][period];
+    const paidAt = new Date();
+    const periodLabel = period === 'monthly' ? '1 tháng' : '1 năm';
+    const orderCode = parseInt(String(Date.now()).slice(-8) + String(Math.floor(Math.random() * 100)).padStart(2, '0'));
+    let payment;
+    try {
+      payment = await PaymentModel.create({
+        userId,
+        payosOrderCode: orderCode,
+        plan,
+        period,
+        amount,
+        status: 'processing',
+        processingAt: paidAt,
+        buyerEmail: userEmail,
+        description: `[DEV] Galaxy ${PLANS[plan].label} - ${periodLabel}`,
+        idempotencyKeyHash,
+      });
+    } catch (err) {
+      if (err?.code === 11000) {
+        throw new errorResponse({ message: 'Yêu cầu DEV đang được xử lý, vui lòng thử lại', statusCode: 409 });
+      }
+      throw err;
+    }
+
+    try {
+      const existingSub = await SubscriptionModel.findOne({ userId, status: 'active' });
+      let subscription;
+      if (existingSub) {
+        const baseDate = existingSub.expiredAt > paidAt ? existingSub.expiredAt : paidAt;
+        const expiredAt = new Date(baseDate);
+        if (period === 'monthly') expiredAt.setMonth(expiredAt.getMonth() + 1);
+        else expiredAt.setFullYear(expiredAt.getFullYear() + 1);
+        subscription = await SubscriptionModel.findByIdAndUpdate(
+          existingSub._id,
+          { plan, period, status: 'active', expiredAt },
+          { new: true },
+        );
+      } else {
+        const expiredAt = new Date(paidAt);
+        if (period === 'monthly') expiredAt.setMonth(expiredAt.getMonth() + 1);
+        else expiredAt.setFullYear(expiredAt.getFullYear() + 1);
+        subscription = await SubscriptionModel.create({
+          userId, plan, period, status: 'active', startDate: paidAt, expiredAt,
+        });
+      }
+
+      await PaymentModel.findByIdAndUpdate(payment._id, {
+        status: 'paid', processingAt: null, paidAt, subscriptionId: subscription._id,
+        payosTransactionId: `DEV-${payment._id}`,
+      });
+      return {
+        status: 'paid', paymentId: payment._id, subscriptionId: subscription._id,
+        plan, period, amount, extended: Boolean(existingSub), reused: false, simulated: true,
+      };
+    } catch (err) {
+      await PaymentModel.findByIdAndUpdate(payment._id, { status: 'failed', processingAt: null });
+      throw new errorResponse({ message: 'Không thể kích hoạt gói DEV: ' + err.message, statusCode: 500 });
+    }
   }
 
   async handleWebhook(webhookBody) {
@@ -146,18 +273,52 @@ class PaymentService {
     }
   }
 
-  async getStatus(userId) {
-    const sub = await SubscriptionModel.findOne({ userId, status: 'active' }).sort({ expiredAt: -1 });
-    if (!sub) return null;
-    if (sub.expiredAt < new Date()) {
+  async getStatus(userId, userRole) {
+    const accessMode = getEntitlementBypassMode({ role: userRole });
+    const entitlementBypass = accessMode !== null;
+    const developmentBypass = accessMode === 'development';
+    const privilegedBypass = accessMode === 'admin' || accessMode === 'partner';
+    let sub = await SubscriptionModel.findOne({ userId, status: 'active' }).sort({ expiredAt: -1 });
+    if (sub && sub.expiredAt < new Date()) {
       await SubscriptionModel.findByIdAndUpdate(sub._id, { status: 'expired' });
-      return null;
+      if (!entitlementBypass) return null;
+      sub = null;
     }
-    return sub;
+    if (!sub && !entitlementBypass) return null;
+    const bypassPlan = privilegedBypass ? userRole : 'development';
+    const result = sub ? sub.toObject() : { plan: bypassPlan, status: 'active' };
+    if (entitlementBypass) {
+      result.accessMode = accessMode;
+      result.developmentBypass = developmentBypass;
+      result.privilegedBypass = privilegedBypass;
+      result.features = [...new Set(PLAN_KEYS.flatMap(key => PLANS[key].features || []))];
+      result.maxGalaxies = Number.MAX_SAFE_INTEGER;
+      result.effectivePlan = [...PLAN_KEYS].sort((left, right) => PLAN_RANK[right] - PLAN_RANK[left])[0] || 'free';
+      return result;
+    }
+    result.accessMode = 'subscription';
+    result.features = [...(PLANS[sub.plan]?.features || [])];
+    result.maxGalaxies = PLANS[sub.plan]?.maxGalaxies || 1;
+    return result;
   }
 
-  async getHistory(userId) {
-    return PaymentModel.find({ userId }).sort({ createdAt: -1 }).limit(50);
+  async getHistory(userId, query = {}) {
+    const page = Math.max(1, Math.min(10000, Number.parseInt(query.page, 10) || 1));
+    const limit = Math.max(1, Math.min(50, Number.parseInt(query.limit, 10) || 10));
+    const filter = { userId };
+    const [items, total] = await Promise.all([
+      PaymentModel.find(filter)
+        .select('payosOrderCode plan period amount status paidAt createdAt')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      PaymentModel.countDocuments(filter),
+    ]);
+    return {
+      items,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   async cancelPayment(orderCode) {

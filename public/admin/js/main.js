@@ -39,6 +39,28 @@ async function api(path, opts = {}) {
   return data;
 }
 
+async function loadConfiguredPlans() {
+  try {
+    const response = await fetch('/compliance/public');
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.message || 'Cannot load plans');
+    const entries = Object.entries(body.meta?.plans || {})
+      .filter(([key]) => key !== 'free')
+      .sort(([, left], [, right]) => (left.rank || 0) - (right.rank || 0));
+    const addOptions = (select, beforeNode) => entries.forEach(([key, plan]) => {
+      const option = document.createElement('option');
+      option.value = key; option.textContent = plan.label;
+      select.insertBefore(option, beforeNode || null);
+    });
+    const userFilter = document.getElementById('user-plan-filter');
+    addOptions(userFilter, userFilter.querySelector('option[value="none"]'));
+    addOptions(document.getElementById('pay-plan-filter'));
+    addOptions(document.getElementById('grant-plan'));
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
+
 // ── Tab navigation ────────────────────────────────
 const tabLoaded = {};
 document.querySelectorAll('.nav-item').forEach(btn => {
@@ -93,7 +115,7 @@ async function loadUsers() {
 
 function planBadge(sub) {
   if (!sub) return '<span class="badge badge-none">Không có</span>';
-  return `<span class="badge badge-${esc(sub.plan)}">${esc(sub.plan.toUpperCase())}</span>`;
+  return `<span class="badge badge-plan">${esc(sub.plan.toUpperCase())}</span>`;
 }
 
 function roleBadge(role) {
@@ -234,7 +256,7 @@ async function openDetail(userId, email) {
     const safeEmail = esc(user.email || email);
 
     const subSection = subscription
-      ? `<div class="detail-row"><span class="key">Plan</span><span class="badge badge-${esc(subscription.plan)}">${esc(subscription.plan.toUpperCase())}</span></div>
+      ? `<div class="detail-row"><span class="key">Plan</span><span class="badge badge-plan">${esc(subscription.plan.toUpperCase())}</span></div>
          <div class="detail-row"><span class="key">${window.t.adminExpiry}</span><span>${fmtDate(subscription.expiredAt)}</span></div>
          <div class="detail-actions">
            <button class="btn btn-danger btn-sm" onclick="revokeSubscription('${uid}','${safeEmail}')">${window.t.adminRevokeBtn}</button>
@@ -318,6 +340,7 @@ async function revokeSubscription(userId, email) {
 }
 
 // ── Init ──────────────────────────────────────────
+loadConfiguredPlans();
 loadStats();
 loadAnalytics();
 tabLoaded['dashboard'] = true;

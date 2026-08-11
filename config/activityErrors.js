@@ -53,6 +53,8 @@ const ERROR_TYPE_DESCRIPTIONS = Object.freeze({
   payment_webhook_invalid: 'Webhook thanh toán không hợp lệ.',
   payment_webhook_process_fail: 'Xử lý webhook thanh toán thất bại.',
   payment_pending_timeout: 'Giao dịch chờ thanh toán đã hết hạn.',
+  support_request_fail: 'Không thể tiếp nhận yêu cầu hỗ trợ.',
+  universe_save_fail: 'Không thể lưu lựa chọn vũ trụ.',
   unknown: 'Chưa phân loại được nguyên nhân lỗi.',
 });
 

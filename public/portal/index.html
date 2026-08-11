@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/css/subscription.css">
   <style>
     :root {
       --bg: #06060e;
@@ -416,6 +417,8 @@
 
     /* ── Subscription ────────────────────────────── */
     .sub-section { max-width: 520px; }
+    #panel-subscription .sub-section { width: 100%; max-width: none; }
+    #panel-account .sub-section { width: 100%; max-width: 520px; }
     .sub-current {
       background: var(--surface);
       border: 1px solid var(--border-accent);
@@ -434,15 +437,16 @@
     .sub-current .plan-expiry { font-size: 13px; color: var(--text-sub); }
     .sub-plans {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
     }
     .plan-card {
+      display: flex;
+      flex-direction: column;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 24px;
       transition: border-color 0.2s;
     }
     .plan-card:hover { border-color: var(--border-accent); }
@@ -455,6 +459,7 @@
       margin-bottom: 10px;
     }
     .plan-card .plan-features {
+      flex: 1;
       font-size: 12px;
       color: var(--text-sub);
       margin-bottom: 14px;
@@ -462,7 +467,23 @@
     }
     .plan-card .plan-price { font-size: 13px; color: var(--text); margin-bottom: 14px; }
     .plan-card .plan-price strong { font-size: 17px; }
-    .period-toggle { display: flex; gap: 6px; margin-bottom: 20px; }
+    .subscription-plans-section { margin-top: 28px; }
+    .subscription-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+    .subscription-section-header h2 {
+      margin-bottom: 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 17px;
+      color: var(--text);
+      letter-spacing: 0.04em;
+    }
+    .subscription-section-header p { color: var(--text-sub); font-size: 12px; }
+    .period-toggle { display: flex; flex: none; gap: 6px; }
     .period-btn {
       padding: 6px 14px;
       border-radius: 6px;
@@ -829,6 +850,7 @@
 
       /* sub plans single col */
       .sub-plans { grid-template-columns: 1fr; }
+      .subscription-section-header { align-items: flex-start; flex-direction: column; gap: 12px; }
 
       /* toast no overflow */
       .toast { white-space: normal; max-width: calc(100vw - 48px); }
@@ -847,9 +869,9 @@
         <div class="settings-menu" id="settings-menu">
           <button class="settings-item" id="btn-admin-panel" style="display:none">🛡 Admin Panel</button>
           <div class="settings-divider" id="settings-divider" style="display:none"></div>
-          <button class="settings-item" id="btn-goto-account" data-tab="account"></button>
+          <button class="settings-item" id="btn-goto-account" data-tab="account">👤 Tài khoản</button>
           <div class="settings-divider"></div>
-          <button class="settings-item danger" id="btn-logout"></button>
+          <button class="settings-item danger" id="btn-logout">Đăng xuất</button>
         </div>
       </div>
     </header>
@@ -883,28 +905,28 @@
 
         <!-- Phiên đăng nhập -->
         <div class="account-card" style="margin-bottom:16px" id="sessions-card">
-          <div class="account-section-title" id="sessions-title"></div>
+          <div class="account-section-title" id="sessions-title">Phiên đăng nhập</div>
           <div id="sessions-list"></div>
-          <button class="btn-danger-full" id="btn-logout-all" style="margin-top:12px"></button>
+          <button class="btn-danger-full" id="btn-logout-all" style="margin-top:12px">Đăng xuất tất cả thiết bị</button>
           <div class="account-msg" id="msg-sessions"></div>
         </div>
 
         <!-- Đổi mật khẩu -->
         <div class="account-card" style="margin-bottom:16px">
-          <div class="account-section-title" id="account-change-pw-title"></div>
-          <input type="password" class="account-input" id="acc-current-pw" />
-          <input type="password" class="account-input" id="acc-new-pw" />
-          <input type="password" class="account-input" id="acc-confirm-pw" />
-          <button class="btn-subscribe" id="btn-change-pw" style="margin-top:4px"></button>
+          <div class="account-section-title" id="account-change-pw-title">Đổi mật khẩu</div>
+          <input type="password" class="account-input" id="acc-current-pw" placeholder="Mật khẩu hiện tại" />
+          <input type="password" class="account-input" id="acc-new-pw" placeholder="Mật khẩu mới" />
+          <input type="password" class="account-input" id="acc-confirm-pw" placeholder="Xác nhận mật khẩu mới" />
+          <button class="btn-subscribe" id="btn-change-pw" style="margin-top:4px">Đổi mật khẩu</button>
           <div class="account-msg" id="msg-change-pw"></div>
         </div>
 
         <!-- Danger zone -->
         <div class="account-card account-danger">
-          <div class="account-section-title" id="account-danger-title" style="color:var(--red)"></div>
-          <p id="account-delete-hint" class="account-hint"></p>
-          <input type="password" class="account-input account-input-danger" id="acc-delete-pw" />
-          <button class="btn-danger-full" id="btn-delete-account"></button>
+          <div class="account-section-title" id="account-danger-title" style="color:var(--red)">Vùng nguy hiểm</div>
+          <p id="account-delete-hint" class="account-hint">Nhập mật khẩu để xác nhận xóa tài khoản vĩnh viễn.</p>
+          <input type="password" class="account-input account-input-danger" id="acc-delete-pw" placeholder="Mật khẩu" />
+          <button class="btn-danger-full" id="btn-delete-account">Xóa tài khoản</button>
           <div class="account-msg" id="msg-delete-account"></div>
         </div>
 
@@ -933,35 +955,43 @@
   <script src="/shared/js/i18n.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      document.title = t.portalTitle;
-      document.querySelector('[data-tab="galaxies"]').textContent = t.tabGalaxies;
-      document.querySelector('[data-tab="subscription"]').textContent = t.tabSubscription;
-      document.querySelector('[data-tab="account"]').textContent = t.tabAccount;
-      document.getElementById('btn-open-modal').textContent = t.btnNewGalaxy;
-      document.getElementById('settings-label').textContent = t.tabSettings || 'Cài đặt';
-      document.getElementById('btn-goto-account').textContent = '👤 ' + t.tabAccount;
-      document.getElementById('btn-logout').textContent = t.btnLogout;
-      document.querySelector('.modal h3').textContent = t.modalCreateTitle;
-      document.getElementById('galaxy-name').placeholder = t.placeholderGalaxyName;
-      document.getElementById('btn-cancel').textContent = t.btnCancel;
-      document.getElementById('btn-create').textContent = t.btnCreate;
-      document.getElementById('sub-loading').textContent = t.subLoading;
+      const setText = (selector, value) => {
+        const node = document.querySelector(selector);
+        if (node && value) node.textContent = value;
+      };
+      const setPlaceholder = (selector, value) => {
+        const node = document.querySelector(selector);
+        if (node && value) node.placeholder = value;
+      };
+      document.title = t.portalTitle || document.title;
+      setText('[data-tab="galaxies"]', t.tabGalaxies);
+      setText('[data-tab="subscription"]', t.tabSubscription);
+      setText('[data-tab="account"]', t.tabAccount);
+      setText('#btn-open-modal', t.btnNewGalaxy);
+      setText('#settings-label', t.tabSettings || 'Cài đặt');
+      setText('#btn-goto-account', t.tabAccount && '👤 ' + t.tabAccount);
+      setText('#btn-logout', t.btnLogout);
+      setText('.modal h3', t.modalCreateTitle);
+      setPlaceholder('#galaxy-name', t.placeholderGalaxyName);
+      setText('#btn-cancel', t.btnCancel);
+      setText('#btn-create', t.btnCreate);
+      setText('#sub-loading', t.subLoading);
       // Sessions card
-      document.getElementById('sessions-title').textContent = t.sessionsTitle;
-      document.getElementById('btn-logout-all').textContent = t.sessionsLogoutAll;
-      document.getElementById('sessions-list').textContent = t.sessionsLoading;
+      setText('#sessions-title', t.sessionsTitle);
+      setText('#btn-logout-all', t.sessionsLogoutAll);
+      setText('#sessions-list', t.sessionsLoading);
       // Account tab
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      document.getElementById('account-email-display').textContent = user.email || '';
-      document.getElementById('account-change-pw-title').textContent = t.changePasswordTitle;
-      document.getElementById('acc-current-pw').placeholder = t.placeholderCurrentPassword;
-      document.getElementById('acc-new-pw').placeholder = t.placeholderNewPassword;
-      document.getElementById('acc-confirm-pw').placeholder = t.placeholderConfirmPassword;
-      document.getElementById('btn-change-pw').textContent = t.btnChangePassword;
-      document.getElementById('account-danger-title').textContent = t.dangerZoneTitle;
-      document.getElementById('account-delete-hint').textContent = t.deleteAccountConfirm;
-      document.getElementById('acc-delete-pw').placeholder = t.placeholderPassword;
-      document.getElementById('btn-delete-account').textContent = t.deleteAccountBtn;
+      setText('#account-email-display', user.email);
+      setText('#account-change-pw-title', t.changePasswordTitle);
+      setPlaceholder('#acc-current-pw', t.placeholderCurrentPassword);
+      setPlaceholder('#acc-new-pw', t.placeholderNewPassword);
+      setPlaceholder('#acc-confirm-pw', t.placeholderConfirmPassword);
+      setText('#btn-change-pw', t.btnChangePassword);
+      setText('#account-danger-title', t.dangerZoneTitle);
+      setText('#account-delete-hint', t.deleteAccountConfirm);
+      setPlaceholder('#acc-delete-pw', t.placeholderPassword);
+      setText('#btn-delete-account', t.deleteAccountBtn);
     });
   </script>
   <script src="./js/main.js"></script>

@@ -4,6 +4,7 @@ const PaymentModel = require('../models/payment');
 const GalaxyModel = require('../models/galaxy');
 const { successfullyResponse, errorResponse } = require('../context/responseHandle');
 const asyncHandler = require('../context/asyncHandler');
+const { PLANS } = require('../config/plans');
 
 // GET /admin/stats
 const getStats = asyncHandler(async (req, res) => {
@@ -105,7 +106,7 @@ const getUserDetail = asyncHandler(async (req, res) => {
 // PATCH /admin/users/:id/subscription  body: { plan, days }
 const grantSubscription = asyncHandler(async (req, res) => {
   const { plan, days } = req.body;
-  if (!['plus', 'pro'].includes(plan) || !days) {
+  if (!PLANS[plan] || !days) {
     throw new errorResponse({ message: 'Invalid plan or days', statusCode: 400 });
   }
 

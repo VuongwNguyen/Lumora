@@ -16,18 +16,18 @@ let themes       = [];
 let musics       = [];
 let currentAudio = null;
 let userPlan     = 'free'; // 'free' | 'plus' | 'pro'
+let userFeatures = new Set();
 
-const PLAN_RANK = { free: 0, plus: 1, pro: 2 };
-function canUse(minPlan) { return PLAN_RANK[userPlan] >= PLAN_RANK[minPlan]; }
+function canUseFeature(feature) { return userFeatures.has(feature); }
 
 function applySubLocks() {
   const locks = [
-    { tabId: 'tab-theme',   paneId: 'tab-theme',   min: 'plus', label: 'Plus',  desc: 'Chọn giao diện cho galaxy' },
-    { tabId: 'tab-music',   paneId: 'tab-music',   min: 'pro',  label: 'Pro',   desc: 'Thêm nhạc nền cho galaxy' },
-    { tabId: 'tab-caption', paneId: 'tab-caption', min: 'pro',  label: 'Pro',   desc: 'Thêm caption vòng 3D' },
+    { tabId: 'tab-theme', paneId: 'tab-theme', feature: 'themes', label: 'Plus', desc: 'Chọn giao diện cho galaxy' },
+    { tabId: 'tab-music', paneId: 'tab-music', feature: 'music', label: 'Pro', desc: 'Thêm nhạc nền cho galaxy' },
+    { tabId: 'tab-caption', paneId: 'tab-caption', feature: 'text', label: 'Pro', desc: 'Thêm caption vòng 3D' },
   ];
-  locks.forEach(({ tabId, paneId, min, label, desc }) => {
-    if (canUse(min)) return;
+  locks.forEach(({ tabId, paneId, feature, label, desc }) => {
+    if (canUseFeature(feature)) return;
     // Dim tab button
     const btn = document.querySelector(`.tab-btn[data-tab="${tabId.replace('tab-','')}"]`);
     if (btn) { btn.style.opacity = '0.45'; btn.title = `Yêu cầu ${label}`; }
@@ -39,7 +39,7 @@ function applySubLocks() {
     overlay.innerHTML = `<div style="font-size:28px;margin-bottom:12px">🔒</div>
       <div style="font-size:14px;color:rgba(237,233,248,0.7);margin-bottom:6px">${desc}</div>
       <div style="font-size:12px;color:rgba(237,233,248,0.4);margin-bottom:20px">Yêu cầu gói <strong style="color:#c4b5fd">${label}</strong></div>
-      <a href="/portal/?tab=subscription" data-track-action="Galaxy Upgrade Click" data-track-id="upgrade_${min}" style="display:inline-block;padding:9px 20px;background:#8b5cf6;color:#fff;border-radius:8px;font-size:13px;text-decoration:none">Nâng cấp →</a>`;
+      <a href="/portal/?tab=subscription" data-track-action="Galaxy Upgrade Click" data-track-id="upgrade_${feature}" style="display:inline-block;padding:9px 20px;background:#8b5cf6;color:#fff;border-radius:8px;font-size:13px;text-decoration:none">Nâng cấp →</a>`;
     pane.replaceChildren(overlay);
   });
 }
@@ -47,9 +47,7 @@ function applySubLocks() {
 const frame = document.getElementById('galaxy-frame');
 
 function refreshPreview() {
-  const template = galaxy?.template || 'galaxy';
-  const base = template === 'fall' ? '/fall/' : '/view/';
-  frame.src = `${base}?galaxyId=${galaxyId}&skip_se=true&autostart=true&_t=${Date.now()}`;
+  frame.src = `/view/?galaxyId=${galaxyId}&skip_se=true&autostart=true&_t=${Date.now()}`;
 }
 
 const toast = document.getElementById('toast');
@@ -453,6 +451,65 @@ function renderCaptions() {
   });
 }
 
+// ── Universe template ──────────────────────────────────────
+
+function renderUniverses() {
+  const wrap = document.getElementById('universe-options');
+  if (!wrap) return;
+  clear(wrap);
+  const options = [
+    { id: 'galaxy', icon: '🌌', name: 'Galaxy Classic', desc: 'Thiên hà ảnh 3D dạng xoắn ốc.', tier: 0 },
+    { id: 'fall', icon: '🎞', name: 'Fall Through Memories', desc: 'Rơi xuyên qua dòng ký ức điện ảnh.', feature: 'fall_universe', requiredPlan: 'Pro', tier: 2 },
+  ].sort((left, right) => {
+    const leftLocked = left.feature && !canUseFeature(left.feature) ? 1 : 0;
+    const rightLocked = right.feature && !canUseFeature(right.feature) ? 1 : 0;
+    return leftLocked - rightLocked || left.tier - right.tier;
+  });
+  options.forEach(option => {
+    const locked = Boolean(option.feature && !canUseFeature(option.feature));
+    const selected = (galaxy.template || 'galaxy') === option.id;
+    const button = el('button', 'theme-card universe-card' + (selected ? ' selected' : '') + (locked ? ' locked' : ''));
+    button.type = 'button';
+    button.dataset.trackAction = 'Galaxy Universe Select';
+    button.dataset.trackId = 'universe_' + option.id;
+    if (locked) button.dataset.blockedReason = 'plan_required';
+    const header = el('div', 'universe-card-header');
+    header.appendChild(el('span', 'universe-card-name', option.icon + ' ' + option.name));
+    if (option.requiredPlan) header.appendChild(el('span', 'universe-plan-badge', (locked ? '🔒 ' : '') + option.requiredPlan));
+    button.appendChild(header);
+    button.appendChild(el('div', 'universe-card-desc', option.desc));
+    button.onclick = () => applyUniverse(option.id);
+    wrap.appendChild(button);
+  });
+}
+
+async function applyUniverse(template) {
+  if (template === 'fall' && !canUseFeature('fall_universe')) {
+    activity?.logBlocked('Galaxy Universe Change Blocked', 'plan_required', { template }, { galaxyId });
+    showToast('Fall Through Memories yêu cầu gói Pro');
+    return;
+  }
+  const previous = galaxy.template || 'galaxy';
+  galaxy.template = template;
+  renderUniverses();
+  try {
+    const response = await fetch(`/galaxies/${galaxyId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ template }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.message || 'Không thể đổi vũ trụ');
+    galaxy = body.meta || galaxy;
+    refreshPreview();
+    trackResult('Galaxy Universe Change Result', true, { template });
+    showToast('✓ Đã chuyển vũ trụ');
+  } catch (error) {
+    galaxy.template = previous; renderUniverses();
+    trackResult('Galaxy Universe Change Result', false, { template, errorType: 'universe_save_fail' }, error);
+    showToast(error.message || 'Không thể đổi vũ trụ');
+  }
+}
+
 async function saveCaption(captions) {
   await fetch(`/galaxies/${galaxyId}`, {
     method: 'PUT',
@@ -511,7 +568,7 @@ function updateGELock() {
   document.querySelectorAll('.ge-tab').forEach(btn => {
     btn.classList.toggle('locked', !hasStory);
   });
-  ['tab-photos', 'tab-theme', 'tab-music'].forEach(id => {
+  ['tab-universe', 'tab-photos', 'tab-theme', 'tab-music'].forEach(id => {
     const pane = document.getElementById(id);
     if (!pane) return;
     const existing = pane.querySelector('.ge-lock-banner');
@@ -565,6 +622,7 @@ async function init() {
     themes       = themesData.meta   || [];
     musics       = musicsData.meta   || [];
     userPlan     = subData.meta?.plan || 'free';
+    userFeatures = new Set(subData.meta?.features || []);
 
     document.getElementById('galaxy-name').textContent = galaxy.name || 'Galaxy';
     document.getElementById('preview-caption').textContent = galaxy.name || 'Galaxy';
@@ -574,6 +632,7 @@ async function init() {
     refreshPreview();
 
     renderGallery();
+    renderUniverses();
     renderThemes();
     renderMusics();
     renderStory();

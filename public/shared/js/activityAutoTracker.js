@@ -198,12 +198,11 @@
     const tab = element.getAttribute('data-tab');
     if (tab) data.tab = tab.slice(0, 40);
     const plan = element.getAttribute('data-plan');
-    if (plan && /^(free|plus|pro)$/.test(plan)) data.plan = plan;
+    if (plan && /^[a-z][a-z0-9_-]{0,39}$/.test(plan)) data.plan = plan;
     if (page.indexOf('viewer_') === 0) data.template = templateName();
     if (page === 'landing' && matches(element, '.price-card .btn-plan')) {
       const card = element.closest('.price-card');
-      const index = Array.from(doc.querySelectorAll('.price-card')).indexOf(card);
-      data.plan = ['free', 'plus', 'pro'][index] || 'unknown';
+      data.plan = card && /^[a-z][a-z0-9_-]{0,39}$/.test(card.dataset.plan || '') ? card.dataset.plan : 'unknown';
     }
     if (element.getAttribute('href')) {
       try { data.destinationPath = new URL(element.href, root.location.href).pathname; } catch { /* ignore */ }

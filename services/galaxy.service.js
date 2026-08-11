@@ -1,7 +1,8 @@
 const GalaxyModel = require("../models/galaxy");
 const SubscriptionModel = require("../models/subscription");
-const { PLAN_RANK, PLANS, FREE_MAX_GALAXIES } = require("../config/plans");
+const { PLANS, FREE_MAX_GALAXIES, planHasFeature } = require("../config/plans");
 const { errorResponse } = require("../context/responseHandle");
+const { hasEntitlementBypass } = require('../config/runtime');
 
 class GalaxyService {
   async createGalaxy({ userId, name, userRole }) {
@@ -10,7 +11,7 @@ class GalaxyService {
       throw new errorResponse({ message: "Galaxy name already exists", statusCode: 409 });
     }
 
-    if (userRole !== 'admin' && userRole !== 'partner') {
+    if (!hasEntitlementBypass({ role: userRole })) {
       const count = await GalaxyModel.countDocuments({ userId, status: 'active' });
       const sub = await SubscriptionModel.findOne({ userId, status: 'active', expiredAt: { $gt: new Date() } });
       const max = sub ? (PLANS[sub.plan]?.maxGalaxies ?? FREE_MAX_GALAXIES) : FREE_MAX_GALAXIES;
@@ -103,6 +104,11 @@ class GalaxyService {
   }
 
   async updateGalaxy({ galaxyId, userId, user, data }) {
+    const allowedFields = new Set([
+      'name', 'themeId', 'backgroundMusicId', 'caption', 'template',
+      'seEffect', 'storyType', 'occasion', 'chapters',
+    ]);
+    data = Object.fromEntries(Object.entries(data || {}).filter(([key]) => allowedFields.has(key)));
     const galaxy = await GalaxyModel.findOne({ _id: galaxyId, userId });
     if (!galaxy) {
       throw new errorResponse({ message: "Galaxy not found", statusCode: 404 });
@@ -123,15 +129,18 @@ class GalaxyService {
       }
     }
 
-    if (user.role !== "admin") {
-      delete data.template;
+    if (data.template !== undefined && !['galaxy', 'fall'].includes(data.template)) {
+      throw new errorResponse({ message: 'Invalid galaxy template', statusCode: 400 });
+    }
 
+    if (!hasEntitlementBypass({ role: user.role })) {
+      const wantsFallUniverse = data.template === 'fall';
       const wantsTheme = data.themeId !== undefined;
       const wantsMusic = data.backgroundMusicId !== undefined;
       const wantsCaption = data.caption !== undefined;
 
-      if (wantsTheme || wantsMusic || wantsCaption) {
-        const sub = await SubscriptionModel.findOne({ userId, status: "active" });
+      if (wantsTheme || wantsMusic || wantsCaption || wantsFallUniverse) {
+        const sub = await SubscriptionModel.findOne({ userId, status: "active", expiredAt: { $gt: new Date() } });
         const hasActiveSub = sub && sub.expiredAt > new Date();
 
         if (!hasActiveSub) {
@@ -139,14 +148,14 @@ class GalaxyService {
         }
 
         // music và caption cần pro
-        if ((wantsMusic || wantsCaption) && PLAN_RANK[sub.plan] < PLAN_RANK["pro"]) {
-          throw new errorResponse({ message: "Pro plan required to set music or caption", statusCode: 403 });
-        }
-
-        // theme cần plus trở lên (plus=1, pro=2 đều pass)
-        if (wantsTheme && PLAN_RANK[sub.plan] < PLAN_RANK["plus"]) {
-          throw new errorResponse({ message: "Plus plan or higher required to set theme", statusCode: 403 });
-        }
+        if (wantsMusic && !planHasFeature(sub.plan, 'music'))
+          throw new errorResponse({ message: 'Current plan does not include music', statusCode: 403 });
+        if (wantsCaption && !planHasFeature(sub.plan, 'text'))
+          throw new errorResponse({ message: 'Current plan does not include captions', statusCode: 403 });
+        if (wantsFallUniverse && !planHasFeature(sub.plan, 'fall_universe'))
+          throw new errorResponse({ message: 'Current plan does not include Fall universe', statusCode: 403 });
+        if (wantsTheme && !planHasFeature(sub.plan, 'themes'))
+          throw new errorResponse({ message: 'Current plan does not include themes', statusCode: 403 });
       }
     }
 

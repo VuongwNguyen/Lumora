@@ -1,5 +1,6 @@
 // models/payment.js
 const { model, Schema } = require('mongoose');
+const { PLAN_KEYS } = require('../config/plans');
 
 const paymentSchema = new Schema({
   userId: {
@@ -21,10 +22,21 @@ const paymentSchema = new Schema({
   payosTransactionId: {
     type: String,
     default: null,
+    select: false,
+  },
+  checkoutUrl: {
+    type: String,
+    default: null,
+    select: false,
+  },
+  idempotencyKeyHash: {
+    type: String,
+    default: null,
+    select: false,
   },
   plan: {
     type: String,
-    enum: ['plus', 'pro'],
+    enum: [...PLAN_KEYS],
     required: true,
   },
   period: {
@@ -38,7 +50,7 @@ const paymentSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'paid', 'cancelled'],
+    enum: ['pending', 'processing', 'paid', 'cancelled', 'failed'],
     default: 'pending',
     index: true,
   },
@@ -63,5 +75,10 @@ const paymentSchema = new Schema({
     default: Date.now,
   },
 });
+
+paymentSchema.index(
+  { userId: 1, idempotencyKeyHash: 1 },
+  { unique: true, partialFilterExpression: { idempotencyKeyHash: { $type: 'string' } } }
+);
 
 module.exports = model('Payment', paymentSchema, 'payments');

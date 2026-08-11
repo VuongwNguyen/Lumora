@@ -37,11 +37,13 @@
         radial-gradient(ellipse 70% 50% at 20% 10%, rgba(109,40,217,0.22) 0%, transparent 65%),
         radial-gradient(ellipse 50% 60% at 80% 90%, rgba(79,25,175,0.15) 0%, transparent 65%);
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-family: 'Jost', sans-serif;
       color: var(--text);
       padding: 24px;
+      gap: 28px;
     }
 
     /* ── Card ────────────────────────────────────── */
@@ -409,6 +411,7 @@
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
   <script src="/shared/js/i18n.js"></script>
+  <script src="/shared/js/publicSite.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       document.title = t.authTitle;

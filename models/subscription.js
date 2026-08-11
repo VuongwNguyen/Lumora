@@ -1,4 +1,5 @@
 const { model, Schema } = require("mongoose");
+const { PLAN_KEYS } = require('../config/plans');
 
 const subscriptionSchema = new Schema({
   userId: {
@@ -9,7 +10,7 @@ const subscriptionSchema = new Schema({
   },
   plan: {
     type: String,
-    enum: ["plus", "pro"],
+    enum: [...PLAN_KEYS],
     required: true,
   },
   period: {

@@ -53,6 +53,7 @@ function domainOperation(method, path) {
     [/^POST \/gallary\/upload$/, 'Gallery Upload Server Result'],
     [/^DELETE \/gallary\/items\/:id$/, 'Gallery Delete Server Result'],
     [/^POST \/payment\/create$/, 'Payment Checkout Server Result'],
+    [/^POST \/support\/requests$/, 'Support Request Server Result'],
   ];
   for (const [matcher, action] of rules) {
     if (matcher.test(key)) return action;

@@ -144,6 +144,8 @@ test('all end-user HTML entry points load tracking and admin is explicitly exclu
     'public/portal/galaxy-setup.html', 'public/portal/story-setup.html', 'public/portal/galaxy.html',
     'public/story/index.html', 'public/fall/index.html', 'public/aurora/index.html',
     'public/galaxy-moon/index.html', 'public/privacy/index.html', 'public/terms/index.html',
+    'public/owner-info/index.html', 'public/support/index.html',
+    'public/payment-policy/index.html', 'public/refund-policy/index.html',
   ];
   for (const file of files) {
     const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');

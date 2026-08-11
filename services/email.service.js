@@ -52,6 +52,26 @@ class EmailService {
       `,
     });
   }
+
+  async sendSupportRequest(request) {
+    if (!process.env.SUPPORT_EMAIL) return false;
+    await this.transporter.sendMail({
+      from: `"Lumora Support" <${process.env.GMAIL_USER}>`,
+      to: process.env.SUPPORT_EMAIL,
+      replyTo: request.email,
+      subject: `[Lumora Support] ${request.referenceCode} · ${request.type}`,
+      text: [
+        `Mã yêu cầu: ${request.referenceCode}`,
+        `Loại: ${request.type}`,
+        `Họ tên: ${request.name}`,
+        `Email phản hồi: ${request.email}`,
+        `Mã đơn: ${request.orderCode || 'Không cung cấp'}`,
+        '',
+        request.message,
+      ].join('\n'),
+    });
+    return true;
+  }
 }
 
 module.exports = new EmailService();

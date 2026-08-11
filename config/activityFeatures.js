@@ -7,6 +7,7 @@ const ACTIVITY_FEATURES = Object.freeze([
   'viewer',
   'subscription',
   'payment',
+  'support',
   'account',
   'share',
   'media',
@@ -23,6 +24,7 @@ function deriveFeature(action = '') {
 
   if (/^(API|App|Resource|Network|XHR|Server)\b/.test(value)) return 'reliability';
   if (/^(Payment|PayOS|Checkout)\b/.test(value)) return 'payment';
+  if (/^(Support|Complaint|Refund Request)\b/.test(value)) return 'support';
   if (/^(Subscription|Plan|Billing)\b/.test(value)) return 'subscription';
   if (/^(Auth|Login|Register|OTP|Password Reset)\b/.test(value)) return 'auth';
   if (/^Account\b/.test(value)) return 'account';

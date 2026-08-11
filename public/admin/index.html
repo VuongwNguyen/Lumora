@@ -82,6 +82,7 @@
     .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 500; }
     .badge-plus { background: rgba(139,92,246,0.2); color: #a78bfa; }
     .badge-pro { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .badge-plan { background: rgba(139,92,246,0.2); color: #c4b5fd; }
     .badge-none { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35); }
     .badge-active { background: rgba(34,197,94,0.15); color: #4ade80; }
     .badge-inactive { background: rgba(239,68,68,0.15); color: #f87171; }
@@ -197,8 +198,6 @@
             <input class="search-input" id="user-search" placeholder="Tìm email…" />
             <select class="filter-select" id="user-plan-filter">
               <option value="">Tất cả plan</option>
-              <option value="plus">Plus</option>
-              <option value="pro">Pro</option>
               <option value="none">Không có sub</option>
             </select>
           </div>
@@ -239,8 +238,6 @@
             </select>
             <select class="filter-select" id="pay-plan-filter">
               <option value="">Tất cả plan</option>
-              <option value="plus">Plus</option>
-              <option value="pro">Pro</option>
             </select>
           </div>
         </div>
@@ -341,10 +338,7 @@
       <h3>Cấp Subscription</h3>
       <div class="modal-info">User: <strong id="grant-email"></strong></div>
       <label>Plan</label>
-      <select id="grant-plan">
-        <option value="plus">Plus</option>
-        <option value="pro">Pro</option>
-      </select>
+      <select id="grant-plan"></select>
       <label>Số ngày</label>
       <input type="number" id="grant-days" value="30" min="1" max="3650" />
       <div class="modal-actions">

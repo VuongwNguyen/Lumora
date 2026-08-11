@@ -1,4 +1,5 @@
-// config/plans.js
+// Add paid plans only in this object. The declaration order is the fallback
+// upgrade rank; use a numeric `rank` only when a different order is required.
 const PLANS = {
   plus: {
     monthly: 10000,
@@ -10,13 +11,21 @@ const PLANS = {
   pro: {
     monthly: 29000,
     yearly: 189000,
-    features: ['themes', 'music', 'text'],
+    features: ['themes', 'music', 'text', 'fall_universe'],
     label: 'Pro',
     maxGalaxies: 10,
+    featured: true,
   },
 };
 
-const PLAN_RANK = { plus: 1, pro: 2 };
+const PLAN_KEYS = Object.freeze(Object.keys(PLANS));
+const PLAN_RANK = Object.freeze(Object.fromEntries(
+  PLAN_KEYS.map((key, index) => [key, Number.isFinite(PLANS[key].rank) ? PLANS[key].rank : index + 1])
+));
 const FREE_MAX_GALAXIES = 1;
 
-module.exports = { PLANS, PLAN_RANK, FREE_MAX_GALAXIES };
+function planHasFeature(plan, feature) {
+  return Boolean(PLANS[plan]?.features?.includes(feature));
+}
+
+module.exports = { PLANS, PLAN_KEYS, PLAN_RANK, FREE_MAX_GALAXIES, planHasFeature };

@@ -1,5 +1,11 @@
 const API = window.location.origin;
 const authToken = localStorage.getItem('token');
+const configuredPlansPromise = fetch('/compliance/public')
+  .then(response => response.ok ? response.json() : Promise.reject(new Error('Cannot load plans')))
+  .then(body => Object.entries(body.meta?.plans || {})
+    .filter(([key]) => key !== 'free')
+    .sort(([, left], [, right]) => (left.rank || 0) - (right.rank || 0)))
+  .catch(() => []);
 
 // ── Toast ─────────────────────────────────────────
 function showAdminToast(msg, type) {
@@ -517,10 +523,14 @@ function openAuGrant(userId, email) {
     const selPlan = document.createElement('select');
     selPlan.id = 'au-grant-plan';
     selPlan.style.cssText = 'width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:9px 12px;color:#fff;font-size:13px;outline:none;margin-bottom:14px';
-    ['plus', 'pro'].forEach(v => {
-      const opt = document.createElement('option');
-      opt.value = v; opt.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-      selPlan.appendChild(opt);
+    const loadingPlan = document.createElement('option');
+    loadingPlan.textContent = 'Đang tải plan…'; loadingPlan.disabled = true; loadingPlan.selected = true;
+    selPlan.appendChild(loadingPlan);
+    configuredPlansPromise.then(entries => {
+      if (!entries.length) { loadingPlan.textContent = 'Không tải được plan'; return; }
+      selPlan.replaceChildren(...entries.map(([key, plan]) => {
+        const option = document.createElement('option'); option.value = key; option.textContent = plan.label; return option;
+      }));
     });
 
     const labelDays = makeEl('label', 'font-size:12px;color:rgba(255,255,255,0.4);display:block;margin-bottom:6px', 'Số ngày');

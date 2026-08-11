@@ -34,7 +34,7 @@ app.use(cors({
       }
     : true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-Activity-Session", "X-Anonymous-Id", "X-Activity-Opt-Out"],
+  allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "X-Request-Id", "X-Activity-Session", "X-Anonymous-Id", "X-Activity-Opt-Out"],
   exposedHeaders: ["X-Request-Id"],
   credentials: true,
 }));

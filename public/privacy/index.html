@@ -44,13 +44,13 @@
       <li data-vi="Email và mật khẩu khi đăng ký" data-en="Email and password when registering"></li>
       <li data-vi="Tên hiển thị và thông tin hồ sơ" data-en="Display name and profile information"></li>
       <li data-vi="Ảnh, âm nhạc và nội dung bạn tải lên" data-en="Photos, music, and content you upload"></li>
-      <li data-vi="Thông tin thanh toán (được xử lý qua bên thứ ba)" data-en="Payment information (processed by third parties)"></li>
+      <li data-vi="Mã đơn, gói, kỳ, số tiền, trạng thái và email người mua; PayOS xử lý thông tin phương tiện/tài khoản thanh toán và Lumora không lưu dữ liệu thẻ hoặc tài khoản ngân hàng đầy đủ" data-en="Order code, plan, term, amount, status, and buyer email; PayOS processes payment-method/account details and Lumora does not store full card or bank-account data"></li>
     </ul>
     <p><strong data-vi="Thông tin tự động thu thập:" data-en="Automatically collected information:"></strong></p>
     <ul>
       <li data-vi="Địa chỉ IP và thông tin thiết bị" data-en="IP address and device information"></li>
       <li data-vi="Dữ liệu sử dụng (tính năng bạn dùng, thời gian truy cập)" data-en="Usage data (features used, access times)"></li>
-      <li data-vi="Cookies và công nghệ theo dõi tương tự" data-en="Cookies and similar tracking technologies"></li>
+      <li data-vi="Dữ liệu lưu cục bộ trên trình duyệt, gồm phiên đăng nhập, ngôn ngữ, mã trình duyệt ngẫu nhiên, mã phiên activity và lựa chọn tắt tracking" data-en="Local browser storage, including login session, language, random browser ID, activity session ID, and tracking opt-out preference"></li>
       <li data-vi="Nhật ký tương tác và độ tin cậy: trang đã xem, nút/biểu mẫu đã dùng, kết quả thao tác, lỗi API/JavaScript/tài nguyên và thời lượng; gắn với mã trình duyệt ngẫu nhiên và mã phiên" data-en="Interaction and reliability logs: pages viewed, controls/forms used, operation results, API/JavaScript/resource errors and duration; linked to random browser and session identifiers"></li>
     </ul>
 
@@ -70,19 +70,19 @@
        data-en="We do not sell your personal information. We only share when:"></p>
     <ul>
       <li><strong data-vi="Với sự đồng ý của bạn:" data-en="With your consent:"></strong> <span data-vi="Khi bạn chia sẻ Lumora công khai" data-en="When you share your Lumora publicly"></span></li>
-      <li><strong data-vi="Nhà cung cấp dịch vụ:" data-en="Service providers:"></strong> <span data-vi="Hosting, thanh toán, phân tích (họ phải tuân thủ bảo mật)" data-en="Hosting, payments, analytics (they must comply with security requirements)"></span></li>
+      <li><strong data-vi="Nhà cung cấp dịch vụ:" data-en="Service providers:"></strong> <span data-vi="nhà cung cấp hạ tầng/lưu trữ, ImageKit để xử lý media, PayOS để xử lý thanh toán, Gmail để gửi email giao dịch và SoundCloud khi bạn chọn nội dung từ dịch vụ này" data-en="infrastructure and storage providers, ImageKit for media processing, PayOS for payments, Gmail for transactional email, and SoundCloud when you select content from that service"></span></li>
       <li><strong data-vi="Yêu cầu pháp lý:" data-en="Legal requirements:"></strong> <span data-vi="Khi luật pháp yêu cầu hoặc để bảo vệ quyền lợi hợp pháp" data-en="When required by law or to protect legal rights"></span></li>
       <li><strong data-vi="Chuyển giao kinh doanh:" data-en="Business transfer:"></strong> <span data-vi="Trong trường hợp sáp nhập hoặc mua lại" data-en="In the event of a merger or acquisition"></span></li>
     </ul>
 
     <h2 data-vi="4. Lưu trữ và bảo mật" data-en="4. Storage and Security"></h2>
-    <p data-vi="Chúng tôi lưu trữ dữ liệu của bạn trên các máy chủ an toàn và áp dụng các biện pháp bảo mật:"
-       data-en="We store your data on secure servers and apply security measures:"></p>
+    <p data-vi="Lumora áp dụng các biện pháp kỹ thuật hiện có trong ứng dụng để giảm rủi ro truy cập trái phép:"
+       data-en="Lumora applies technical measures currently implemented in the application to reduce unauthorized-access risks:"></p>
     <ul>
       <li data-vi="Mã hóa dữ liệu khi truyền tải (HTTPS/TLS)" data-en="Data encryption in transit (HTTPS/TLS)"></li>
       <li data-vi="Mã hóa mật khẩu (bcrypt)" data-en="Password hashing (bcrypt)"></li>
-      <li data-vi="Kiểm soát truy cập nghiêm ngặt" data-en="Strict access controls"></li>
-      <li data-vi="Sao lưu định kỳ" data-en="Regular backups"></li>
+      <li data-vi="Xác thực phiên và kiểm soát quyền truy cập theo tài khoản" data-en="Session authentication and account-based access control"></li>
+      <li data-vi="Giới hạn tần suất đối với API nhạy cảm và tiêu đề bảo mật trình duyệt" data-en="Rate limiting for sensitive APIs and browser security headers"></li>
     </ul>
     <p data-vi="Tuy nhiên, không có hệ thống nào an toàn tuyệt đối. Chúng tôi khuyến khích bạn sử dụng mật khẩu mạnh và không chia sẻ thông tin đăng nhập."
        data-en="However, no system is completely secure. We encourage you to use strong passwords and not share your login credentials."></p>
@@ -91,7 +91,7 @@
     <p data-vi="Chúng tôi lưu trữ thông tin của bạn:" data-en="We retain your information:"></p>
     <ul>
       <li data-vi="Trong suốt thời gian tài khoản còn hoạt động" data-en="For as long as your account is active"></li>
-      <li data-vi="Sau khi xóa tài khoản: 30 ngày (để khôi phục nếu cần)" data-en="After account deletion: 30 days (for recovery if needed)"></li>
+      <li data-vi="Dữ liệu tài khoản được xử lý theo chức năng xóa tài khoản; thời hạn lưu bổ sung, nếu có, phụ thuộc nghĩa vụ pháp lý áp dụng" data-en="Account data is handled through the account-deletion function; any additional retention depends on applicable legal obligations"></li>
       <li data-vi="Một số dữ liệu có thể được lưu lâu hơn để tuân thủ pháp luật" data-en="Some data may be retained longer to comply with legal obligations"></li>
       <li data-vi="Nhật ký hoạt động chi tiết được tự động xóa sau tối đa 180 ngày" data-en="Detailed activity logs are automatically deleted after no more than 180 days"></li>
     </ul>
@@ -110,34 +110,36 @@
       <li><strong data-vi="Xuất dữ liệu:" data-en="Data portability:"></strong> <span data-vi="Tải về bản sao dữ liệu của bạn" data-en="Download a copy of your data"></span></li>
       <li><strong data-vi="Từ chối marketing:" data-en="Opt-out:"></strong> <span data-vi="Hủy đăng ký email quảng cáo" data-en="Unsubscribe from marketing emails"></span></li>
     </ul>
-    <p data-vi="Để thực hiện các quyền này, vui lòng liên hệ qua form liên hệ trên website."
-       data-en="To exercise these rights, please contact us via the contact form on the website."></p>
+    <p data-vi="Để thực hiện các quyền này, gửi yêu cầu tại trang Hỗ trợ và chọn Quyền dữ liệu cá nhân."
+       data-en="To exercise these rights, submit a Support request and select Personal Data Rights."></p>
+    <p><a href="/support/?type=data_rights" data-vi="Gửi yêu cầu về dữ liệu" data-en="Submit a data request"></a></p>
 
-    <h2 data-vi="8. Cookies" data-en="8. Cookies"></h2>
-    <p data-vi="Chúng tôi sử dụng cookies để:" data-en="We use cookies to:"></p>
+    <h2 data-vi="8. Lưu trữ trình duyệt và analytics" data-en="8. Browser Storage and Analytics"></h2>
+    <p data-vi="Lumora hiện sử dụng local storage của trình duyệt để:" data-en="Lumora currently uses browser local storage to:"></p>
     <ul>
       <li data-vi="Duy trì phiên đăng nhập" data-en="Maintain login sessions"></li>
       <li data-vi="Ghi nhớ tùy chọn của bạn" data-en="Remember your preferences"></li>
-      <li data-vi="Phân tích cách sử dụng dịch vụ" data-en="Analyze how the service is used"></li>
+      <li data-vi="Duy trì mã trình duyệt/mã phiên ngẫu nhiên cho hệ thống activity nội bộ" data-en="Maintain random browser/session IDs for the internal activity system"></li>
     </ul>
-    <p data-vi="Bạn có thể tắt cookies trong trình duyệt, nhưng một số tính năng có thể không hoạt động."
-       data-en="You can disable cookies in your browser, but some features may not work."></p>
+    <p data-vi="Lumora không tích hợp nền tảng analytics quảng cáo của bên thứ ba trong source hiện tại. Nội dung nhúng như SoundCloud có thể sử dụng cơ chế lưu trữ theo chính sách của nhà cung cấp. Xóa local storage có thể đăng xuất tài khoản và đặt lại tùy chọn."
+       data-en="Lumora does not integrate a third-party advertising analytics platform in the current source. Embedded content such as SoundCloud may use storage under the provider’s policy. Clearing local storage may sign you out and reset preferences."></p>
 
     <h2 data-vi="9. Trẻ em" data-en="9. Children"></h2>
     <p data-vi="Lumora không dành cho trẻ dưới 13 tuổi. Chúng tôi không cố ý thu thập thông tin từ trẻ em. Nếu bạn phát hiện trẻ em sử dụng dịch vụ, vui lòng thông báo để chúng tôi xử lý."
        data-en="Lumora is not intended for children under 13. We do not knowingly collect information from children. If you discover a child using the service, please notify us."></p>
 
     <h2 data-vi="10. Chuyển dữ liệu quốc tế" data-en="10. International Data Transfers"></h2>
-    <p data-vi="Dữ liệu của bạn có thể được xử lý ở các quốc gia khác nơi máy chủ của chúng tôi đặt. Chúng tôi đảm bảo mức độ bảo vệ tương đương bất kể vị trí."
-       data-en="Your data may be processed in other countries where our servers are located. We ensure equivalent protection regardless of location."></p>
+    <p data-vi="Một số nhà cung cấp dịch vụ có thể xử lý dữ liệu ngoài Việt Nam theo hạ tầng của họ. Lumora lựa chọn và cấu hình nhà cung cấp trong phạm vi kỹ thuật khả dụng, đồng thời áp dụng yêu cầu bảo vệ dữ liệu phù hợp với vai trò của từng bên."
+       data-en="Some service providers may process data outside Vietnam through their infrastructure. Lumora selects and configures providers within available technical controls and applies data-protection requirements appropriate to each provider’s role."></p>
 
     <h2 data-vi="11. Thay đổi chính sách" data-en="11. Policy Changes"></h2>
     <p data-vi="Chúng tôi có thể cập nhật chính sách này. Thay đổi quan trọng sẽ được thông báo qua email hoặc thông báo trên trang web trước ít nhất 7 ngày."
        data-en="We may update this policy. Important changes will be notified via email or on the website at least 7 days in advance."></p>
 
     <h2 data-vi="12. Liên hệ" data-en="12. Contact"></h2>
-    <p data-vi="Nếu bạn có câu hỏi về chính sách bảo mật, liên hệ qua form liên hệ trên website."
-       data-en="If you have questions about this privacy policy, contact us via the contact form on the website."></p>
+    <p data-vi="Nếu có câu hỏi hoặc khiếu nại về dữ liệu, gửi yêu cầu qua trang Hỗ trợ và khiếu nại."
+       data-en="For data questions or complaints, submit a request through the Support and Complaints page."></p>
+    <p><a href="/support/?type=data_rights" data-vi="Mở trang hỗ trợ" data-en="Open support page"></a></p>
   </div>
 
   <script src="/shared/js/activityApi.js"></script>
@@ -145,6 +147,7 @@
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
   <script src="/shared/js/i18n.js"></script>
+  <script src="/shared/js/publicSite.js"></script>
   <script>
     const lang = localStorage.getItem('lang') || ((navigator.language || '').startsWith('en') && !navigator.languages?.some(l => l.startsWith('vi')) ? 'en' : 'vi');
     document.querySelectorAll('[data-vi]').forEach(el => {

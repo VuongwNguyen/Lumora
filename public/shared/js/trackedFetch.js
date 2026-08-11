@@ -57,6 +57,8 @@
       [/^DELETE \/gallary\/items\/:id$/, 'Galaxy Photo Delete'],
       [/^POST \/payment\/create$/, 'Payment Checkout'],
       [/^GET \/payment\/status$/, 'Subscription Status'],
+      [/^GET \/payment\/history$/, 'Payment History'],
+      [/^POST \/support\/requests$/, 'Support Request'],
       [/^POST \/media\/themes$/, 'Media Theme Create'],
       [/^POST \/media\/musics$/, 'Media Music Create'],
     ];

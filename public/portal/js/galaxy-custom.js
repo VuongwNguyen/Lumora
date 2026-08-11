@@ -3,13 +3,13 @@ const API_BASE = window.location.origin;
 const token = localStorage.getItem('token');
 const galaxyId = new URLSearchParams(window.location.search).get('galaxyId');
 
-const PLAN_RANK = { plus: 1, pro: 2 };
-
 let currentCaptions = [];
 let themes = [];
 let musics = [];
 let saveTimer = null;
 let dragSrcIndex = null;
+let canSelectTemplate = false;
+const pendingFields = new Set();
 
 // ── Toast ─────────────────────────────────────────
 function showToast(msg, type) {
@@ -44,7 +44,8 @@ function setSaveStatus(status) {
 }
 
 // ── Auto-save (debounced) ─────────────────────────
-function scheduleSave() {
+function scheduleSave(field = 'caption') {
+  pendingFields.add(field);
   clearTimeout(saveTimer);
   setSaveStatus('saving');
   saveTimer = setTimeout(performSave, 800);
@@ -53,12 +54,13 @@ function scheduleSave() {
 async function performSave() {
   const themeId = document.getElementById('themeSelect').value || null;
   const musicId = document.getElementById('musicSelect').value || null;
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const payload = { themeId, backgroundMusicId: musicId, caption: currentCaptions };
-  payload.seEffect = document.getElementById('effectSelect').value || 'none';
-  if (user.role === 'admin') {
-    payload.template = document.getElementById('templateSelect').value || 'galaxy';
-  }
+  const fields = new Set(pendingFields); pendingFields.clear();
+  const payload = {};
+  if (fields.has('themeId')) payload.themeId = themeId;
+  if (fields.has('backgroundMusicId')) payload.backgroundMusicId = musicId;
+  if (fields.has('caption')) payload.caption = currentCaptions;
+  if (fields.has('seEffect')) payload.seEffect = document.getElementById('effectSelect').value || 'none';
+  if (fields.has('template') && canSelectTemplate) payload.template = document.getElementById('templateSelect').value || 'galaxy';
   try {
     const res = await fetch(`${API_BASE}/galaxies/${galaxyId}`, {
       method: 'PUT',
@@ -95,12 +97,6 @@ function applyLock(sectionId, planLabel) {
 }
 
 async function applySubscriptionLock() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user.role === 'admin') {
-    document.getElementById('templateSection').style.display = 'block';
-    return;
-  }
-  if (user.role === 'partner') return;
   try {
     const res = await fetch(`${API_BASE}/payment/status`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -108,10 +104,14 @@ async function applySubscriptionLock() {
     if (res.status === 401) return;
     const data = await res.json();
     const sub = data.meta;
-    const rank = sub ? (PLAN_RANK[sub.plan] || 0) : 0;
-    if (rank < PLAN_RANK['plus']) applyLock('themeSection', 'Plus');
-    if (rank < PLAN_RANK['pro'])  applyLock('musicSection', 'Pro');
-    if (rank < PLAN_RANK['pro'])  applyLock('captionSection', 'Pro');
+    const features = new Set(sub?.features || []);
+    if (features.has('fall_universe')) {
+      canSelectTemplate = true;
+      document.getElementById('templateSection').style.display = 'block';
+    }
+    if (!features.has('themes')) applyLock('themeSection', 'Plus');
+    if (!features.has('music'))  applyLock('musicSection', 'Pro');
+    if (!features.has('text'))   applyLock('captionSection', 'Pro');
   } catch { /* silent */ }
 }
 
@@ -264,10 +264,10 @@ document.getElementById('captionInput').addEventListener('keydown', (e) => {
 });
 
 // ── Trigger auto-save on select changes ──────────
-document.getElementById('themeSelect').addEventListener('change', scheduleSave);
-document.getElementById('musicSelect').addEventListener('change', scheduleSave);
-document.getElementById('templateSelect').addEventListener('change', scheduleSave);
-document.getElementById('effectSelect').addEventListener('change', scheduleSave);
+document.getElementById('themeSelect').addEventListener('change', () => scheduleSave('themeId'));
+document.getElementById('musicSelect').addEventListener('change', () => scheduleSave('backgroundMusicId'));
+document.getElementById('templateSelect').addEventListener('change', () => scheduleSave('template'));
+document.getElementById('effectSelect').addEventListener('change', () => scheduleSave('seEffect'));
 
 // ── Initialize ────────────────────────────────────
 (async () => {

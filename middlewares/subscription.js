@@ -2,9 +2,10 @@
 const SubscriptionModel = require('../models/subscription');
 const { errorResponse } = require('../context/responseHandle');
 const { PLAN_RANK } = require('../config/plans');
+const { hasEntitlementBypass } = require('../config/runtime');
 
 const requireSubscription = (minPlan) => async (req, res, next) => {
-  if (req.user.role === 'admin' || req.user.role === 'partner') return next();
+  if (hasEntitlementBypass({ role: req.user.role })) return next();
   try {
     const sub = await SubscriptionModel.findOne({ userId: req.user._id, status: 'active' });
 
@@ -15,7 +16,9 @@ const requireSubscription = (minPlan) => async (req, res, next) => {
       return next(new errorResponse({ message: 'Active subscription required', statusCode: 403 }));
     }
 
-    if (PLAN_RANK[sub.plan] < PLAN_RANK[minPlan]) {
+    const currentRank = PLAN_RANK[sub.plan] ?? -1;
+    const requiredRank = PLAN_RANK[minPlan];
+    if (requiredRank == null || currentRank < requiredRank) {
       return next(new errorResponse({ message: minPlan + ' plan or higher required', statusCode: 403 }));
     }
 

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hỗ trợ và khiếu nại — Lumora</title><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/shared/css/legal.css"></head>
+<body class="legal-page" data-title-vi="Hỗ trợ và khiếu nại — Lumora" data-title-en="Support and Complaints — Lumora">
+  <nav class="legal-nav"><a href="/">✦ Lumora</a><a href="/owner-info/" data-vi="Thông tin chủ quản" data-en="Owner information"></a></nav>
+  <main class="legal-container">
+    <h1 data-vi="Hỗ trợ và khiếu nại" data-en="Support and Complaints"></h1>
+    <p class="legal-lead" data-vi="Gửi yêu cầu để Lumora tiếp nhận, xác minh, xử lý và phản hồi." data-en="Submit a request for Lumora to receive, verify, process, and respond."></p>
+    <p class="legal-notice" data-config-row hidden><span data-support-response-notice></span></p>
+    <p class="legal-notice" data-missing-notice="supportResponseNotice" data-vi="Thời hạn phản hồi chính thức sẽ được công khai trước khi mở thanh toán." data-en="The official response timeframe will be published before payments are enabled."></p>
+    <p data-config-row hidden><span data-vi="Nếu form gặp lỗi, liên hệ trực tiếp:" data-en="If the form fails, contact us directly:"></span> <a data-support-email></a> · <a data-support-phone></a>.</p>
+    <form id="support-form" class="legal-card" novalidate>
+      <div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label for="support-website">Website</label><input id="support-website" name="website" tabindex="-1" autocomplete="off"></div>
+      <div class="legal-field"><label for="support-name" data-vi="Họ và tên" data-en="Full name"></label><input id="support-name" name="name" autocomplete="name" maxlength="120" minlength="2" required></div>
+      <div class="legal-field"><label for="support-email">Email</label><input id="support-email" name="email" type="email" autocomplete="email" maxlength="254" required></div>
+      <div class="legal-field"><label for="support-type" data-vi="Loại yêu cầu" data-en="Request type"></label><select id="support-type" name="type" required><option value="technical" data-vi="Hỗ trợ kỹ thuật" data-en="Technical support"></option><option value="payment" data-vi="Thanh toán" data-en="Payment"></option><option value="refund" data-vi="Hoàn tiền" data-en="Refund"></option><option value="data_rights" data-vi="Quyền dữ liệu cá nhân" data-en="Personal data rights"></option><option value="complaint" data-vi="Khiếu nại khác" data-en="Other complaint"></option></select></div>
+      <div class="legal-field"><label for="support-order" data-vi="Mã đơn hàng (không bắt buộc)" data-en="Order code (optional)"></label><input id="support-order" name="orderCode" maxlength="40" pattern="[A-Za-z0-9_-]{4,40}" autocomplete="off"></div>
+      <div class="legal-field"><label for="support-message" data-vi="Nội dung yêu cầu" data-en="Request details"></label><textarea id="support-message" name="message" minlength="10" maxlength="5000" required></textarea></div>
+      <label class="legal-checkbox"><input name="accuracyConfirmed" type="checkbox" required><span data-vi="Tôi xác nhận nội dung cung cấp là chính xác theo hiểu biết của mình." data-en="I confirm that the information provided is accurate to the best of my knowledge."></span></label>
+      <div class="legal-actions"><button class="legal-button" type="submit" data-track-action="Support Request Submit" data-vi="Gửi yêu cầu" data-en="Submit request"></button></div>
+      <div id="support-status" class="legal-status" role="status" aria-live="polite"></div>
+    </form>
+    <h2 data-vi="Quy trình xử lý" data-en="Handling process"></h2><ol><li data-vi="Tiếp nhận và cấp mã yêu cầu." data-en="Receive the request and issue a reference code."></li><li data-vi="Xác minh email, mã đơn và thông tin liên quan khi cần." data-en="Verify the email, order code, and relevant information when needed."></li><li data-vi="Phân loại, xử lý hoặc đề nghị bổ sung thông tin." data-en="Classify and process the request or ask for additional information."></li><li data-vi="Phản hồi kết quả qua email đã cung cấp." data-en="Send the outcome to the email address provided."></li></ol>
+    <p data-vi="Không gửi mật khẩu, OTP, token truy cập, ảnh CCCD hoặc thông tin ngân hàng đầy đủ qua form." data-en="Do not submit passwords, OTPs, access tokens, identity-card images, or full banking information through this form."></p>
+  </main>
+  <script src="/shared/js/activityApi.js"></script><script src="/shared/js/activityLogger.js"></script><script src="/shared/js/trackedFetch.js"></script><script src="/shared/js/activityAutoTracker.js"></script><script src="/shared/js/publicSite.js"></script>
+  <script>
+    (function () {
+      var form = document.getElementById('support-form');
+      var status = document.getElementById('support-status');
+      var params = new URLSearchParams(location.search);
+      var type = params.get('type');
+      var allowed = ['technical', 'payment', 'refund', 'data_rights', 'complaint'];
+      if (allowed.includes(type)) form.elements.type.value = type;
+      if (params.get('orderCode')) form.elements.orderCode.value = params.get('orderCode').slice(0, 40);
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        var button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        var locale = window.LumoraPublicI18n;
+        var i18n = locale.text;
+        status.className = 'legal-status'; status.textContent = i18n.supportSending;
+        try {
+          var response = await fetch('/support/requests', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: form.elements.name.value, email: form.elements.email.value, type: form.elements.type.value, orderCode: form.elements.orderCode.value, message: form.elements.message.value, accuracyConfirmed: form.elements.accuracyConfirmed.checked, website: form.elements.website.value })
+          });
+          var body = await response.json();
+          if (!response.ok) throw new Error(locale.lang === 'en' ? i18n.supportFailed : (body.message || i18n.supportFailed));
+          status.className = 'legal-status success';
+          status.textContent = i18n.supportSuccess + body.meta.referenceCode;
+          form.reset();
+          window.LumoraActivity?.log({ action: 'Support Request Created', feature: 'support', status: 1 });
+        } catch (error) {
+          status.className = 'legal-status error'; status.textContent = error.message || i18n.supportRetry;
+        } finally { button.disabled = false; }
+      });
+    })();
+  </script>
+</body></html>
