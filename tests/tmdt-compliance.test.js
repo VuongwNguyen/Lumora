@@ -375,6 +375,16 @@ test('landing page uses the responsive Lumora showcase and shared monthly/yearly
   assert.match(landing, /Object\.entries\(plans\)/);
   assert.match(landing, /createPriceCard\(\{ key, plan, free: key === 'free' \}\)/);
   assert.match(landing, /Landing Billing Period Select/);
+  assert.match(landing, /className = 'shooting-star'/);
+  assert.match(landing, /function initLandingMotion\(\)/);
+  assert.match(landing, /function createDemoBurst\(\)/);
+  assert.match(landing, /const basePositions = positions\.slice\(\)/);
+  assert.match(landing, /const gravityTarget = new THREE\.Vector3/);
+  assert.match(landing, /distanceSq < radiusSq/);
+  assert.match(landing, /const COUNT = compactMotion \? 2600 : 6000/);
+  assert.match(landing, /--page-progress/);
+  assert.match(landing, /motion-reveal/);
+  assert.match(landing, /hero\.addEventListener\('pointermove'/);
   assert.match(landing, /@media \(max-width: 980px\)/);
   assert.match(landing, /@media \(max-width: 680px\)/);
   assert.match(landing, /prefers-reduced-motion: reduce/);
