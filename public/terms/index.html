@@ -106,6 +106,10 @@
        data-en="If you have questions about these terms, please contact us via the contact form on the website."></p>
   </div>
 
+  <script src="/shared/js/activityApi.js"></script>
+  <script src="/shared/js/activityLogger.js"></script>
+  <script src="/shared/js/trackedFetch.js"></script>
+  <script src="/shared/js/activityAutoTracker.js"></script>
   <script src="/shared/js/i18n.js"></script>
   <script>
     const lang = localStorage.getItem('lang') || ((navigator.language || '').startsWith('en') && !navigator.languages?.some(l => l.startsWith('vi')) ? 'en' : 'vi');

@@ -38,11 +38,15 @@ const paymentSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'paid', 'cancelled'],
+    enum: ['pending', 'processing', 'paid', 'cancelled'],
     default: 'pending',
     index: true,
   },
   paidAt: {
+    type: Date,
+    default: null,
+  },
+  processingAt: {
     type: Date,
     default: null,
   },

@@ -1,6 +1,11 @@
 const params   = new URLSearchParams(location.search);
 const galaxyId = params.get('galaxyId');
 const token    = localStorage.getItem('token');
+const activity = window.LumoraActivity;
+
+function storyResult(action, ok, metadata, error) {
+  activity?.logResult(action, ok, metadata || {}, error, { galaxyId });
+}
 
 if (!token) window.location.href = '/auth/';
 if (!galaxyId) window.location.href = '/portal/';
@@ -33,6 +38,8 @@ function askChips(options) {
       const chip = document.createElement('span');
       chip.className = 'chip';
       chip.textContent = opt.label;
+      chip.dataset.trackAction = opt.id === '__cancel__' ? 'Story Action Cancel' : 'Story Wizard Choice Select';
+      chip.dataset.trackId = 'choice_' + opt.id;
       chip.addEventListener('click', () => {
         wrap.querySelectorAll('.chip').forEach(c => { c.classList.remove('on'); c.style.pointerEvents = 'none'; });
         chip.classList.add('on');
@@ -148,6 +155,8 @@ async function saveChapter(chapterId) {
   const files = chapterFiles[chapterId] || [];
   if (!files.length) return; // no new files — keep existing
 
+  activity?.log({ action: 'Story Chapter Photo Upload Submit', feature: 'story', galaxyId, description: { chapterId, count: files.length } });
+
   const oversized = files.find(f => f.size > MAX_UPLOAD_SIZE);
   if (oversized) throw new Error(`Ảnh "${oversized.name}" quá lớn. Tối đa 20MB mỗi ảnh.`);
 
@@ -177,8 +186,11 @@ async function saveChapter(chapterId) {
       const body = await res.json();
       if (body.message) msg = body.message;
     } catch {}
-    throw new Error(msg);
+    const error = new Error(msg);
+    storyResult('Story Chapter Photo Upload Result', false, { chapterId, count: files.length, errorType: 'story_photo_upload_fail' }, error);
+    throw error;
   }
+  storyResult('Story Chapter Photo Upload Result', true, { chapterId, count: files.length });
 }
 
 let _hookSaveTimer;
@@ -189,10 +201,15 @@ async function saveHookText() {
       id: ch.id,
       hookText: chapterHooks[ch.id] || null,
     }));
-    await fetch(`/galaxies/${galaxyId}`, {
+    const res = await fetch(`/galaxies/${galaxyId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ chapters }),
+    });
+    storyResult('Story Chapter Hook Change', res.ok, {
+      chapterCount: chapters.length,
+      textLength: Object.values(chapterHooks).reduce((sum, value) => sum + String(value || '').length, 0),
+      ...(!res.ok && { errorType: 'story_save_fail' }),
     });
   }, 800);
 }
@@ -202,12 +219,18 @@ async function saveStoryMeta(occasion) {
     id: ch.id,
     hookText: chapterHooks[ch.id] || null,
   }));
+  activity?.log({ action: 'Story Save Submit', feature: 'story', galaxyId, description: { storyType: selectedStoryType, occasion } });
   const res = await fetch(`/galaxies/${galaxyId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     body: JSON.stringify({ storyType: selectedStoryType, occasion, chapters }),
   });
-  if (!res.ok) throw new Error(`Save story failed: ${res.status}`);
+  if (!res.ok) {
+    const error = new Error(`Save story failed: ${res.status}`);
+    storyResult('Story Save Result', false, { storyType: selectedStoryType, occasion, errorType: 'story_save_fail' }, error);
+    throw error;
+  }
+  storyResult('Story Save Result', true, { storyType: selectedStoryType, occasion });
 }
 
 function setupNameEditor(initialName) {
@@ -220,7 +243,7 @@ function setupNameEditor(initialName) {
   let cancelled = false;
 
   function showEditor() {
-    if (saving) return;
+    if (saving) { activity?.logBlocked('Story Rename Blocked', 'operation_in_progress', {}, { galaxyId }); return; }
     cancelled = false;
     status.textContent = '';
     status.classList.remove('error');
@@ -232,17 +255,19 @@ function setupNameEditor(initialName) {
   }
 
   async function finishEditing() {
-    if (saving) return;
+    if (saving) { activity?.logBlocked('Story Rename Blocked', 'operation_in_progress', {}, { galaxyId }); return; }
     if (cancelled) {
       cancelled = false;
       input.hidden = true;
       button.hidden = false;
       button.focus();
+      activity?.log({ action: 'Story Rename Cancel', feature: 'story', level: 'warn', galaxyId });
       return;
     }
 
     const nextName = input.value.trim();
     if (!nextName) {
+      activity?.logBlocked('Story Rename Blocked', 'missing_input', {}, { galaxyId });
       status.textContent = 'Tên không được để trống.';
       status.classList.add('error');
       input.focus();
@@ -255,6 +280,7 @@ function setupNameEditor(initialName) {
     }
 
     saving = true;
+    activity?.log({ action: 'Story Rename Submit', feature: 'story', galaxyId });
     input.disabled = true;
     status.textContent = 'Đang lưu…';
     status.classList.remove('error');
@@ -272,7 +298,9 @@ function setupNameEditor(initialName) {
       status.textContent = '';
       input.hidden = true;
       button.hidden = false;
+      storyResult('Story Rename Result', true);
     } catch (err) {
+      storyResult('Story Rename Result', false, { errorType: 'galaxy_update_fail' }, err);
       input.value = savedName;
       status.textContent = 'Không thể lưu tên. Vui lòng thử lại.';
       status.classList.add('error');
@@ -302,6 +330,7 @@ function setupNameEditor(initialName) {
 // ── Left preview helpers ──────────────────────────────────────────────────────
 
 function showChapterPreview(chapter, chapterIdx, totalChapters) {
+  activity?.log({ action: 'Story Chapter Preview Open', feature: 'story', galaxyId, description: { chapterId: chapter.id, chapterIndex: chapterIdx, totalChapters } });
   const localFiles = chapterFiles[chapter.id];
   if (localFiles && localFiles.length) {
     // Local selection takes priority — clear immediately, then load async
@@ -359,6 +388,8 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
   fileInput.accept = 'image/*';
   fileInput.multiple = chapter.photoCount.max > 1;
   fileInput.style.display = 'none';
+  fileInput.dataset.trackAction = 'Story Chapter Photo Picker Open';
+  fileInput.dataset.trackId = 'chapter_' + chapter.id;
   card.appendChild(fileInput);
 
   function fileToDataUrl(file) {
@@ -422,6 +453,8 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
   const actionRow = document.createElement('div');
   actionRow.className = 'action-row';
   const nextBtn = document.createElement('button');
+  nextBtn.dataset.trackAction = editMode ? 'Story Save Submit' : 'Story Wizard Next Click';
+  nextBtn.dataset.trackId = 'chapter_next_' + chapter.id;
 
   if (editMode) {
     nextBtn.className = 'btn-next';
@@ -537,6 +570,7 @@ async function runLastChapter(chapter, chapterIdx, totalChapters) {
       try {
         await saveChapter(chapter.id);
         await saveStoryMeta(selectedOccasion);
+        activity?.log({ action: 'Story Wizard Complete', feature: 'story', status: 1, galaxyId, description: { storyType: selectedStoryType, occasion: selectedOccasion } });
         appendLMsgWithNote('Câu chuyện của bạn đã sẵn sàng ✨', 'Đang chuyển về trang quản lý…');
         await wait(1800);
         window.location.href = `/portal/galaxy.html?galaxyId=${galaxyId}`;
@@ -564,6 +598,7 @@ async function init() {
 
   STORY_CONFIG = await cfgRes.json();
   const galaxy = (await galaxyRes.json()).meta;
+  storyResult('Story Setup Loaded', true, { editMode: Boolean(galaxy.storyType) });
 
   const gName = galaxy.name || 'Galaxy';
   document.getElementById('galaxy-name').textContent = gName;
@@ -706,6 +741,8 @@ async function init() {
     chip.className = 'chip';
     chip.textContent = type.labelVi || type.label;
     chip.dataset.id = id;
+    chip.dataset.trackAction = 'Story Type Select';
+    chip.dataset.trackId = 'story_type_' + id;
     typeWrap.appendChild(chip);
   });
   appendEl(typeWrap);
@@ -736,6 +773,8 @@ async function init() {
     chip.className = 'chip';
     chip.textContent = occ.label;
     chip.dataset.id = id;
+    chip.dataset.trackAction = 'Story Occasion Select';
+    chip.dataset.trackId = 'story_occasion_' + id;
     chipsWrap.appendChild(chip);
   });
   appendEl(chipsWrap);
@@ -771,5 +810,6 @@ async function init() {
 }
 
 init().catch(err => {
+  storyResult('Story Setup Failed', false, { errorType: 'story_save_fail' }, err);
   console.error('[story-setup] init failed:', err);
 });

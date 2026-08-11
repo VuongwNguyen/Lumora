@@ -173,7 +173,6 @@
   function getApiErrorMeta(error, request) {
     request = request || {};
     const status = error && (error.status || (error.response && error.response.status));
-    const responseData = error && (error.data || (error.response && error.response.data));
     const message = error && (error.message || error.error) || 'Unknown API error';
     return redactCredential({
       endpoint: normalizePath(request.url || request.endpoint || ''),
@@ -181,7 +180,6 @@
       httpStatus: status || null,
       errorType: classifyApiError(status, message),
       errorMsg: message,
-      beResponse: responseData || null,
       durationMs: request.durationMs,
       requestId: request.requestId,
     });
@@ -283,7 +281,7 @@
 
   function logResult(action, ok, metadata, error, extra) {
     const description = Object.assign({}, metadata || {});
-    if (!ok && error) Object.assign(description, getApiErrorMeta(error));
+    if (!ok && error) Object.assign(description, getApiErrorMeta(error, metadata));
     log(Object.assign({}, extra || {}, {
       action: action,
       status: ok ? 1 : 0,

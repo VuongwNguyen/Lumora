@@ -3,6 +3,7 @@ import * as THREE from 'three';
 // ── Fetch galaxy data ──────────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
 const galaxyId = params.get('galaxyId');
+const activity = window.LumoraActivity;
 
 async function fetchData() {
   if (!galaxyId) return { images: [], captions: [], music: null, theme: null };
@@ -896,6 +897,7 @@ function handlePointerDown(clientX, clientY) {
   if (hits.length) {
     const parent = polaroids.find(p => p.children.includes(hits[0].object));
     if (parent) {
+      activity?.log({ action: 'Viewer Photo Open', feature: 'viewer', galaxyId, description: { template: 'fall' } });
       clickedPolaroid = parent;
       parent.userData.targetScale = 3.0;
       // 4 units ahead of camera along its look direction
@@ -908,6 +910,7 @@ function handlePointerUp() {
   frozen = false;
   _dragging = false;
   if (clickedPolaroid) {
+    activity?.log({ action: 'Viewer Photo Close', feature: 'viewer', galaxyId, description: { template: 'fall', via: 'release' } });
     clickedPolaroid.userData.targetScale = 1.0;
     delete clickedPolaroid.userData.targetPosition;
     // Đẩy ảnh ra khỏi camera sau khi nhả

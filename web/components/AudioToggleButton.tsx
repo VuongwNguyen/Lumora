@@ -14,6 +14,8 @@ export function AudioToggleButton({ isPlaying, hasTrack, onToggle }: AudioToggle
   return (
     <button
       type="button"
+      data-track-action="Viewer Audio Toggle"
+      data-track-id="audio_toggle"
       className={styles.audioToggle}
       onClick={onToggle}
       aria-label={isPlaying ? "Tắt nhạc" : "Bật nhạc"}

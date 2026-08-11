@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const { rateLimit } = require("express-rate-limit");
 const connectToDatabase = require("./connection");
+const { activityRequestContext, logUnhandledError } = require('./middlewares/activityTracking');
 require("dotenv").config();
 
 const app = express();
@@ -33,7 +34,8 @@ app.use(cors({
       }
     : true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Request-Id", "X-Activity-Session", "X-Anonymous-Id", "X-Activity-Opt-Out"],
+  exposedHeaders: ["X-Request-Id"],
   credentials: true,
 }));
 
@@ -91,6 +93,7 @@ const apiLimiter = rateLimit({
 });
 
 // ── Body parsing ──────────────────────────────────
+app.use(activityRequestContext);
 app.use(logger(isDev ? "dev" : "combined"));
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
@@ -195,6 +198,7 @@ app.use(function (req, res, next) {
 
 // ── Error handler ─────────────────────────────────
 app.use((err, req, res, next) => {
+  logUnhandledError(req, err);
   if (err.status === 404)
     return res.status(404).json({ status: false, message: "Not found", statusCode: 404 });
 

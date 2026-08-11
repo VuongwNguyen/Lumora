@@ -1,6 +1,7 @@
 import { initEffect } from './effects.js';
 
 const galaxyId = new URLSearchParams(location.search).get('galaxyId');
+const activity = window.LumoraActivity;
 
 async function fetchAll() {
   if (!galaxyId) return null;
@@ -76,6 +77,7 @@ function waitTapOrTimer(ms) {
 }
 
 async function playChapter(hookText, chapterTag, photoUrls, chapterIdx, totalChapters) {
+  activity?.log({ action: 'Viewer Story Chapter Start', feature: 'viewer', galaxyId, description: { template: 'story', chapterIndex: chapterIdx, photoCount: photoUrls.length } });
   setProgress(chapterIdx, totalChapters);
 
   elChapterTag.textContent = chapterTag;
@@ -102,6 +104,7 @@ async function playChapter(hookText, chapterTag, photoUrls, chapterIdx, totalCha
   }
 
   elPhotoDots.replaceChildren();
+  activity?.log({ action: 'Viewer Story Chapter Complete', feature: 'viewer', galaxyId, status: 1, description: { template: 'story', chapterIndex: chapterIdx } });
 }
 
 async function main() {
@@ -158,6 +161,7 @@ async function main() {
   fadeIn(elFinale);
   await wait(2800);
   stopEffect();
+  activity?.log({ action: 'Viewer Story Complete', feature: 'viewer', galaxyId, status: 1, description: { template: 'story', chapterCount: chaptersWithPhotos.length } });
   window.location.replace(`/view/?galaxyId=${galaxyId}&skip_se=true`);
 }
 

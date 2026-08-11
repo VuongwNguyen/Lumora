@@ -17,7 +17,7 @@ class ActivityController {
       const result = await ActivityService.create(req.body, {
         userId: req.user?._id || null,
         clientIp: getClientIp(req),
-        requestId: req.headers['x-request-id'] || null,
+        requestId: req.activityRequestId || req.headers['x-request-id'] || null,
       });
       const activity = result.activity;
       return res.status(200).json({

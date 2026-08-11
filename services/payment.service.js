@@ -57,7 +57,6 @@ class PaymentService {
   }
 
   async handleWebhook(webhookBody) {
-    console.log('Received PayOS webhook:', webhookBody);
     let webhookData;
     try {
       webhookData = await payos.webhooks.verify(webhookBody);
@@ -68,56 +67,81 @@ class PaymentService {
     const { orderCode, reference, code } = webhookData;
 
     const payment = await PaymentModel.findOne({ payosOrderCode: orderCode });
-    if (!payment) return;
+    if (!payment) return { status: 'ignored' };
 
     if (code !== '00') {
-      await PaymentModel.findByIdAndUpdate(payment._id, { status: 'cancelled' });
-      return;
+      if (payment.status === 'paid' || payment.status === 'cancelled') {
+        return { status: 'duplicate', paymentId: payment._id };
+      }
+      const cancelled = await PaymentModel.findOneAndUpdate(
+        { _id: payment._id, status: 'pending' },
+        { status: 'cancelled' },
+        { new: true }
+      );
+      return cancelled
+        ? { status: 'cancelled', paymentId: payment._id, providerCode: code }
+        : { status: 'duplicate', paymentId: payment._id };
     }
+
+    const processingAt = new Date();
+    const staleProcessingAt = new Date(processingAt.getTime() - 5 * 60 * 1000);
+    const claimedPayment = await PaymentModel.findOneAndUpdate(
+      {
+        _id: payment._id,
+        $or: [
+          { status: 'pending' },
+          { status: 'processing', processingAt: { $lt: staleProcessingAt } },
+        ],
+      },
+      { status: 'processing', processingAt },
+      { new: true }
+    );
+    if (!claimedPayment) return { status: 'duplicate', paymentId: payment._id };
 
     try {
       const paidAt = new Date();
-      await PaymentModel.findByIdAndUpdate(payment._id, {
-        status: 'paid',
-        payosTransactionId: reference,
-        paidAt,
-      });
-
-      const existingSub = await SubscriptionModel.findOne({ userId: payment.userId, status: 'active' });
+      const existingSub = await SubscriptionModel.findOne({ userId: claimedPayment.userId, status: 'active' });
 
       let subscription;
       if (existingSub) {
         const baseDate = existingSub.expiredAt > paidAt ? existingSub.expiredAt : paidAt;
         const newExpiredAt = new Date(baseDate);
-        if (payment.period === 'monthly') {
+        if (claimedPayment.period === 'monthly') {
           newExpiredAt.setMonth(newExpiredAt.getMonth() + 1);
         } else {
           newExpiredAt.setFullYear(newExpiredAt.getFullYear() + 1);
         }
         subscription = await SubscriptionModel.findByIdAndUpdate(
           existingSub._id,
-          { plan: payment.plan, period: payment.period, expiredAt: newExpiredAt },
+          { plan: claimedPayment.plan, period: claimedPayment.period, expiredAt: newExpiredAt },
           { new: true }
         );
       } else {
         const expiredAt = new Date(paidAt);
-        if (payment.period === 'monthly') {
+        if (claimedPayment.period === 'monthly') {
           expiredAt.setMonth(expiredAt.getMonth() + 1);
         } else {
           expiredAt.setFullYear(expiredAt.getFullYear() + 1);
         }
         subscription = await SubscriptionModel.create({
-          userId: payment.userId,
-          plan: payment.plan,
-          period: payment.period,
+          userId: claimedPayment.userId,
+          plan: claimedPayment.plan,
+          period: claimedPayment.period,
           status: 'active',
           startDate: paidAt,
           expiredAt,
         });
       }
 
-      await PaymentModel.findByIdAndUpdate(payment._id, { subscriptionId: subscription._id });
+      await PaymentModel.findByIdAndUpdate(claimedPayment._id, {
+        status: 'paid', processingAt: null, payosTransactionId: reference, paidAt, subscriptionId: subscription._id,
+      });
+      return {
+        status: 'paid', paymentId: claimedPayment._id, plan: claimedPayment.plan,
+        period: claimedPayment.period, amount: claimedPayment.amount, extended: Boolean(existingSub),
+      };
     } catch (err) {
+      await PaymentModel.findOneAndUpdate({ _id: claimedPayment._id, status: 'processing' }, { status: 'pending', processingAt: null });
       throw new errorResponse({ message: 'Failed to process payment: ' + err.message, statusCode: 500 });
     }
   }
@@ -137,11 +161,11 @@ class PaymentService {
   }
 
   async cancelPayment(orderCode) {
-    const payment = await PaymentModel.findOne({ payosOrderCode: orderCode });
-    if (!payment) return;
-    if (payment.status === 'pending') {
-      await PaymentModel.findByIdAndUpdate(payment._id, { status: 'cancelled' });
-    }
+    return PaymentModel.findOneAndUpdate(
+      { payosOrderCode: orderCode, status: 'pending' },
+      { status: 'cancelled' },
+      { new: true }
+    );
   }
 }
 

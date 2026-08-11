@@ -56,6 +56,7 @@ function loadTab(tab) {
   if (tab === 'users') loadUsers();
   if (tab === 'payments') loadPayments();
   if (tab === 'media') { loadThemes(); loadMusics(); }
+  if (tab === 'activities') loadActivities();
 }
 
 // ── Dashboard ─────────────────────────────────────
@@ -555,3 +556,90 @@ async function loadAnalytics() {
     }).join('');
   } catch (e) { toast(e.message, 'error'); }
 }
+
+// ── End-user activity dashboard ──────────────────
+let activitiesPage = 1, activitiesTotal = 0;
+const ACTIVITIES_LIMIT = 50;
+
+function activityParams(includePage = true) {
+  const params = new URLSearchParams();
+  const days = Number(document.getElementById('activity-range').value || 7);
+  params.set('startDate', new Date(Date.now() - days * 86400000).toISOString());
+  params.set('endDate', new Date().toISOString());
+  const feature = document.getElementById('activity-feature').value;
+  const level = document.getElementById('activity-level').value;
+  const action = document.getElementById('activity-action').value.trim();
+  const sessionId = document.getElementById('activity-session').value.trim();
+  if (feature) params.set('feature', feature);
+  if (level) params.set('level', level);
+  if (action) params.set('action', action);
+  if (sessionId) params.set('sessionId', sessionId);
+  if (includePage) {
+    params.set('page', activitiesPage);
+    params.set('limit', ACTIVITIES_LIMIT);
+  }
+  return params;
+}
+
+function compactMeta(activity) {
+  const metadata = { ...(activity.metadata || {}) };
+  delete metadata.sessionId;
+  const text = JSON.stringify(metadata, null, 2);
+  return text === '{}' ? '—' : text;
+}
+
+async function loadActivities() {
+  const tbody = document.getElementById('activities-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">Đang tải activity…</td></tr>';
+  try {
+    const params = activityParams();
+    const overviewParams = activityParams(false);
+    const [listData, overviewData] = await Promise.all([
+      api(`/admin/activities?${params}`),
+      api(`/admin/activities/overview?${overviewParams}`),
+    ]);
+    const { activities, total } = listData.meta;
+    const summary = overviewData.meta;
+    activitiesTotal = total;
+    document.getElementById('activity-total').textContent = summary.total || 0;
+    document.getElementById('activity-sessions').textContent = summary.activeSessions || 0;
+    document.getElementById('activity-errors').textContent = summary.errors || 0;
+    document.getElementById('activity-warnings').textContent = summary.warnings || 0;
+    document.getElementById('activity-error-rate').textContent = `${Number(summary.errorRate || 0).toFixed(1)}%`;
+    if (!activities.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">Không có activity phù hợp</td></tr>';
+    } else {
+      tbody.innerHTML = activities.map(item => {
+        const session = item.sessionId || '';
+        return `<tr>
+          <td style="white-space:nowrap">${fmtDateTime(item.createdAt)}</td>
+          <td><span class="level-${esc(item.level)}">${esc(item.level)}</span></td>
+          <td>${esc(item.feature)}</td>
+          <td>${esc(item.action)}</td>
+          <td>${esc(item.actor)}</td>
+          <td>${esc(item.page || item.path || '—')}</td>
+          <td>${session ? `<button class="btn btn-ghost btn-sm" title="${esc(session)}" onclick="filterActivitySession('${esc(session)}')">${esc(session.slice(0,8))}…</button>` : '—'}</td>
+          <td><details><summary>View</summary><pre class="activity-meta">${esc(compactMeta(item))}</pre></details></td>
+        </tr>`;
+      }).join('');
+    }
+    updatePagination('activities', activitiesPage, total, ACTIVITIES_LIMIT);
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">${esc(e.message)}</td></tr>`;
+  }
+}
+
+function filterActivitySession(sessionId) {
+  document.getElementById('activity-session').value = sessionId;
+  activitiesPage = 1;
+  loadActivities();
+}
+
+document.getElementById('activity-refresh').addEventListener('click', () => { activitiesPage = 1; loadActivities(); });
+document.getElementById('activity-range').addEventListener('change', () => { activitiesPage = 1; loadActivities(); });
+document.getElementById('activity-feature').addEventListener('change', () => { activitiesPage = 1; loadActivities(); });
+document.getElementById('activity-level').addEventListener('change', () => { activitiesPage = 1; loadActivities(); });
+document.getElementById('activities-prev').addEventListener('click', () => { if (activitiesPage > 1) { activitiesPage--; loadActivities(); } });
+document.getElementById('activities-next').addEventListener('click', () => {
+  if (activitiesPage * ACTIVITIES_LIMIT < activitiesTotal) { activitiesPage++; loadActivities(); }
+});

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 const galaxyId = new URLSearchParams(location.search).get('galaxyId');
+const activity = window.LumoraActivity;
 async function fetchData() {
   if (!galaxyId) return { images:[], captions:[], music:null, theme:null, name:'' };
   try {
@@ -220,9 +221,9 @@ function makeCaption(text){
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 const lb=document.getElementById('lightbox'), lbImg=document.getElementById('lightbox-img');
-document.getElementById('lightbox-close').addEventListener('click',()=>lb.classList.remove('visible'));
-lb.addEventListener('click',e=>{if(e.target===lb)lb.classList.remove('visible');});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('visible');});
+document.getElementById('lightbox-close').addEventListener('click',()=>{ lb.classList.remove('visible'); activity?.log({ action:'Viewer Photo Close', feature:'viewer', galaxyId, description:{ template:'aurora', via:'button' } }); });
+lb.addEventListener('click',e=>{if(e.target===lb){ lb.classList.remove('visible'); activity?.log({ action:'Viewer Photo Close', feature:'viewer', galaxyId, description:{ template:'aurora', via:'backdrop' } }); }});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lb.classList.contains('visible')){ lb.classList.remove('visible'); activity?.log({ action:'Viewer Photo Close', feature:'viewer', galaxyId, description:{ template:'aurora', via:'escape' } }); }});
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let cameraZ=0, fallSpd=0, boost=0, started=false;
@@ -281,7 +282,11 @@ const pointerUp=(cx,cy)=>{
   mouse.x=(cx/innerWidth)*2-1; mouse.y=-(cy/innerHeight)*2+1;
   ray.setFromCamera(mouse,camera);
   const hits=ray.intersectObjects(panels.map(p=>p.userData.imgMesh).filter(Boolean));
-  if(hits.length){ lbImg.src=hits[0].object.userData.imgSrc; lb.classList.add('visible'); }
+  if(hits.length){
+    lbImg.src=hits[0].object.userData.imgSrc;
+    lb.classList.add('visible');
+    activity?.log({ action:'Viewer Photo Open', feature:'viewer', galaxyId, description:{ template:'aurora' } });
+  }
 };
 renderer.domElement.addEventListener('mousedown', e=>pointerDown(e.clientX,e.clientY));
 renderer.domElement.addEventListener('mousemove', e=>pointerMove(e.clientX,e.clientY,e.buttons));

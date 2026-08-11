@@ -11,6 +11,7 @@ const activitySchema = new Schema({
   deviceId: { type: String, default: null },
   sessionId: { type: String, default: null, index: true },
   requestId: { type: String, default: null, index: true },
+  dedupKey: { type: String, maxlength: 200 },
   galaxyId: { type: Schema.Types.ObjectId, ref: 'Galaxy', default: null, index: true },
   paymentId: { type: Schema.Types.ObjectId, ref: 'Payment', default: null },
   page: { type: String, default: 'unknown', maxlength: 64 },
@@ -30,6 +31,7 @@ activitySchema.index({ userId: 1, createdAt: -1 });
 activitySchema.index({ anonymousId: 1, createdAt: -1 });
 activitySchema.index({ sessionId: 1, createdAt: 1 });
 activitySchema.index({ galaxyId: 1, createdAt: -1 });
+activitySchema.index({ dedupKey: 1 }, { unique: true, sparse: true });
 activitySchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = model('Activity', activitySchema, 'activities');

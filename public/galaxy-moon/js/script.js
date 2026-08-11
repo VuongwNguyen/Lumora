@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
+const activity = window.LumoraActivity;
 // ---- KHỞI TẠO SCENE, CAMERA, RENDERER ----
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x000000, 0.0015);
@@ -1433,6 +1434,11 @@ async function main() {
     const intersects = raycaster.intersectObject(planet);
 
     if (intersects.length > 0) {
+      activity?.log({
+        action: 'Viewer Start Click', feature: 'viewer',
+        galaxyId: new URLSearchParams(location.search).get('galaxyId'),
+        description: { template: 'galaxy' },
+      });
       requestFullScreen();
       introStarted = true;
       fadeInProgress = true;

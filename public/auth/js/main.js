@@ -2,6 +2,7 @@ import { playTransition } from './transition.js';
 
 // Guard: đã đăng nhập → về portal
 if (localStorage.getItem('token')) {
+  window.LumoraActivity?.log({ action: 'Auth Already Authenticated Redirect', feature: 'auth' });
   window.location.replace('/portal/');
 }
 
@@ -251,6 +252,7 @@ document.getElementById('form-reset').addEventListener('submit', async function(
   var confirmPassword = document.getElementById('confirm-password').value;
 
   if (newPassword !== confirmPassword) {
+    window.LumoraActivity?.logBlocked('Auth Submit Blocked', 'invalid_input', { form: 'reset_password', fields: ['new_password', 'confirm_password'] });
     setMsg('msg-reset', window.t.errPasswordMismatch, 'error');
     return;
   }

@@ -25,9 +25,11 @@
   // Handle ?payment= query param
   const params = new URLSearchParams(window.location.search);
   if (params.get('payment') === 'success') {
+    window.LumoraActivity?.log({ action: 'Payment Return Success', feature: 'payment', status: 1 });
     showToast(window.t.subPaySuccess, 'success');
     history.replaceState({}, '', '/portal/');
   } else if (params.get('payment') === 'cancel') {
+    window.LumoraActivity?.log({ action: 'Payment Return Cancel', feature: 'payment', level: 'warn' });
     showToast(window.t.subPayCancel, 'error');
     history.replaceState({}, '', '/portal/');
   }
@@ -54,6 +56,8 @@
     const toggle = el('div', 'period-toggle');
     ['monthly', 'yearly'].forEach(function (p) {
       const btn = el('button', 'period-btn' + (p === selectedPeriod ? ' active' : ''));
+      btn.dataset.trackAction = 'Subscription Period Select';
+      btn.dataset.trackId = 'period_' + p;
       btn.textContent = p === 'monthly' ? window.t.subPeriodMonthly : window.t.subPeriodYearly;
       btn.addEventListener('click', function () {
         selectedPeriod = p;
@@ -94,9 +98,12 @@
     const isIncluded = currentRank > cardRank;
 
     const btn = el('button', 'btn-subscribe');
+    btn.dataset.plan = planKey;
+    btn.dataset.trackAction = 'Subscription Checkout Click';
     if (isIncluded) {
       btn.textContent = window.t.subIncluded;
       btn.disabled = true;
+      btn.dataset.blockedReason = 'already_included';
     } else {
       btn.textContent = isCurrent ? window.t.subRenew : window.t.subUpgrade(plan.label);
       btn.addEventListener('click', function () {
@@ -236,6 +243,10 @@
         btn.textContent = originalText;
         return;
       }
+      window.LumoraActivity?.log({
+        action: 'Payment Checkout Redirect', feature: 'payment', status: 1,
+        description: { plan: plan, period: period },
+      });
       window.location.href = data.meta.checkoutUrl;
     } catch {
       showToast(window.t.subErrConnect, 'error');

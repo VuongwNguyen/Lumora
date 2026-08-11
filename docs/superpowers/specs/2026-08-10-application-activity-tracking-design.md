@@ -1,7 +1,7 @@
 # Lumora Full Application Activity Tracking — Design Spec
 
 **Date:** 2026-08-10 (`Asia/Ho_Chi_Minh`)
-**Status:** Draft — chờ duyệt trước khi implementation
+**Status:** Implemented — core, global reliability, end-user instrumentation, admin analytics và coverage audit
 **Reference implementation:** `/home/vuongwnguyen/CODE/ArenaBilliard/arena-mobile`
 **Scope:** Toàn bộ bề mặt end-user của Lumora: public website, auth, portal, galaxy/story setup, public viewers, subscription/payment, account, frontend reliability và các backend flow phục vụ end-user. Admin chỉ dùng để xem log, không phải đối tượng được tracking.
 

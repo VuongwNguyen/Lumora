@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
     return [
       { source: "/galaxies/:path*", destination: `${backendOrigin}/galaxies/:path*` },
       { source: "/gallary/:path*", destination: `${backendOrigin}/gallary/:path*` },
+      { source: "/activity/:path*", destination: `${backendOrigin}/activity/:path*` },
+      { source: "/shared/js/activityApi.js", destination: `${backendOrigin}/shared/js/activityApi.js` },
+      { source: "/shared/js/activityLogger.js", destination: `${backendOrigin}/shared/js/activityLogger.js` },
+      { source: "/shared/js/trackedFetch.js", destination: `${backendOrigin}/shared/js/trackedFetch.js` },
+      { source: "/shared/js/activityAutoTracker.js", destination: `${backendOrigin}/shared/js/activityAutoTracker.js` },
     ];
   },
 };

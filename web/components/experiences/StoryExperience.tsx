@@ -11,6 +11,7 @@ import { resolveHook } from "@/lib/story/resolveHook";
 import { initEffect } from "@/lib/story/effects";
 import { AudioToggleButton } from "@/components/AudioToggleButton";
 import styles from "./StoryExperience.module.css";
+import { trackActivity } from "@/lib/activity";
 
 interface StoryExperienceProps {
   galaxyId: string;
@@ -119,6 +120,7 @@ export function StoryExperience({ galaxyId }: StoryExperienceProps) {
       chapterIdx: number,
       totalChapters: number,
     ) {
+      trackActivity({ action: "Viewer Story Chapter Start", feature: "viewer", galaxyId, description: { template: "story", chapterIndex: chapterIdx, photoCount: photoUrls.length } });
       setProgressPct(totalChapters > 0 ? ((chapterIdx + 1) / totalChapters) * 100 : 0);
       setChapterTag(tag);
       setHookText(hook);
@@ -140,6 +142,7 @@ export function StoryExperience({ galaxyId }: StoryExperienceProps) {
         await wait(380);
       }
       setDotsCount(0);
+      trackActivity({ action: "Viewer Story Chapter Complete", feature: "viewer", status: 1, galaxyId, description: { template: "story", chapterIndex: chapterIdx } });
     }
 
     async function main() {
@@ -193,6 +196,7 @@ export function StoryExperience({ galaxyId }: StoryExperienceProps) {
       setPhase("finale");
       await wait(2800);
       stopEffect();
+      trackActivity({ action: "Viewer Story Complete", feature: "viewer", status: 1, galaxyId, description: { template: "story", chapterCount: chaptersWithPhotos.length } });
       window.location.replace(`/view/?galaxyId=${galaxyId}&skip_se=true`);
     }
 
@@ -201,9 +205,11 @@ export function StoryExperience({ galaxyId }: StoryExperienceProps) {
   }, [loading]);
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-lumora-template="story">
       <div
         className={clsx(styles.seIntro, introStarted && styles.hidden)}
+        data-track-action="Viewer Start Click"
+        data-track-id="story_intro"
         onClick={handleTap}
         onTouchEnd={handleTap}
       >
@@ -226,7 +232,7 @@ export function StoryExperience({ galaxyId }: StoryExperienceProps) {
         <div className={styles.seProgressFill} style={{ width: `${progressPct}%` }} />
       </div>
 
-      <div className={clsx(styles.sePhoto, photoVisible && styles.visible)} onClick={handleTap} onTouchEnd={handleTap}>
+      <div className={clsx(styles.sePhoto, photoVisible && styles.visible)} data-track-action="Viewer Story Advance Click" data-track-id="story_photo" onClick={handleTap} onTouchEnd={handleTap}>
         <div className={styles.sePhotoBg} style={photoUrl ? { backgroundImage: `url('${photoUrl}')` } : undefined} />
         {photoUrl && <img className={styles.sePhotoImg} src={photoUrl} alt="" />}
         <canvas ref={effectCanvasRef} className={styles.seEffectCanvas} />

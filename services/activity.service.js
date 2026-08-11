@@ -132,6 +132,7 @@ function normalizeActivityPayload(payload, context = {}) {
   if (issues.length) throw new ActivityValidationError(issues);
 
   const now = new Date();
+  const dedupKey = optionalString(context.dedupKey, 200);
   return {
     action,
     feature,
@@ -142,6 +143,7 @@ function normalizeActivityPayload(payload, context = {}) {
     deviceId: deviceId || anonymousId,
     sessionId,
     requestId: optionalString(context.requestId || payload.requestId, 100),
+    ...(dedupKey && { dedupKey }),
     galaxyId,
     paymentId,
     page,
@@ -164,6 +166,28 @@ class ActivityService {
     const activity = normalizeActivityPayload(payload, context);
     if (!this.isEnabled()) return { disabled: true, activity };
     const document = await ActivityModel.create(activity);
+    return { disabled: false, activity: document };
+  }
+
+  async createServer(payload, context = {}) {
+    const serverPayload = {
+      ...payload,
+      sessionId: context.sessionId || payload.sessionId || null,
+      anonymousId: context.anonymousId || payload.anonymousId || null,
+      deviceId: context.anonymousId || payload.deviceId || null,
+      page: payload.page || 'server',
+    };
+    const activity = normalizeActivityPayload(serverPayload, context);
+    if (!this.isEnabled()) return { disabled: true, activity };
+    if (!activity.dedupKey) {
+      const document = await ActivityModel.create(activity);
+      return { disabled: false, activity: document };
+    }
+    const document = await ActivityModel.findOneAndUpdate(
+      { dedupKey: activity.dedupKey },
+      { $setOnInsert: activity },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
     return { disabled: false, activity: document };
   }
 }

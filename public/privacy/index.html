@@ -17,6 +17,7 @@
     .container { max-width: 800px; margin: 60px auto; padding: 0 40px; }
     h1 { font-size: 42px; margin-bottom: 12px; }
     .date { color: var(--text-sub); font-size: 14px; margin-bottom: 40px; }
+    .privacy-control { padding:10px 16px; border:1px solid var(--accent); border-radius:8px; color:var(--text); background:rgba(139,92,246,.15); cursor:pointer; }
     h2 { font-size: 24px; margin-top: 40px; margin-bottom: 16px; color: var(--accent); }
     p { margin-bottom: 16px; color: var(--text-sub); }
     ul { margin-left: 24px; margin-bottom: 16px; }
@@ -32,7 +33,7 @@
 
   <div class="container">
     <h1 data-vi="Chính sách bảo mật" data-en="Privacy Policy"></h1>
-    <div class="date" data-vi="Cập nhật lần cuối: 25/04/2026" data-en="Last updated: 25/04/2026"></div>
+    <div class="date" data-vi="Cập nhật lần cuối: 11/08/2026" data-en="Last updated: 11/08/2026"></div>
 
     <p data-vi="Lumora cam kết bảo vệ quyền riêng tư của bạn. Chính sách này giải thích cách chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân của bạn."
        data-en="Lumora is committed to protecting your privacy. This policy explains how we collect, use, and protect your personal information."></p>
@@ -50,6 +51,7 @@
       <li data-vi="Địa chỉ IP và thông tin thiết bị" data-en="IP address and device information"></li>
       <li data-vi="Dữ liệu sử dụng (tính năng bạn dùng, thời gian truy cập)" data-en="Usage data (features used, access times)"></li>
       <li data-vi="Cookies và công nghệ theo dõi tương tự" data-en="Cookies and similar tracking technologies"></li>
+      <li data-vi="Nhật ký tương tác và độ tin cậy: trang đã xem, nút/biểu mẫu đã dùng, kết quả thao tác, lỗi API/JavaScript/tài nguyên và thời lượng; gắn với mã trình duyệt ngẫu nhiên và mã phiên" data-en="Interaction and reliability logs: pages viewed, controls/forms used, operation results, API/JavaScript/resource errors and duration; linked to random browser and session identifiers"></li>
     </ul>
 
     <h2 data-vi="2. Cách chúng tôi sử dụng thông tin" data-en="2. How We Use Information"></h2>
@@ -91,9 +93,15 @@
       <li data-vi="Trong suốt thời gian tài khoản còn hoạt động" data-en="For as long as your account is active"></li>
       <li data-vi="Sau khi xóa tài khoản: 30 ngày (để khôi phục nếu cần)" data-en="After account deletion: 30 days (for recovery if needed)"></li>
       <li data-vi="Một số dữ liệu có thể được lưu lâu hơn để tuân thủ pháp luật" data-en="Some data may be retained longer to comply with legal obligations"></li>
+      <li data-vi="Nhật ký hoạt động chi tiết được tự động xóa sau tối đa 180 ngày" data-en="Detailed activity logs are automatically deleted after no more than 180 days"></li>
     </ul>
 
-    <h2 data-vi="6. Quyền của bạn" data-en="6. Your Rights"></h2>
+    <h2 data-vi="6. Kiểm soát dữ liệu phân tích" data-en="6. Analytics Controls"></h2>
+    <p data-vi="Lumora không dùng fingerprint phần cứng và không ghi mật khẩu, OTP, token, cookie, nội dung caption/story hoặc URL có chữ ký vào nhật ký hoạt động. Bạn có thể tắt hoặc bật lại activity tracking trên trình duyệt này bằng nút dưới đây. Các log bảo mật tối thiểu ở máy chủ vẫn có thể được lưu để chống lạm dụng."
+       data-en="Lumora does not use hardware fingerprinting and does not record passwords, OTPs, tokens, cookies, caption/story content, or signed URLs in activity logs. You can disable or re-enable activity tracking in this browser below. Minimal server security logs may still be retained to prevent abuse."></p>
+    <button type="button" class="privacy-control" id="tracking-toggle" data-track-action="Privacy Tracking Preference Click"></button>
+
+    <h2 data-vi="7. Quyền của bạn" data-en="7. Your Rights"></h2>
     <p data-vi="Bạn có quyền:" data-en="You have the right to:"></p>
     <ul>
       <li><strong data-vi="Truy cập:" data-en="Access:"></strong> <span data-vi="Xem thông tin cá nhân chúng tôi có về bạn" data-en="View the personal information we hold about you"></span></li>
@@ -105,7 +113,7 @@
     <p data-vi="Để thực hiện các quyền này, vui lòng liên hệ qua form liên hệ trên website."
        data-en="To exercise these rights, please contact us via the contact form on the website."></p>
 
-    <h2 data-vi="7. Cookies" data-en="7. Cookies"></h2>
+    <h2 data-vi="8. Cookies" data-en="8. Cookies"></h2>
     <p data-vi="Chúng tôi sử dụng cookies để:" data-en="We use cookies to:"></p>
     <ul>
       <li data-vi="Duy trì phiên đăng nhập" data-en="Maintain login sessions"></li>
@@ -115,23 +123,27 @@
     <p data-vi="Bạn có thể tắt cookies trong trình duyệt, nhưng một số tính năng có thể không hoạt động."
        data-en="You can disable cookies in your browser, but some features may not work."></p>
 
-    <h2 data-vi="8. Trẻ em" data-en="8. Children"></h2>
+    <h2 data-vi="9. Trẻ em" data-en="9. Children"></h2>
     <p data-vi="Lumora không dành cho trẻ dưới 13 tuổi. Chúng tôi không cố ý thu thập thông tin từ trẻ em. Nếu bạn phát hiện trẻ em sử dụng dịch vụ, vui lòng thông báo để chúng tôi xử lý."
        data-en="Lumora is not intended for children under 13. We do not knowingly collect information from children. If you discover a child using the service, please notify us."></p>
 
-    <h2 data-vi="9. Chuyển dữ liệu quốc tế" data-en="9. International Data Transfers"></h2>
+    <h2 data-vi="10. Chuyển dữ liệu quốc tế" data-en="10. International Data Transfers"></h2>
     <p data-vi="Dữ liệu của bạn có thể được xử lý ở các quốc gia khác nơi máy chủ của chúng tôi đặt. Chúng tôi đảm bảo mức độ bảo vệ tương đương bất kể vị trí."
        data-en="Your data may be processed in other countries where our servers are located. We ensure equivalent protection regardless of location."></p>
 
-    <h2 data-vi="10. Thay đổi chính sách" data-en="10. Policy Changes"></h2>
+    <h2 data-vi="11. Thay đổi chính sách" data-en="11. Policy Changes"></h2>
     <p data-vi="Chúng tôi có thể cập nhật chính sách này. Thay đổi quan trọng sẽ được thông báo qua email hoặc thông báo trên trang web trước ít nhất 7 ngày."
        data-en="We may update this policy. Important changes will be notified via email or on the website at least 7 days in advance."></p>
 
-    <h2 data-vi="11. Liên hệ" data-en="11. Contact"></h2>
+    <h2 data-vi="12. Liên hệ" data-en="12. Contact"></h2>
     <p data-vi="Nếu bạn có câu hỏi về chính sách bảo mật, liên hệ qua form liên hệ trên website."
        data-en="If you have questions about this privacy policy, contact us via the contact form on the website."></p>
   </div>
 
+  <script src="/shared/js/activityApi.js"></script>
+  <script src="/shared/js/activityLogger.js"></script>
+  <script src="/shared/js/trackedFetch.js"></script>
+  <script src="/shared/js/activityAutoTracker.js"></script>
   <script src="/shared/js/i18n.js"></script>
   <script>
     const lang = localStorage.getItem('lang') || ((navigator.language || '').startsWith('en') && !navigator.languages?.some(l => l.startsWith('vi')) ? 'en' : 'vi');
@@ -142,6 +154,20 @@
       document.title = 'Privacy Policy — Lumora';
       document.documentElement.lang = 'en';
     }
+    const trackingToggle = document.getElementById('tracking-toggle');
+    function renderTrackingPreference() {
+      const optedOut = localStorage.getItem('lumora_tracking_opt_out') === 'true';
+      trackingToggle.textContent = lang === 'en'
+        ? (optedOut ? 'Enable activity tracking' : 'Disable activity tracking')
+        : (optedOut ? 'Bật activity tracking' : 'Tắt activity tracking');
+    }
+    trackingToggle.addEventListener('click', () => {
+      const optedOut = localStorage.getItem('lumora_tracking_opt_out') === 'true';
+      localStorage.setItem('lumora_tracking_opt_out', optedOut ? 'false' : 'true');
+      renderTrackingPreference();
+      if (optedOut) setTimeout(() => location.reload(), 50);
+    });
+    renderTrackingPreference();
   </script>
 </body>
 </html>
