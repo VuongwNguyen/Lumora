@@ -344,7 +344,7 @@
       display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
     }
     footer .logo { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--accent-light); }
-    footer .links { display: flex; gap: 28px; }
+    footer .links { display: flex; flex-wrap: wrap; gap: 12px 28px; }
     footer .links a { font-size: 13px; color: var(--text-sub); text-decoration: none; transition: color 0.2s; }
     footer .links a:hover { color: var(--text); }
     footer .copy { font-size: 12px; color: rgba(255,255,255,0.2); }
@@ -378,46 +378,340 @@
     @media (max-width: 480px) {
       .hero h1 { font-size: clamp(48px, 14vw, 72px); }
     }
+
+    /* ── Lumora public experience redesign ───────────────── */
+    :root {
+      --bg: #05050d;
+      --surface: #0b0a15;
+      --surface-strong: #100d1e;
+      --accent: #8b5cf6;
+      --accent-strong: #7c3aed;
+      --accent-light: #c8b8ff;
+      --text: #f1edf9;
+      --text-sub: rgba(241,237,249,.57);
+      --text-muted: rgba(241,237,249,.34);
+      --border: rgba(255,255,255,.075);
+      --border-accent: rgba(154,112,255,.34);
+      --glass: rgba(255,255,255,.032);
+      --page: min(1180px, calc(100vw - 64px));
+      --r: 24px;
+    }
+
+    body.landing-page {
+      background:
+        radial-gradient(circle at 8% 12%, rgba(112,55,210,.08), transparent 24rem),
+        radial-gradient(circle at 92% 42%, rgba(81,45,160,.07), transparent 28rem),
+        var(--bg);
+    }
+    body.landing-page::before {
+      content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .28;
+      background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: linear-gradient(to bottom, #000, transparent 70%);
+    }
+    .skip-link {
+      position: fixed; z-index: 1000; top: 12px; left: 12px; translate: 0 -160%;
+      padding: 10px 14px; border-radius: 10px; background: #fff; color: #090610; text-decoration: none;
+    }
+    .skip-link:focus { translate: 0; }
+
+    nav.landing-nav {
+      top: 18px; left: 50%; right: auto; width: var(--page); translate: -50% 0;
+      padding: 0; border: 1px solid var(--border); border-radius: 18px;
+      background: rgba(7,6,15,.72); box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    }
+    .nav-shell { width: 100%; min-height: 64px; padding: 9px 10px 9px 18px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .nav-logo { display: inline-flex; align-items: center; gap: 11px; min-width: 0; }
+    .nav-logo-mark {
+      width: 31px; height: 31px; display: grid; place-items: center; flex: 0 0 auto;
+      border: 1px solid var(--border-accent); border-radius: 10px; background: rgba(139,92,246,.12); font-family: 'Jost', sans-serif;
+    }
+    .nav-logo-copy { display: grid; line-height: 1; }
+    .nav-logo-copy strong { color: var(--text); font-size: 18px; font-weight: 600; letter-spacing: .08em; }
+    .nav-logo-copy small { margin-top: 5px; color: var(--text-muted); font-family: 'Jost', sans-serif; font-size: 8px; letter-spacing: .15em; text-transform: uppercase; }
+    .nav-links { gap: 8px; }
+    .nav-links > a:not(.btn-nav) { padding: 10px 12px; border-radius: 10px; }
+    .nav-links > a:not(.btn-nav):hover { background: rgba(255,255,255,.04); }
+    .nav-actions { display: flex; align-items: center; gap: 7px; }
+    .lang-switch {
+      width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 11px;
+      background: rgba(255,255,255,.025); color: var(--text-sub); cursor: pointer; font: 500 11px/1 'Jost', sans-serif;
+    }
+    .lang-switch:hover { color: var(--text); border-color: var(--border-accent); }
+    .btn-nav { padding: 12px 18px; border-radius: 11px; }
+
+    section { padding: 128px 32px; }
+    .section-inner { max-width: 1180px; }
+    .section-heading { display: grid; grid-template-columns: minmax(0, .9fr) minmax(300px, .65fr); gap: 56px; align-items: end; }
+    .section-heading .section-sub { justify-self: end; }
+    .section-tag { margin-bottom: 18px; display: flex; align-items: center; gap: 10px; color: var(--accent-light); opacity: .86; }
+    .section-tag::before { content: ''; width: 24px; height: 1px; background: currentColor; opacity: .55; }
+    .section-title { margin: 0; font-size: clamp(44px, 5.4vw, 70px); font-weight: 500; letter-spacing: -.025em; }
+    .section-sub { color: var(--text-sub); font-size: 15px; }
+    .divider { display: none; }
+
+    .hero {
+      min-height: 100svh; padding: 146px 32px 84px; text-align: left; align-items: stretch;
+    }
+    .hero::before { width: 820px; height: 820px; left: 72%; top: 48%; opacity: .72; }
+    .hero::after { background: linear-gradient(to bottom, transparent 72%, var(--bg)); }
+    .hero-inner {
+      position: relative; z-index: 3; width: var(--page); margin: auto;
+      display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(380px, .75fr); align-items: center; gap: clamp(54px, 8vw, 120px);
+    }
+    .hero-copy { max-width: 690px; }
+    .hero-tag {
+      width: fit-content; margin: 0 0 28px; padding: 9px 13px; border: 1px solid var(--border-accent); border-radius: 999px;
+      background: rgba(139,92,246,.07); letter-spacing: .15em; opacity: 1;
+    }
+    .hero h1 { font-size: clamp(64px, 7.4vw, 106px); line-height: .92; margin: 0 0 30px; font-weight: 500; letter-spacing: -.035em; }
+    .hero p { max-width: 540px; margin: 0 0 36px; font-size: clamp(16px, 1.45vw, 19px); line-height: 1.7; }
+    .hero-cta { justify-content: flex-start; }
+    .btn-primary, .btn-ghost { min-height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 14px 24px; border-radius: 13px; }
+    .btn-primary { box-shadow: 0 12px 34px rgba(108,55,220,.25); }
+    .hero-proof { margin-top: 42px; display: flex; flex-wrap: wrap; gap: 9px; }
+    .hero-proof span { padding: 8px 11px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-muted); font-size: 10px; letter-spacing: .11em; text-transform: uppercase; background: rgba(255,255,255,.018); }
+
+    .hero-memory { position: relative; min-height: 570px; display: grid; place-items: center; perspective: 1100px; }
+    .memory-orbit { position: absolute; width: 510px; aspect-ratio: 1; border: 1px solid rgba(179,148,255,.14); border-radius: 50%; transform: rotateX(68deg) rotateZ(-13deg); }
+    .memory-orbit::before, .memory-orbit::after { content: ''; position: absolute; border: 1px solid rgba(179,148,255,.1); border-radius: inherit; inset: 16%; }
+    .memory-orbit::after { inset: 32%; background: radial-gradient(circle, rgba(139,92,246,.2), transparent 68%); }
+    .memory-card {
+      position: relative; width: min(390px, 100%); padding: 17px; overflow: hidden;
+      border: 1px solid rgba(199,179,255,.22); border-radius: 28px;
+      background: linear-gradient(155deg, rgba(29,23,50,.94), rgba(7,6,15,.94));
+      box-shadow: 0 45px 90px rgba(0,0,0,.48), 0 0 60px rgba(105,55,210,.13); transform: rotateY(-5deg) rotateX(2deg);
+    }
+    .memory-card::before { content: ''; position: absolute; width: 260px; height: 260px; top: -140px; right: -90px; border-radius: 50%; background: rgba(139,92,246,.2); filter: blur(40px); }
+    .memory-card-top { display: flex; align-items: center; justify-content: space-between; padding: 3px 4px 16px; color: var(--text-muted); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; }
+    .memory-status { display: inline-flex; gap: 6px; align-items: center; }
+    .memory-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #72e0be; box-shadow: 0 0 12px rgba(114,224,190,.75); }
+    .memory-visual { position: relative; height: 330px; overflow: hidden; border-radius: 18px; background: radial-gradient(circle at 50% 47%, rgba(212,190,255,.95) 0 2px, rgba(156,102,255,.34) 4px, transparent 15%), radial-gradient(ellipse at 50% 52%, rgba(131,69,226,.3), transparent 38%), #05040b; }
+    .memory-visual::before {
+      content: ''; position: absolute; width: 360px; height: 140px; top: 95px; left: 50%; translate: -50% 0;
+      border: 28px dotted rgba(207,190,255,.48); border-radius: 50%; transform: rotate(-10deg); filter: drop-shadow(0 0 10px rgba(157,100,255,.35));
+    }
+    .memory-visual::after { content: ''; position: absolute; inset: 0; opacity: .54; background-image: radial-gradient(circle, rgba(255,255,255,.9) 0 1px, transparent 1.3px); background-size: 27px 31px; mask-image: linear-gradient(to bottom, #000, transparent 84%); }
+    .memory-photo { position: absolute; z-index: 2; width: 96px; height: 118px; border: 5px solid rgba(244,240,250,.95); border-bottom-width: 22px; background: linear-gradient(145deg, #553980, #191127 60%, #b1778e); box-shadow: 0 14px 32px rgba(0,0,0,.45); }
+    .memory-photo.one { left: 46px; top: 92px; rotate: -10deg; }
+    .memory-photo.two { right: 45px; top: 105px; rotate: 8deg; background: linear-gradient(145deg, #25376e, #151126 62%, #80526e); }
+    .memory-message { position: absolute; z-index: 3; left: 50%; bottom: 32px; translate: -50% 0; width: 80%; text-align: center; }
+    .memory-message small { color: var(--accent-light); font-size: 9px; letter-spacing: .18em; text-transform: uppercase; }
+    .memory-message strong { display: block; margin-top: 9px; font-family: 'Cormorant Garamond', serif; font-size: 25px; line-height: 1.1; font-weight: 500; }
+    .memory-card-bottom { padding: 17px 6px 4px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .memory-card-bottom p { margin: 0; font-size: 11px; line-height: 1.55; color: var(--text-muted); }
+    .memory-card-bottom span { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: white; }
+    .hero-scroll { position: absolute; z-index: 4; bottom: 26px; left: 50%; translate: -50% 0; color: var(--text-muted); font-size: 9px; letter-spacing: .17em; text-transform: uppercase; }
+
+    #demo, #pricing { background: transparent; border: 0; }
+    #demo { position: relative; }
+    #demo::before { content: ''; position: absolute; inset: 13% 0 auto; height: 60%; background: linear-gradient(90deg, transparent, rgba(139,92,246,.045), transparent); pointer-events: none; }
+    .demo-shell { margin-top: 56px; padding: 9px; border: 1px solid var(--border); border-radius: 28px; background: rgba(255,255,255,.025); box-shadow: 0 40px 90px rgba(0,0,0,.35); }
+    .demo-toolbar { height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 13px 0 9px; }
+    .window-dots { display: flex; gap: 6px; }
+    .window-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.13); }
+    .demo-toolbar-label { color: var(--text-muted); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; }
+    .demo-live { display: inline-flex; align-items: center; gap: 6px; color: var(--text-sub); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+    .demo-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #72e0be; box-shadow: 0 0 10px rgba(114,224,190,.65); }
+    .demo-frame-wrap { height: min(66vw, 650px); min-height: 420px; margin: 0; border: 0; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--border); }
+    .demo-overlay { border: 0; color: var(--text); font: inherit; background: radial-gradient(circle at 50% 45%, rgba(60,37,103,.35), rgba(5,5,13,.94) 48%); }
+    .demo-overlay::before { content: ''; position: absolute; width: 90px; height: 90px; border: 1px solid var(--border-accent); border-radius: 50%; animation: demoPulse 2.8s ease-out infinite; }
+    .demo-overlay-emoji { position: relative; z-index: 1; width: 62px; height: 62px; display: grid; place-items: center; border-radius: 50%; background: rgba(139,92,246,.14); border: 1px solid var(--border-accent); font-size: 25px; }
+    @keyframes demoPulse { 0% { scale: .75; opacity: .7; } 100% { scale: 1.8; opacity: 0; } }
+
+    #features { background: transparent; }
+    .features-grid { grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .feature-card { position: relative; min-height: 260px; grid-column: span 4; padding: 32px; overflow: hidden; background: linear-gradient(145deg, rgba(255,255,255,.038), rgba(255,255,255,.017)); }
+    .feature-card::after { content: attr(data-index); position: absolute; top: 24px; right: 25px; color: var(--text-muted); font-size: 10px; letter-spacing: .14em; }
+    .feature-card:nth-child(2) { grid-column: span 8; background: radial-gradient(circle at 85% 20%, rgba(139,92,246,.2), transparent 32%), linear-gradient(145deg, rgba(139,92,246,.09), rgba(255,255,255,.015)); }
+    .feature-card:nth-child(3), .feature-card:nth-child(4) { grid-column: span 6; }
+    .feature-card:nth-child(5) { grid-column: span 5; }
+    .feature-card:nth-child(6) { grid-column: span 7; min-height: 220px; padding: 32px; align-items: flex-end; }
+    .feature-icon { width: 52px; height: 52px; display: grid; place-items: center; margin-bottom: 38px; border: 1px solid var(--border); border-radius: 16px; background: rgba(139,92,246,.08); font-size: 22px; }
+    .feature-card:nth-child(6) .feature-icon { margin: 0; }
+    .feature-card h3 { font-family: 'Cormorant Garamond', serif; font-size: 25px; color: var(--text); font-weight: 600; }
+    .feature-card p { max-width: 520px; color: var(--text-sub); }
+
+    #how { padding-top: 104px; }
+    .steps { gap: 16px; }
+    .steps::before { display: none; }
+    .step { position: relative; min-height: 280px; padding: 30px; text-align: left; border: 1px solid var(--border); border-radius: var(--r); background: rgba(255,255,255,.02); }
+    .step::after { content: '→'; position: absolute; top: 28px; right: 28px; color: var(--text-muted); }
+    .step:last-child::after { content: '✦'; color: var(--accent-light); }
+    .step-num { width: auto; height: auto; margin: 0 0 76px; justify-content: flex-start; border: 0; background: none; border-radius: 0; color: var(--accent-light); font-size: 11px; letter-spacing: .15em; }
+    .step h3 { max-width: 250px; font-family: 'Cormorant Garamond', serif; font-size: 25px; line-height: 1.08; }
+
+    .pricing-head { align-items: center; }
+    .billing-toggle { justify-self: end; display: inline-flex; padding: 4px; border: 1px solid var(--border); border-radius: 13px; background: rgba(255,255,255,.025); }
+    .billing-toggle button { min-width: 108px; padding: 10px 15px; border: 0; border-radius: 9px; background: transparent; color: var(--text-sub); cursor: pointer; font: 500 12px/1 'Jost', sans-serif; }
+    .billing-toggle button.active { background: var(--accent); color: #fff; box-shadow: 0 8px 20px rgba(109,56,217,.28); }
+    .pricing-grid { grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); align-items: stretch; }
+    .price-card { min-height: 500px; padding: 32px; }
+    .price-card.featured { translate: 0 -10px; }
+    .price-card.visible.featured { translate: 0 -10px; }
+    .price-head { min-height: 104px; }
+    .price-label { min-height: 15px; }
+    .price-amount-row { display: flex; align-items: baseline; gap: 8px; margin: 19px 0 28px; }
+    .price-amount { margin: 0; font-size: clamp(35px, 3.5vw, 46px); color: var(--text); }
+    .price-period { margin: 0; }
+    .price-saving { width: fit-content; margin-top: 8px; padding: 5px 8px; border-radius: 999px; background: rgba(114,224,190,.08); color: #83dfc4; font-size: 10px; }
+    .price-features li { padding: 11px 0; }
+
+    .cta-section { padding-top: 96px; }
+    .cta-banner { min-height: 480px; display: grid; place-items: center; align-content: center; padding: 76px 48px; overflow: hidden; background: radial-gradient(circle at 50% 85%, rgba(139,92,246,.22), transparent 40%), linear-gradient(145deg, rgba(139,92,246,.08), rgba(255,255,255,.015)); }
+    .cta-banner::after { content: ''; position: absolute; width: 520px; height: 180px; bottom: -130px; border: 1px solid var(--border-accent); border-radius: 50%; box-shadow: 0 0 80px rgba(139,92,246,.24); }
+    .cta-banner h2 { max-width: 720px; font-size: clamp(54px, 7vw, 86px); font-weight: 500; }
+
+    footer.lumora-legal-footer { width: var(--page); margin: 0 auto 28px; padding: 28px 4px 0; align-items: flex-start; }
+    footer .logo { font-size: 22px; }
+    footer .links { justify-content: center; }
+
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 3px; }
+
+    @media (max-width: 980px) {
+      :root { --page: min(100% - 40px, 760px); }
+      .nav-shell { padding-left: 14px; }
+      .hero { min-height: auto; padding-top: 136px; }
+      .hero-inner { grid-template-columns: 1fr; gap: 60px; }
+      .hero-copy { text-align: center; margin: 0 auto; }
+      .hero-tag, .hero-proof { margin-left: auto; margin-right: auto; justify-content: center; }
+      .hero-cta { justify-content: center; }
+      .hero-memory { min-height: 500px; }
+      .hero-scroll { display: none; }
+      .section-heading { grid-template-columns: 1fr; gap: 20px; }
+      .section-heading .section-sub, .billing-toggle { justify-self: start; }
+      .feature-card, .feature-card:nth-child(2), .feature-card:nth-child(3), .feature-card:nth-child(4), .feature-card:nth-child(5), .feature-card:nth-child(6) { grid-column: span 6; }
+      .feature-card:nth-child(6) { align-items: flex-start; }
+      .steps { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .step { padding: 24px; }
+      .step-num { margin-bottom: 48px; }
+    }
+
+    @media (max-width: 680px) {
+      :root { --page: calc(100% - 28px); }
+      nav.landing-nav { top: 10px; border-radius: 15px; }
+      .nav-shell { min-height: 58px; padding: 7px; }
+      .nav-logo-copy small, .nav-links > a:not(.btn-nav), .nav-links > .nav-login { display: none; }
+      .nav-logo-mark { width: 37px; height: 37px; }
+      .nav-logo-copy strong { font-size: 16px; }
+      .lang-switch { width: 35px; height: 35px; }
+      .btn-nav { padding: 11px 13px; font-size: 11px; }
+      section { padding: 88px 20px; }
+      .hero { padding: 122px 18px 78px; }
+      .hero h1 { font-size: clamp(53px, 16vw, 76px); }
+      .hero p { font-size: 15px; }
+      .hero-cta { display: grid; grid-template-columns: 1fr; width: 100%; }
+      .hero-proof { margin-top: 30px; }
+      .hero-memory { min-height: 410px; }
+      .memory-orbit { width: 390px; }
+      .memory-card { width: min(340px, 94vw); padding: 12px; transform: none; }
+      .memory-visual { height: 270px; }
+      .memory-photo { scale: .86; }
+      .memory-photo.one { left: 26px; top: 72px; }
+      .memory-photo.two { right: 25px; top: 84px; }
+      .memory-card-bottom { padding: 13px 4px 3px; }
+      .section-title { font-size: clamp(42px, 13vw, 58px); }
+      .section-sub { font-size: 14px; }
+      .demo-shell { margin-top: 38px; padding: 6px; border-radius: 20px; }
+      .demo-toolbar { height: 42px; }
+      .demo-frame-wrap { min-height: 480px; height: 72vh; border-radius: 15px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feature-card, .feature-card:nth-child(2), .feature-card:nth-child(3), .feature-card:nth-child(4), .feature-card:nth-child(5), .feature-card:nth-child(6) { grid-column: 1; min-height: 230px; }
+      .feature-card:nth-child(6) { flex-direction: row; align-items: flex-end; }
+      .steps { grid-template-columns: 1fr; gap: 12px; }
+      .step { min-height: 235px; }
+      .step-num { margin-bottom: 52px; }
+      .pricing-head { gap: 28px; }
+      .billing-toggle { width: 100%; }
+      .billing-toggle button { flex: 1; min-width: 0; }
+      .pricing-grid { margin-top: 36px; }
+      .price-card { min-height: auto; }
+      .price-card.featured, .price-card.visible.featured { translate: 0; }
+      .cta-banner { min-height: 430px; padding: 60px 22px; }
+      .cta-banner h2 { font-size: clamp(48px, 14vw, 66px); }
+      footer.lumora-legal-footer { align-items: flex-start; }
+      footer .links { justify-content: flex-start; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+    }
   </style>
 </head>
-<body>
+<body class="landing-page">
+  <a class="skip-link" href="#main-content">Đi đến nội dung chính</a>
 
   <!-- Nav -->
-  <nav>
-    <div class="nav-logo">✦ Lumora - ánh sáng của ký ức</div>
-    <div class="nav-links">
-      <a href="#features">Tính năng</a>
-      <a href="#pricing">Bảng giá</a>
-      <a href="/auth/">Đăng nhập</a>
-      <a href="/auth/" class="btn-nav">Bắt đầu miễn phí</a>
+  <nav class="landing-nav" aria-label="Điều hướng chính">
+    <div class="nav-shell">
+      <a class="nav-logo" href="#main-content" aria-label="Lumora — Trang chủ">
+        <span class="nav-logo-mark" aria-hidden="true">✦</span>
+        <span class="nav-logo-copy"><strong>Lumora</strong><small>Ánh sáng của ký ức</small></span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" data-track-action="Landing Nav Features" data-track-id="nav_features">Tính năng</a>
+        <a href="#pricing" data-track-action="Landing Nav Pricing" data-track-id="nav_pricing">Bảng giá</a>
+        <a href="/auth/" class="nav-login" data-track-action="Landing Login Click" data-track-id="nav_login">Đăng nhập</a>
+        <span class="nav-actions">
+          <button class="lang-switch" type="button" data-track-action="Landing Language Switch" data-track-id="language_switch">EN</button>
+          <a href="/auth/" class="btn-nav" data-track-action="Landing Start Click" data-track-id="nav_start">Bắt đầu miễn phí</a>
+        </span>
+      </div>
     </div>
   </nav>
 
   <!-- Hero -->
-  <section class="hero">
+  <main id="main-content">
+  <section class="hero" aria-labelledby="hero-title">
     <canvas id="hero-canvas"></canvas>
     <div class="stars" id="stars"></div>
-    <div class="hero-tag">✦ Gửi đến người bạn muốn</div>
-    <h1>Có ai đó bạn<br/><span>chưa nói hết lời.</span></h1>
-    <p>Lumora là không gian để bạn nói điều đó — và để họ thật sự cảm nhận được.</p>
-    <div class="hero-cta">
-      <a href="/auth/" class="btn-primary">Tạo khoảnh khắc của bạn</a>
-      <a href="#demo" class="btn-ghost">Xem demo</a>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="hero-tag">✦ Gửi đến người bạn muốn</div>
+        <h1 id="hero-title">Có ai đó bạn<br/><span>chưa nói hết lời.</span></h1>
+        <p>Lumora là không gian để bạn nói điều đó — và để họ thật sự cảm nhận được.</p>
+        <div class="hero-cta">
+          <a href="/auth/" class="btn-primary" data-track-action="Landing Hero Start Click" data-track-id="hero_start">Tạo khoảnh khắc của bạn</a>
+          <a href="#demo" class="btn-ghost" data-track-action="Landing Hero Demo Click" data-track-id="hero_demo">Xem demo</a>
+        </div>
+        <div class="hero-proof" aria-label="Điểm nổi bật">
+          <span>Story dẫn lối</span><span>Vũ trụ 3D</span><span>Một link để sẻ chia</span>
+        </div>
+      </div>
+      <div class="hero-memory" aria-hidden="true">
+        <div class="memory-orbit"></div>
+        <div class="memory-card">
+          <div class="memory-card-top"><span>Lumora · Story 01</span><span class="memory-status">Trực tiếp</span></div>
+          <div class="memory-visual">
+            <span class="memory-photo one"></span><span class="memory-photo two"></span>
+            <div class="memory-message"><small>Một câu chuyện dành riêng</small><strong>Ký ức không chỉ để xem.</strong></div>
+          </div>
+          <div class="memory-card-bottom"><p>Chạm vào, lắng nghe<br/>và bước vào.</p><span>→</span></div>
+        </div>
+      </div>
     </div>
+    <div class="hero-scroll">Cuộn để khám phá ↓</div>
   </section>
 
   <!-- Demo -->
   <section id="demo">
     <div class="section-inner" style="max-width: 1200px;">
-      <div class="section-tag">Trải nghiệm ngay</div>
-      <h2 class="section-title">Khám phá Lumora</h2>
-      <p class="section-sub">Tương tác với galaxy mẫu bên dưới — click, kéo, zoom để khám phá không gian 3D.</p>
-      <div class="demo-frame-wrap">
-        <iframe id="demoFrame" style="width:100%;height:100%;border:none;" allow="autoplay"></iframe>
-        <div id="demoOverlay" class="demo-overlay">
-          <div class="demo-overlay-emoji">🌌</div>
-          <div class="demo-overlay-title">Click để khám phá demo</div>
-          <div class="demo-overlay-note">Cần có ít nhất 1 galaxy công khai để hiển thị demo</div>
+      <div class="section-heading">
+        <div><div class="section-tag">Trải nghiệm ngay</div><h2 class="section-title">Khám phá Lumora</h2></div>
+        <p class="section-sub">Tương tác với galaxy mẫu bên dưới — click, kéo, zoom để khám phá không gian 3D.</p>
+      </div>
+      <div class="demo-shell">
+        <div class="demo-toolbar" aria-hidden="true">
+          <span class="window-dots"><i></i><i></i><i></i></span><span class="demo-toolbar-label">Lumora experience</span><span class="demo-live">Trực tiếp</span>
+        </div>
+        <div class="demo-frame-wrap">
+          <iframe id="demoFrame" title="Lumora interactive demo" style="width:100%;height:100%;border:none;" allow="autoplay"></iframe>
+          <button id="demoOverlay" type="button" class="demo-overlay" data-track-action="Landing Demo Open" data-track-id="demo_open">
+            <span class="demo-overlay-emoji" aria-hidden="true">✦</span>
+            <span class="demo-overlay-title">Chạm để khám phá demo</span>
+            <span class="demo-overlay-note">Mở trải nghiệm tương tác toàn màn hình</span>
+          </button>
         </div>
       </div>
     </div>
@@ -426,37 +720,37 @@
   <!-- Features -->
   <section id="features">
     <div class="section-inner">
-      <div class="section-tag">Tính năng</div>
-      <h2 class="section-title">Mọi chi tiết<br/>đều có lý do</h2>
-      <div class="divider"></div>
-      <p class="section-sub">Từ câu chuyện đến âm nhạc — tất cả được tạo ra để họ cảm nhận điều bạn muốn nói.</p>
+      <div class="section-heading">
+        <div><div class="section-tag">Tính năng</div><h2 class="section-title">Mọi chi tiết<br/>đều có lý do</h2></div>
+        <p class="section-sub">Từ câu chuyện đến âm nhạc — tất cả được tạo ra để họ cảm nhận điều bạn muốn nói.</p>
+      </div>
       <div class="features-grid">
-        <div class="feature-card">
+        <div class="feature-card" data-index="01">
           <div class="feature-icon">🌌</div>
           <h3>Galaxy cá nhân</h3>
           <p>Không gian của riêng hai người, nơi mỗi khoảnh khắc trở thành một ngôi sao.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-index="02">
           <div class="feature-icon">🎭</div>
           <h3>Story Experience</h3>
           <p>Lời nhắn của bạn trở thành một cuộc trò chuyện — họ đọc, cảm nhận, rồi bước vào.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-index="03">
           <div class="feature-icon">🎨</div>
           <h3>Themes màu sắc</h3>
           <p>Giao diện phù hợp với câu chuyện và cảm xúc của bạn.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-index="04">
           <div class="feature-icon">🎵</div>
           <h3>Nhạc nền</h3>
           <p>Âm nhạc dâng lên đúng lúc người nhận bước vào thiên hà.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-index="05">
           <div class="feature-icon">✍️</div>
           <h3>Caption & lời nhắn</h3>
           <p>Những dòng chữ trôi nổi trong vũ trụ — lời yêu thương, kỷ niệm, hay tên của nhau.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card" data-index="06">
           <div class="feature-icon">🔗</div>
           <div class="feature-text">
             <h3>Chia sẻ dễ dàng</h3>
@@ -470,9 +764,10 @@
   <!-- How it works -->
   <section id="how">
     <div class="section-inner">
-      <div class="section-tag">Cách hoạt động</div>
-      <h2 class="section-title">3 bước đơn giản</h2>
-      <div class="divider"></div>
+      <div class="section-heading">
+        <div><div class="section-tag">Cách hoạt động</div><h2 class="section-title">3 bước đơn giản</h2></div>
+        <p class="section-sub how-sub">Từ những điều bạn muốn nói đến khoảnh khắc họ thật sự bước vào câu chuyện.</p>
+      </div>
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
@@ -496,10 +791,13 @@
   <!-- Pricing -->
   <section id="pricing">
     <div class="section-inner">
-      <div class="section-tag">Bảng giá</div>
-      <h2 class="section-title">Đơn giản &amp; minh bạch</h2>
-      <div class="divider"></div>
-      <p class="section-sub">Bắt đầu miễn phí. Nâng cấp khi bạn cần thêm.</p>
+      <div class="section-heading pricing-head">
+        <div><div class="section-tag">Bảng giá</div><h2 class="section-title">Đơn giản &amp; minh bạch</h2><p class="section-sub">Bắt đầu miễn phí. Nâng cấp khi bạn cần thêm.</p></div>
+        <div class="billing-toggle" role="group" aria-label="Chu kỳ thanh toán">
+          <button type="button" class="active" data-period="monthly" aria-pressed="true">Theo tháng</button>
+          <button type="button" data-period="yearly" aria-pressed="false">Theo năm</button>
+        </div>
+      </div>
       <div class="pricing-grid"><div class="pricing-loading">Đang tải bảng giá…</div></div>
     </div>
   </section>
@@ -510,25 +808,26 @@
       <div class="cta-banner">
         <h2>Ai đó đang chờ<br/>nghe từ bạn.</h2>
         <p>Bắt đầu miễn phí. Không cần thẻ tín dụng.</p>
-        <a href="/auth/" class="btn-primary">Tạo Lumora của bạn →</a>
+        <a href="/auth/" class="btn-primary" data-track-action="Landing Final CTA Click" data-track-id="final_cta">Tạo Lumora của bạn →</a>
       </div>
     </div>
   </section>
+  </main>
 
   <!-- Footer -->
   <footer class="lumora-legal-footer">
     <div class="logo">✦ Lumora</div>
     <div class="links">
-      <a href="/owner-info/">Chủ quản</a>
-      <a href="/terms/">Điều khoản</a>
-      <a href="/privacy/">Chính sách</a>
-      <a href="/payment-policy/">Thanh toán</a>
-      <a href="/refund-policy/">Hoàn tiền</a>
-      <a href="/support/">Liên hệ</a>
-      <a href="/auth/">Đăng nhập</a>
+      <a href="/owner-info/" data-vi="Chủ quản" data-en="Owner">Chủ quản</a>
+      <a href="/terms/" data-vi="Điều khoản" data-en="Terms">Điều khoản</a>
+      <a href="/privacy/" data-vi="Bảo mật" data-en="Privacy">Bảo mật</a>
+      <a href="/payment-policy/" data-vi="Thanh toán" data-en="Payment">Thanh toán</a>
+      <a href="/refund-policy/" data-vi="Hoàn tiền" data-en="Refunds">Hoàn tiền</a>
+      <a href="/support/" data-vi="Liên hệ" data-en="Contact">Liên hệ</a>
+      <a href="/auth/" data-vi="Đăng nhập" data-en="Login">Đăng nhập</a>
     </div>
     <div class="legal-footer-owner" data-footer-owner hidden></div>
-    <div class="copy">© 2026 Lumora - ánh sáng của ký ức</div>
+    <div class="copy" data-vi="© 2026 Lumora - ánh sáng của ký ức" data-en="© 2026 Lumora">© 2026 Lumora - ánh sáng của ký ức</div>
   </footer>
 
   <script src="/shared/js/activityApi.js"></script>
@@ -547,15 +846,24 @@
     }
 
     // Nav & footer
+    document.documentElement.lang = userLang;
+    document.title = t.landingPageTitle;
+    document.querySelector('meta[name="description"]').content = t.landingHeroDesc;
+    document.querySelector('.skip-link').textContent = t.landingSkip;
+    document.querySelector('.landing-nav').setAttribute('aria-label', t.landingNavAria);
+    document.querySelector('.nav-logo').setAttribute('aria-label', `Lumora — ${t.landingBrandSub}`);
+    document.querySelector('.nav-logo-copy small').textContent = t.landingBrandSub;
     document.querySelector('a[href="#features"]').textContent = t.navFeatures;
     document.querySelector('a[href="#pricing"]').textContent = t.navPricing;
     document.querySelector('.nav-links a[href="/auth/"]:not(.btn-nav)').textContent = t.navLogin;
     document.querySelector('.btn-nav').textContent = t.navStart;
-    document.querySelector('footer .links a[href="/terms/"]').textContent = t.footerTerms;
-    document.querySelector('footer .links a[href="/privacy/"]').textContent = t.footerPrivacy;
-    document.querySelector('footer .links a[href="/auth/"]').textContent = t.footerLogin;
-    document.querySelector('footer .copy').textContent = t.footerCopy;
-
+    const languageSwitch = document.querySelector('.lang-switch');
+    languageSwitch.textContent = userLang === 'vi' ? 'EN' : 'VI';
+    languageSwitch.setAttribute('aria-label', t.landingLanguageLabel);
+    languageSwitch.addEventListener('click', () => {
+      localStorage.setItem('lang', userLang === 'vi' ? 'en' : 'vi');
+      window.location.reload();
+    });
     // Hero
     document.querySelector('.hero-tag').textContent = t.landingHeroTag;
     const heroH1 = document.querySelector('.hero h1');
@@ -564,13 +872,25 @@
     document.querySelector('.hero p').textContent = t.landingHeroDesc;
     document.querySelector('.hero-cta .btn-primary').textContent = t.landingHeroCtaPrimary;
     document.querySelector('.hero-cta .btn-ghost').textContent = t.landingHeroCtaGhost;
+    [t.landingHeroProof1, t.landingHeroProof2, t.landingHeroProof3].forEach((value, index) => {
+      document.querySelectorAll('.hero-proof span')[index].textContent = value;
+    });
+    document.querySelector('.hero-proof').setAttribute('aria-label', t.landingFeaturesTag);
+    document.querySelector('.memory-status').textContent = t.landingHeroMemoryStatus;
+    document.querySelector('.memory-message small').textContent = t.landingHeroMemoryEyebrow;
+    document.querySelector('.memory-message strong').textContent = t.landingHeroMemoryTitle;
+    document.querySelector('.memory-card-bottom p').textContent = t.landingHeroMemoryCopy;
+    document.querySelector('.hero-scroll').textContent = t.landingHeroScroll;
 
     // Demo
     document.querySelector('#demo .section-tag').textContent = t.landingDemoTag;
     document.querySelector('#demo .section-title').textContent = t.landingDemoTitle;
     document.querySelector('#demo .section-sub').textContent = t.landingDemoSub;
-    document.querySelector('#demoOverlay div:nth-child(2)').textContent = t.demoClick;
-    document.querySelector('#demoOverlay div:nth-child(3)').textContent = t.landingDemoNote;
+    document.querySelector('.demo-toolbar-label').textContent = t.landingDemoWindow;
+    document.querySelector('.demo-live').textContent = t.landingDemoLive;
+    document.getElementById('demoFrame').title = t.landingDemoWindow;
+    document.querySelector('#demoOverlay .demo-overlay-title').textContent = t.demoClick;
+    document.querySelector('#demoOverlay .demo-overlay-note').textContent = t.landingDemoNote;
 
     // Features
     document.querySelector('#features .section-tag').textContent = t.landingFeaturesTag;
@@ -593,6 +913,7 @@
     // How it works
     document.querySelector('#how .section-tag').textContent = t.landingHowTag;
     document.querySelector('#how .section-title').textContent = t.landingHowTitle;
+    document.querySelector('#how .how-sub').textContent = t.landingHowSub;
     [
       [t.landingStep1Title, t.landingStep1Desc],
       [t.landingStep2Title, t.landingStep2Desc],
@@ -608,40 +929,112 @@
     document.querySelector('#pricing .section-tag').textContent = t.landingPricingTag;
     document.querySelector('#pricing .section-title').textContent = t.landingPricingTitle;
     document.querySelector('#pricing .section-sub').textContent = t.landingPricingSub;
+    const billingToggle = document.querySelector('.billing-toggle');
+    billingToggle.setAttribute('aria-label', t.landingBillingLabel);
+    billingToggle.querySelector('[data-period="monthly"]').textContent = t.landingMonthly;
+    billingToggle.querySelector('[data-period="yearly"]').textContent = t.landingYearly;
+    document.querySelector('.pricing-loading').textContent = t.landingPricingLoading;
+
     // Single source of truth: all plan prices/limits/features come from config/plans.js.
-    window.LumoraPublicConfig.then(({ plans = {} }) => {
+    let pricingPlans = {};
+    let billingPeriod = 'monthly';
+
+    function createPriceCard({ key, plan, free = false }) {
+      const card = document.createElement('article');
+      card.className = 'price-card visible' + (plan.featured ? ' featured' : '');
+      card.dataset.plan = key;
+
+      const head = document.createElement('div');
+      head.className = 'price-head';
+      const label = document.createElement('div');
+      label.className = 'price-label';
+      label.textContent = plan.featured ? t.landingProLabel : (free ? t.landingFreeLabel : '\u00a0');
+      const name = document.createElement('div');
+      name.className = 'price-name';
+      name.textContent = free ? t.landingFreeLabel : plan.label;
+      head.append(label, name);
+
+      const amountRow = document.createElement('div');
+      amountRow.className = 'price-amount-row';
+      const amount = document.createElement('div');
+      amount.className = 'price-amount';
+      amount.textContent = free ? '0đ' : Number(plan[billingPeriod]).toLocaleString('vi-VN') + 'đ';
+      const period = document.createElement('div');
+      period.className = 'price-period';
+      period.textContent = free ? t.landingFreePeriod : (billingPeriod === 'yearly' ? t.landingYearlyPeriod : t.landingMonthlyPeriod);
+      amountRow.append(amount, period);
+
+      const list = document.createElement('ul');
+      list.className = 'price-features';
+      const featureNames = {
+        themes: t.landingF3Title,
+        music: t.landingF4Title,
+        text: t.landingF5Title,
+        fall_universe: t.landingFallFeature,
+      };
+      const items = free
+        ? [t.landingFreeF1, t.landingFreeF2, t.landingFreeF3]
+        : [t.landingGalaxyCount(plan.maxGalaxies)]
+          .concat((plan.features || []).map(feature => featureNames[feature] || feature))
+          .concat([t.landingFreeF2, t.landingFreeF3]);
+      list.replaceChildren(...items.map(text => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        return item;
+      }));
+
+      const button = document.createElement('a');
+      button.href = '/auth/';
+      button.className = 'btn-plan ' + (plan.featured ? 'btn-plan-primary' : 'btn-plan-ghost');
+      button.textContent = free ? t.landingFreeBtn : t.landingSubscribePlan(plan.label);
+      button.dataset.trackAction = free ? 'Landing Free Plan Click' : 'Landing Paid Plan Click';
+      button.dataset.trackId = 'pricing_' + key + '_' + billingPeriod;
+
+      card.append(head, amountRow);
+      if (!free && billingPeriod === 'yearly' && plan.monthly && plan.yearly) {
+        const saving = Math.max(0, Math.round((1 - plan.yearly / (plan.monthly * 12)) * 100));
+        if (saving) {
+          const savingLabel = document.createElement('div');
+          savingLabel.className = 'price-saving';
+          savingLabel.textContent = t.landingYearlySaving(saving);
+          card.appendChild(savingLabel);
+        }
+      }
+      card.append(list, button);
+      return card;
+    }
+
+    function renderPricing() {
       const grid = document.querySelector('.pricing-grid');
-      const featureNames = userLang === 'en'
-        ? { themes: 'Color themes', music: 'Background music', text: 'Captions & messages', fall_universe: 'Fall Through Memories universe' }
-        : { themes: 'Themes màu sắc', music: 'Nhạc nền', text: 'Caption & lời nhắn', fall_universe: 'Vũ trụ Fall Through Memories' };
+      const plans = pricingPlans;
       const entries = Object.entries(plans).sort(([, left], [, right]) => (left.rank || 0) - (right.rank || 0));
       if (!entries.length) {
-        grid.firstElementChild.textContent = userLang === 'en' ? 'Unable to load pricing.' : 'Không tải được bảng giá.';
+        const error = document.createElement('div');
+        error.className = 'pricing-loading';
+        error.textContent = t.landingPricingError;
+        grid.replaceChildren(error);
         return;
       }
-      const cards = entries.map(([key, plan]) => {
-        const card = document.createElement('div');
-        card.className = 'price-card visible' + (plan.featured ? ' featured' : '');
-        card.dataset.plan = key;
-        const label = document.createElement('div'); label.className = 'price-label';
-        label.textContent = plan.featured ? (userLang === 'en' ? '✦ Most popular' : '✦ Phổ biến nhất') : plan.label;
-        const name = document.createElement('div'); name.className = 'price-name'; name.textContent = plan.label;
-        const amount = document.createElement('div'); amount.className = 'price-amount';
-        amount.textContent = Number(plan.monthly).toLocaleString('vi-VN') + 'đ';
-        const period = document.createElement('div'); period.className = 'price-period';
-        period.textContent = key === 'free' ? t.landingFreePeriod : (userLang === 'en' ? '/ month' : '/ tháng');
-        const list = document.createElement('ul'); list.className = 'price-features';
-        const items = [`${plan.maxGalaxies} ${plan.maxGalaxies === 1 ? 'galaxy' : 'galaxies'}`]
-          .concat((plan.features || []).map(feature => featureNames[feature] || feature))
-          .concat(userLang === 'en' ? ['Unlimited photo uploads', 'Link sharing'] : ['Upload ảnh không giới hạn', 'Chia sẻ link']);
-        list.replaceChildren(...items.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
-        const button = document.createElement('a'); button.href = '/auth/';
-        button.className = 'btn-plan ' + (plan.featured ? 'btn-plan-primary' : 'btn-plan-ghost');
-        button.textContent = key === 'free' ? t.landingFreeBtn : (userLang === 'en' ? 'Subscribe ' : 'Đăng ký ') + plan.label;
-        card.append(label, name, amount, period, list, button);
-        return card;
+      grid.replaceChildren(...entries.map(([key, plan]) => createPriceCard({ key, plan, free: key === 'free' })));
+    }
+
+    billingToggle.querySelectorAll('button').forEach(button => {
+      button.dataset.trackAction = 'Landing Billing Period Select';
+      button.dataset.trackId = 'billing_' + button.dataset.period;
+      button.addEventListener('click', () => {
+        billingPeriod = button.dataset.period;
+        billingToggle.querySelectorAll('button').forEach(item => {
+          const selected = item === button;
+          item.classList.toggle('active', selected);
+          item.setAttribute('aria-pressed', String(selected));
+        });
+        renderPricing();
       });
-      grid.replaceChildren(...cards);
+    });
+
+    window.LumoraPublicConfig.then(({ plans = {} }) => {
+      pricingPlans = plans;
+      renderPricing();
     });
 
     // CTA
@@ -762,6 +1155,11 @@
         camera.position.y += (ty + 1.5 - camera.position.y) * 0.03;
         camera.lookAt(scene.position);
         renderer.render(scene, camera);
+      }
+
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        renderer.render(scene, camera);
+        return;
       }
 
       // Only animate when hero is visible

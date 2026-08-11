@@ -1,5 +1,4 @@
 const { PLANS, PLAN_RANK, FREE_MAX_GALAXIES } = require('./plans');
-const { isDevelopmentBypass } = require('./runtime');
 
 const OWNER_FIELDS = [
   'OWNER_NAME',
@@ -100,7 +99,6 @@ function getComplianceConfig(env = process.env) {
       requested,
       configurationComplete,
     },
-    development: { bypassLocks: isDevelopmentBypass(env) },
     plans: publicPlans(),
   };
 }

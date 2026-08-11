@@ -182,7 +182,7 @@ async function loadPayments() {
     tbody.innerHTML = payments.map(p => `
       <tr>
         <td>${esc(p.buyerEmail)}</td>
-        <td><span class="badge badge-${esc(p.plan)}">${esc(p.plan.toUpperCase())}</span></td>
+        <td><span class="badge badge-${esc(p.plan)}">${esc(p.plan.toUpperCase())}</span>${p.isSimulation ? ' <span class="badge">ADMIN TEST</span>' : ''}</td>
         <td>${p.period === 'monthly' ? 'Tháng' : 'Năm'}</td>
         <td>${fmtVND(p.amount)}</td>
         <td><span class="badge badge-${esc(p.status)}">${esc(p.status)}</span></td>
@@ -268,7 +268,7 @@ async function openDetail(userId, email) {
       : `<div style="color:rgba(255,255,255,0.3);font-size:13px">${window.t.adminNoGalaxy}</div>`;
 
     const paymentRows = payments.length
-      ? payments.map(p => `<div class="detail-row"><span class="key">${fmtDate(p.paidAt || p.createdAt)}</span><span><span class="badge badge-${esc(p.plan)}">${esc(p.plan)}</span> ${fmtVND(p.amount)} <span class="badge badge-${esc(p.status)}">${esc(p.status)}</span></span></div>`).join('')
+      ? payments.map(p => `<div class="detail-row"><span class="key">${fmtDate(p.paidAt || p.createdAt)}</span><span><span class="badge badge-${esc(p.plan)}">${esc(p.plan)}</span>${p.isSimulation ? ' <span class="badge">ADMIN TEST</span>' : ''} ${fmtVND(p.amount)} <span class="badge badge-${esc(p.status)}">${esc(p.status)}</span></span></div>`).join('')
       : '<div style="color:rgba(255,255,255,0.3);font-size:13px">Chưa có payment</div>';
 
     document.getElementById('detail-content').innerHTML = `
@@ -571,7 +571,7 @@ async function loadAnalytics() {
       const bg = p.status === 'paid' ? 'badge-paid' : p.status === 'cancelled' ? 'badge-cancelled' : 'badge-pending';
       return `<tr>
         <td>${esc(p.buyerEmail)}</td>
-        <td><span class="badge badge-${esc(p.plan)}">${esc(p.plan.toUpperCase())}</span></td>
+        <td><span class="badge badge-${esc(p.plan)}">${esc(p.plan.toUpperCase())}</span>${p.isSimulation ? ' <span class="badge">ADMIN TEST</span>' : ''}</td>
         <td>${fmtVND(p.amount)}</td>
         <td><span class="badge ${bg}">${esc(p.status)}</span></td>
         <td>${fmtDateTime(p.paidAt || p.createdAt)}</td>

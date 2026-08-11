@@ -48,6 +48,11 @@ const paymentSchema = new Schema({
     type: Number,
     required: true,
   },
+  isSimulation: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
   status: {
     type: String,
     enum: ['pending', 'processing', 'paid', 'cancelled', 'failed'],

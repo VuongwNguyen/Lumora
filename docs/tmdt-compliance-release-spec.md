@@ -203,6 +203,8 @@ Thêm feature flag, ví dụ `PAYMENTS_ENABLED`:
 
 Backend phải từ chối `/payment/create` khi flag tắt, không chỉ khóa ở frontend.
 
+Ngoại lệ kiểm thử đã được xác nhận: admin đã xác thực có thể gọi `/payment/create` khi flag public đang tắt để kiểm tra PayOS end-to-end, với điều kiện server đã có đủ PayOS credentials. Ngoại lệ này không áp dụng cho user/partner, không bỏ bước rà soát đơn, idempotency, giá từ server hay xác minh webhook. Admin cũng có thể chọn `/payment/admin-simulate`; giao dịch mô phỏng không gọi PayOS, không thu tiền và không được tính vào số liệu kinh doanh thật.
+
 ## 4. Yêu cầu phi chức năng
 
 - Responsive trên mobile và desktop.

@@ -2,6 +2,28 @@ const params   = new URLSearchParams(location.search);
 const galaxyId = params.get('galaxyId');
 const token    = localStorage.getItem('token');
 const activity = window.LumoraActivity;
+const isVietnamese = document.documentElement.lang === 'vi';
+
+function tr(key, ...args) {
+  const value = window.t?.[key];
+  return typeof value === 'function' ? value(...args) : (value || key);
+}
+
+function typeLabel(id, config) {
+  return isVietnamese ? (config.labelVi || config.label || id) : (config.label || id);
+}
+
+function occasionLabel(id, config) {
+  return tr('storySetupOccasionLabel', id, config?.label || id);
+}
+
+function chapterLabel(chapter) {
+  return tr('storySetupChapterLabel', chapter.id, chapter.label || chapter.id);
+}
+
+function chapterPrompt(chapter) {
+  return tr('storySetupChapterPrompt', chapter.id, chapterLabel(chapter), chapter.hooks?.[0] || chapter.label);
+}
 
 function storyResult(action, ok, metadata, error) {
   activity?.logResult(action, ok, metadata || {}, error, { galaxyId });
@@ -11,16 +33,6 @@ if (!token) window.location.href = '/auth/';
 if (!galaxyId) window.location.href = '/portal/';
 
 const chat = document.getElementById('chat');
-
-const OPTIONAL_QUESTIONS = {
-  highlight: {
-    anniversary: 'Có khoảnh khắc đặc biệt nào bạn muốn lưu lại không?',
-    confession:  'Có khoảnh khắc nào bạn nhận ra mình thích họ không?',
-    missing:     'Có kỷ niệm nào bạn nhớ nhất không?',
-    proposal:    'Có lý do nào bạn muốn chia sẻ thêm không?',
-    birthday:    'Có điều gì bạn thích nhất ở họ muốn kể không?',
-  },
-};
 
 let STORY_CONFIG = null;
 let selectedStoryType = null;
@@ -35,7 +47,8 @@ function askChips(options) {
     const wrap = document.createElement('div');
     wrap.className = 'chips-wrap';
     options.forEach(opt => {
-      const chip = document.createElement('span');
+      const chip = document.createElement('button');
+      chip.type = 'button';
       chip.className = 'chip';
       chip.textContent = opt.label;
       chip.dataset.trackAction = opt.id === '__cancel__' ? 'Story Action Cancel' : 'Story Wizard Choice Select';
@@ -158,7 +171,7 @@ async function saveChapter(chapterId) {
   activity?.log({ action: 'Story Chapter Photo Upload Submit', feature: 'story', galaxyId, description: { chapterId, count: files.length } });
 
   const oversized = files.find(f => f.size > MAX_UPLOAD_SIZE);
-  if (oversized) throw new Error(`Ảnh "${oversized.name}" quá lớn. Tối đa 20MB mỗi ảnh.`);
+  if (oversized) throw new Error(tr('storySetupPhotoTooLarge', oversized.name));
 
   // Delete old photos for this chapter before uploading new ones (replace semantics)
   const oldIds = window._galleryIdsByChapter?.[chapterId] || [];
@@ -181,7 +194,7 @@ async function saveChapter(chapterId) {
     body: form,
   });
   if (!res.ok) {
-    let msg = `Upload thất bại (${res.status})`;
+    let msg = tr('storySetupUploadFail', res.status);
     try {
       const body = await res.json();
       if (body.message) msg = body.message;
@@ -268,7 +281,7 @@ function setupNameEditor(initialName) {
     const nextName = input.value.trim();
     if (!nextName) {
       activity?.logBlocked('Story Rename Blocked', 'missing_input', {}, { galaxyId });
-      status.textContent = 'Tên không được để trống.';
+      status.textContent = tr('storySetupNameEmpty');
       status.classList.add('error');
       input.focus();
       return;
@@ -282,7 +295,7 @@ function setupNameEditor(initialName) {
     saving = true;
     activity?.log({ action: 'Story Rename Submit', feature: 'story', galaxyId });
     input.disabled = true;
-    status.textContent = 'Đang lưu…';
+    status.textContent = tr('setupSaving');
     status.classList.remove('error');
     try {
       const res = await fetch(`/galaxies/${galaxyId}`, {
@@ -302,7 +315,7 @@ function setupNameEditor(initialName) {
     } catch (err) {
       storyResult('Story Rename Result', false, { errorType: 'galaxy_update_fail' }, err);
       input.value = savedName;
-      status.textContent = 'Không thể lưu tên. Vui lòng thử lại.';
+      status.textContent = tr('storySetupNameSaveFail');
       status.classList.add('error');
       input.hidden = true;
       button.hidden = false;
@@ -345,14 +358,13 @@ function showChapterPreview(chapter, chapterIdx, totalChapters) {
   const occasionCfg = STORY_CONFIG?.[selectedStoryType]?.occasions?.[selectedOccasion];
   const hookText = chapterHooks[chapter.id]
     || window._dbChapterHooks?.[chapter.id]
-    || chapter.hooks?.[0]
-    || chapter.label;
+    || chapterPrompt(chapter);
   const labelEl = document.getElementById('se-bottom-label');
   const hookEl  = document.getElementById('se-bottom-hook');
   if (labelEl) {
     const num = String(chapterIdx + 1).padStart(2, '0');
     const tot = String(totalChapters).padStart(2, '0');
-    labelEl.textContent = [(occasionCfg?.label || selectedOccasion || '').toUpperCase(), `${num} / ${tot}`].filter(Boolean).join(' · ');
+    labelEl.textContent = [occasionLabel(selectedOccasion, occasionCfg).toUpperCase(), `${num} / ${tot}`].filter(Boolean).join(' · ');
   }
   if (hookEl) hookEl.textContent = hookText || '';
 }
@@ -367,16 +379,26 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
 
   const head = document.createElement('div');
   head.className = 'ch-head';
+  head.dataset.trackAction = 'Story Chapter Preview Open';
+  head.dataset.trackId = 'chapter_preview_' + chapter.id;
   const num = document.createElement('div');
   num.className = 'ch-num';
-  num.textContent = `Chương ${chapterIdx + 1} / ${totalChapters}`;
+  num.textContent = tr('storySetupChapterNumber', chapterIdx + 1, totalChapters);
   const title = document.createElement('div');
   title.className = 'ch-title';
-  title.textContent = chapter.label;
+  title.textContent = chapterLabel(chapter);
   head.appendChild(num);
   head.appendChild(title);
   head.style.cursor = 'pointer';
+  head.tabIndex = 0;
+  head.setAttribute('role', 'button');
   head.addEventListener('click', () => showChapterPreview(chapter, chapterIdx, totalChapters));
+  head.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      showChapterPreview(chapter, chapterIdx, totalChapters);
+    }
+  });
   card.appendChild(head);
 
   const photosEl = document.createElement('div');
@@ -413,9 +435,13 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
       photosEl.appendChild(ph);
     }
     if (files.length < chapter.photoCount.max) {
-      const addPh = document.createElement('div');
+      const addPh = document.createElement('button');
+      addPh.type = 'button';
       addPh.className = 'ch-ph';
       addPh.textContent = '+';
+      addPh.setAttribute('aria-label', tr('setupUploadLabel'));
+      addPh.dataset.trackAction = 'Story Chapter Photo Picker Open';
+      addPh.dataset.trackId = 'chapter_photo_' + chapter.id;
       addPh.addEventListener('click', () => fileInput.click());
       photosEl.appendChild(addPh);
     }
@@ -437,7 +463,7 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
   const hookInput = document.createElement('textarea');
   hookInput.className = 'ch-hook-input';
   hookInput.rows = 2;
-  hookInput.placeholder = chapter.hooks?.[0] || 'Câu hook cho chương này...';
+  hookInput.placeholder = chapterPrompt(chapter) || tr('storySetupHookPlaceholder');
   hookInput.value = chapterHooks[chapter.id] || window._dbChapterHooks?.[chapter.id] || '';
   hookInput.addEventListener('input', () => {
     chapterHooks[chapter.id] = hookInput.value;
@@ -453,30 +479,31 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
   const actionRow = document.createElement('div');
   actionRow.className = 'action-row';
   const nextBtn = document.createElement('button');
+  nextBtn.type = 'button';
   nextBtn.dataset.trackAction = editMode ? 'Story Save Submit' : 'Story Wizard Next Click';
   nextBtn.dataset.trackId = 'chapter_next_' + chapter.id;
 
   if (editMode) {
     nextBtn.className = 'btn-next';
     nextBtn.disabled = true;
-    nextBtn.textContent = '↑ Lưu ảnh';
+    nextBtn.textContent = tr('storySetupSavePhotos');
     nextBtn.addEventListener('click', async () => {
       nextBtn.disabled = true;
-      nextBtn.textContent = 'Đang lưu…';
+      nextBtn.textContent = tr('setupSaving');
       try {
         await saveChapter(chapter.id);
-        nextBtn.textContent = '✓ Đã lưu';
+        nextBtn.textContent = tr('storySetupSaved');
         chapterFiles[chapter.id] = [];
-        setTimeout(() => { nextBtn.textContent = '↑ Lưu ảnh'; nextBtn.disabled = true; }, 2000);
+        setTimeout(() => { nextBtn.textContent = tr('storySetupSavePhotos'); nextBtn.disabled = true; }, 2000);
       } catch {
         nextBtn.disabled = false;
-        nextBtn.textContent = '↑ Lưu ảnh';
+        nextBtn.textContent = tr('storySetupSavePhotos');
       }
     });
   } else {
     nextBtn.className = 'btn-next';
     nextBtn.disabled = chapter.required;
-    nextBtn.textContent = 'Tiếp →';
+    nextBtn.textContent = tr('storySetupNext');
   }
 
   actionRow.appendChild(nextBtn);
@@ -489,20 +516,20 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
 
 async function runChapter(chapter, chapterIdx, totalChapters) {
   showChapterPreview(chapter, chapterIdx, totalChapters);
-  await typingThen(null, window._dbChapterHooks?.[chapter.id] || chapter.hooks?.[0] || chapter.label);
+  await typingThen(null, window._dbChapterHooks?.[chapter.id] || chapterPrompt(chapter));
   const { wrap, nextBtn } = buildChapterCard(chapter, chapterIdx, totalChapters);
   appendEl(wrap);
   await new Promise(resolve => {
     async function attempt() {
       nextBtn.disabled = true;
-      nextBtn.textContent = 'Đang lưu…';
+      nextBtn.textContent = tr('setupSaving');
       try {
         await saveChapter(chapter.id);
         resolve();
       } catch (err) {
         appendErrMsg(err.message);
         nextBtn.disabled = false;
-        nextBtn.textContent = 'Tiếp →';
+        nextBtn.textContent = tr('storySetupNext');
         nextBtn.addEventListener('click', attempt, { once: true });
       }
     }
@@ -512,25 +539,30 @@ async function runChapter(chapter, chapterIdx, totalChapters) {
 
 async function runOptionalChapter(chapter, chapterIdx, totalChapters, occasion) {
   showChapterPreview(chapter, chapterIdx, totalChapters);
-  const question = OPTIONAL_QUESTIONS[chapter.id]?.[occasion]
-    || `Có ${chapter.label.toLowerCase()} nào bạn muốn thêm không?`;
+  const question = tr('storySetupOptionalQuestion', occasion, chapterLabel(chapter));
   await typingThen(question);
 
   const yesno = document.createElement('div');
   yesno.className = 'btn-yesno';
   const btnYes = document.createElement('button');
+  btnYes.type = 'button';
   btnYes.className = 'btn-yes';
-  btnYes.textContent = 'Có 🫧';
+  btnYes.textContent = tr('storySetupYes');
+  btnYes.dataset.trackAction = 'Story Optional Chapter Include';
+  btnYes.dataset.trackId = 'optional_' + chapter.id + '_yes';
   const btnNo = document.createElement('button');
+  btnNo.type = 'button';
   btnNo.className = 'btn-no';
-  btnNo.textContent = 'Không có';
+  btnNo.textContent = tr('storySetupNo');
+  btnNo.dataset.trackAction = 'Story Optional Chapter Skip';
+  btnNo.dataset.trackId = 'optional_' + chapter.id + '_no';
   yesno.appendChild(btnYes);
   yesno.appendChild(btnNo);
   appendEl(yesno);
 
   const userSaidYes = await new Promise(resolve => {
-    btnYes.addEventListener('click', () => { yesno.replaceChildren(); appendUMsg('Có 🫧'); resolve(true); }, { once: true });
-    btnNo.addEventListener('click',  () => { yesno.replaceChildren(); appendUMsg('Không có'); resolve(false); }, { once: true });
+    btnYes.addEventListener('click', () => { yesno.replaceChildren(); appendUMsg(tr('storySetupYes')); resolve(true); }, { once: true });
+    btnNo.addEventListener('click',  () => { yesno.replaceChildren(); appendUMsg(tr('storySetupNo')); resolve(false); }, { once: true });
   });
 
   if (userSaidYes) {
@@ -540,14 +572,14 @@ async function runOptionalChapter(chapter, chapterIdx, totalChapters, occasion) 
     await new Promise(resolve => {
       async function attempt() {
         nextBtn.disabled = true;
-        nextBtn.textContent = 'Đang lưu…';
+        nextBtn.textContent = tr('setupSaving');
         try {
           await saveChapter(chapter.id);
           resolve();
         } catch (err) {
           appendErrMsg(err.message);
           nextBtn.disabled = false;
-          nextBtn.textContent = 'Tiếp →';
+          nextBtn.textContent = tr('storySetupNext');
           nextBtn.addEventListener('click', attempt, { once: true });
         }
       }
@@ -558,27 +590,27 @@ async function runOptionalChapter(chapter, chapterIdx, totalChapters, occasion) 
 
 async function runLastChapter(chapter, chapterIdx, totalChapters) {
   showChapterPreview(chapter, chapterIdx, totalChapters);
-  await typingThen(null, window._dbChapterHooks?.[chapter.id] || chapter.hooks?.[0] || chapter.label);
+  await typingThen(null, window._dbChapterHooks?.[chapter.id] || chapterPrompt(chapter));
   const { wrap, nextBtn } = buildChapterCard(chapter, chapterIdx, totalChapters);
-  nextBtn.textContent = 'Hoàn thành ✓';
+  nextBtn.textContent = tr('storySetupFinish');
   nextBtn.classList.add('done');
   appendEl(wrap);
   await new Promise(resolve => {
     async function attempt() {
       nextBtn.disabled = true;
-      nextBtn.textContent = 'Đang lưu…';
+      nextBtn.textContent = tr('setupSaving');
       try {
         await saveChapter(chapter.id);
         await saveStoryMeta(selectedOccasion);
         activity?.log({ action: 'Story Wizard Complete', feature: 'story', status: 1, galaxyId, description: { storyType: selectedStoryType, occasion: selectedOccasion } });
-        appendLMsgWithNote('Câu chuyện của bạn đã sẵn sàng ✨', 'Đang chuyển về trang quản lý…');
+        appendLMsgWithNote(tr('storySetupReady'), tr('storySetupRedirecting'));
         await wait(1800);
         window.location.href = `/portal/galaxy.html?galaxyId=${galaxyId}`;
         resolve();
       } catch (err) {
         appendErrMsg(err.message);
         nextBtn.disabled = false;
-        nextBtn.textContent = 'Hoàn thành ✓';
+        nextBtn.textContent = tr('storySetupFinish');
         nextBtn.addEventListener('click', attempt, { once: true });
       }
     }
@@ -636,28 +668,29 @@ async function init() {
     selectedStoryType = galaxy.storyType;
     selectedOccasion  = galaxy.occasion;
 
-    const typeLabel = STORY_CONFIG[galaxy.storyType]?.labelVi || galaxy.storyType;
-    const occLabel  = STORY_CONFIG[galaxy.storyType]?.occasions?.[galaxy.occasion]?.label || galaxy.occasion;
+    const typeCfg = STORY_CONFIG[galaxy.storyType];
+    const occasionCfg = typeCfg?.occasions?.[galaxy.occasion];
+    const occLabel = occasionLabel(galaxy.occasion, occasionCfg);
     window.updateSEPreview?.(galaxy.storyType, occLabel, gName);
 
-    await typingThen(`Câu chuyện "${occLabel}" đã được tạo ✓`, null, 400);
+    await typingThen(tr('storySetupExisting', occLabel), null, 400);
 
     let chapters = STORY_CONFIG[galaxy.storyType].occasions[galaxy.occasion].chapters;
     showChapterPreview(chapters[0], 0, chapters.length);
 
     // ── Conversational edit loop ──
     while (true) {
-      await typingThen('Bạn muốn chỉnh sửa gì?');
+      await typingThen(tr('storySetupEditQuestion'));
 
       const action = await askChips([
-        { id: 'photos', label: '📸 Sửa ảnh' },
-        { id: 'hook',   label: '✍️ Sửa hook text' },
-        { id: 'story',  label: '📖 Sửa câu chuyện' },
-        { id: 'done',   label: 'Xong rồi ✓' },
+        { id: 'photos', label: tr('storySetupEditPhotos') },
+        { id: 'hook',   label: tr('storySetupEditHook') },
+        { id: 'story',  label: tr('storySetupEditStory') },
+        { id: 'done',   label: tr('storySetupDone') },
       ]);
 
       if (action === 'done') {
-        await typingThen('Tuyệt! Galaxy đã sẵn sàng 🌙');
+        await typingThen(tr('storySetupGalaxyReady'));
         await wait(1200);
         window.location.href = `/portal/galaxy-setup.html?galaxyId=${galaxyId}`;
         return;
@@ -665,19 +698,19 @@ async function init() {
 
       // ── Story type / occasion change ──
       if (action === 'story') {
-        await typingThen('Chọn loại câu chuyện:');
-        const typeOpts = Object.entries(STORY_CONFIG).map(([id, cfg]) => ({ id, label: cfg.labelVi || cfg.label }));
-        typeOpts.push({ id: '__cancel__', label: '← Hủy' });
+        await typingThen(tr('storySetupChooseType'));
+        const typeOpts = Object.entries(STORY_CONFIG).map(([id, cfg]) => ({ id, label: typeLabel(id, cfg) }));
+        typeOpts.push({ id: '__cancel__', label: tr('storySetupCancel') });
         const newType = await askChips(typeOpts);
         if (newType === '__cancel__') continue;
 
-        await typingThen('Chọn dịp:');
-        const occOpts = Object.entries(STORY_CONFIG[newType].occasions).map(([id, cfg]) => ({ id, label: cfg.label }));
-        occOpts.push({ id: '__cancel__', label: '← Hủy' });
+        await typingThen(tr('storySetupChooseOccasion'));
+        const occOpts = Object.entries(STORY_CONFIG[newType].occasions).map(([id, cfg]) => ({ id, label: occasionLabel(id, cfg) }));
+        occOpts.push({ id: '__cancel__', label: tr('storySetupCancel') });
         const newOcc = await askChips(occOpts);
         if (newOcc === '__cancel__') continue;
 
-        const newOccLabel = STORY_CONFIG[newType].occasions[newOcc].label;
+        const newOccLabel = occasionLabel(newOcc, STORY_CONFIG[newType].occasions[newOcc]);
         await fetch(`/galaxies/${galaxyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -688,15 +721,15 @@ async function init() {
         chapters = STORY_CONFIG[newType].occasions[newOcc].chapters;
         window.updateSEPreview?.(newType, newOccLabel, null);
         showChapterPreview(chapters[0], 0, chapters.length);
-        await typingThen(`✓ Đã đổi sang "${newOccLabel}"`);
+        await typingThen(tr('storySetupChangedTo', newOccLabel));
         continue;
       }
 
       // Pick chapter
-      await typingThen(action === 'photos' ? 'Chương nào bạn muốn sửa ảnh?' : 'Chương nào bạn muốn sửa hook?');
+      await typingThen(action === 'photos' ? tr('storySetupWhichPhotos') : tr('storySetupWhichHook'));
 
-      const chOpts = chapters.map((ch, i) => ({ id: String(i), label: ch.label }));
-      chOpts.push({ id: '__cancel__', label: '← Hủy' });
+      const chOpts = chapters.map((ch, i) => ({ id: String(i), label: chapterLabel(ch) }));
+      chOpts.push({ id: '__cancel__', label: tr('storySetupCancel') });
 
       const chChoice = await askChips(chOpts);
       if (chChoice === '__cancel__') continue;
@@ -715,14 +748,14 @@ async function init() {
       }
 
       // Ask what next
-      await typingThen('Đã chỉnh xong chưa?');
+      await typingThen(tr('storySetupEditFinished'));
       const next = await askChips([
-        { id: 'more', label: 'Sửa thêm' },
-        { id: 'done', label: 'Xong rồi ✓' },
+        { id: 'more', label: tr('storySetupEditMore') },
+        { id: 'done', label: tr('storySetupDone') },
       ]);
 
       if (next === 'done') {
-        await typingThen('Tuyệt! Galaxy đã sẵn sàng 🌙');
+        await typingThen(tr('storySetupGalaxyReady'));
         await wait(1200);
         window.location.href = `/portal/galaxy-setup.html?galaxyId=${galaxyId}`;
         return;
@@ -732,14 +765,15 @@ async function init() {
   }
 
   // Step 1 — Story type (new setup)
-  await typingThen('Câu chuyện này thuộc loại nào?', null, 500);
+  await typingThen(tr('storySetupTypeQuestion'), null, 500);
 
   const typeWrap = document.createElement('div');
   typeWrap.className = 'chips-wrap';
   Object.entries(STORY_CONFIG).forEach(([id, type]) => {
-    const chip = document.createElement('span');
+    const chip = document.createElement('button');
+    chip.type = 'button';
     chip.className = 'chip';
-    chip.textContent = type.labelVi || type.label;
+    chip.textContent = typeLabel(id, type);
     chip.dataset.id = id;
     chip.dataset.trackAction = 'Story Type Select';
     chip.dataset.trackId = 'story_type_' + id;
@@ -763,15 +797,16 @@ async function init() {
   });
 
   // Step 2 — Occasion
-  await typingThen('Dịp này là...?');
+  await typingThen(tr('storySetupOccasionQuestion'));
 
   const occasions = STORY_CONFIG[selectedStoryType].occasions;
   const chipsWrap = document.createElement('div');
   chipsWrap.className = 'chips-wrap';
   Object.entries(occasions).forEach(([id, occ]) => {
-    const chip = document.createElement('span');
+    const chip = document.createElement('button');
+    chip.type = 'button';
     chip.className = 'chip';
-    chip.textContent = occ.label;
+    chip.textContent = occasionLabel(id, occ);
     chip.dataset.id = id;
     chip.dataset.trackAction = 'Story Occasion Select';
     chip.dataset.trackId = 'story_occasion_' + id;

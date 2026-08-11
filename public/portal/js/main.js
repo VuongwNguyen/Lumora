@@ -20,17 +20,19 @@ const settingsBtn = document.getElementById('btn-settings');
 const settingsMenu = document.getElementById('settings-menu');
 settingsBtn.addEventListener('click', function(e) {
   e.stopPropagation();
-  settingsMenu.classList.toggle('open');
+  const isOpen = settingsMenu.classList.toggle('open');
+  settingsBtn.setAttribute('aria-expanded', String(isOpen));
 });
-document.addEventListener('click', function() { settingsMenu.classList.remove('open'); });
+document.addEventListener('click', function() {
+  settingsMenu.classList.remove('open');
+  settingsBtn.setAttribute('aria-expanded', 'false');
+});
 
 // Goto account tab from dropdown
 document.getElementById('btn-goto-account').addEventListener('click', function() {
   settingsMenu.classList.remove('open');
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-account').classList.add('active');
-  loadSessions();
+  settingsBtn.setAttribute('aria-expanded', 'false');
+  activateTab('account');
 });
 
 // Tab switching
@@ -40,9 +42,13 @@ function activateTab(tab) {
   const panel = document.getElementById('panel-' + tab);
   if (!btn || !panel) return false;
 
-  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.remove('active');
+    b.setAttribute('aria-selected', 'false');
+  });
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   btn.classList.add('active');
+  btn.setAttribute('aria-selected', 'true');
   panel.classList.add('active');
   if (tab === 'subscription' && window._loadSubscription) window._loadSubscription();
   if (tab === 'account') loadSessions();
@@ -76,14 +82,19 @@ async function logout() {
 
 function openModal() {
   document.getElementById('modal').classList.add('open');
-  document.getElementById('galaxy-name').value = '';
+  const nameInput = document.getElementById('galaxy-name');
+  nameInput.value = '';
   document.getElementById('modal-msg').textContent = '';
   document.getElementById('btn-create').disabled = false;
   document.getElementById('btn-create').textContent = window.t.btnCreate;
+  window.setTimeout(function() { nameInput.focus(); }, 50);
 }
 
 function closeModal() {
-  document.getElementById('modal').classList.remove('open');
+  const modal = document.getElementById('modal');
+  const wasOpen = modal.classList.contains('open');
+  modal.classList.remove('open');
+  if (wasOpen) document.getElementById('btn-open-modal').focus();
 }
 
 async function loadGalaxies() {
@@ -97,26 +108,63 @@ async function loadGalaxies() {
     const data = await res.json();
     renderGalaxies(grid, data.meta || []);
   } catch {
-    const p = document.createElement('p');
-    p.className = 'empty';
-    p.textContent = window.t.errLoadData;
-    grid.appendChild(p);
+    const count = document.getElementById('galaxy-count');
+    if (count) count.textContent = window.t.portalGalaxyCount ? window.t.portalGalaxyCount(0) : '0';
+    const error = document.createElement('div');
+    error.className = 'empty-state';
+    const title = document.createElement('strong');
+    title.textContent = window.t.errLoadData;
+    const description = document.createElement('p');
+    description.textContent = window.t.errConnect;
+    error.appendChild(title);
+    error.appendChild(description);
+    grid.appendChild(error);
   }
 }
 
 function renderGalaxies(grid, galaxies) {
   grid.textContent = '';
+  const count = document.getElementById('galaxy-count');
+  if (count) {
+    count.textContent = window.t.portalGalaxyCount
+      ? window.t.portalGalaxyCount(galaxies.length)
+      : `${galaxies.length} galaxy`;
+  }
   if (!galaxies.length) {
-    const p = document.createElement('p');
-    p.className = 'empty';
-    p.textContent = window.t.emptyGalaxies;
-    grid.appendChild(p);
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+
+    const icon = document.createElement('span');
+    icon.className = 'empty-state-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '✦';
+
+    const title = document.createElement('strong');
+    title.textContent = window.t.portalEmptyTitle || window.t.emptyGalaxies;
+
+    const description = document.createElement('p');
+    description.textContent = window.t.portalEmptyDescription || window.t.emptyGalaxies;
+
+    empty.appendChild(icon);
+    empty.appendChild(title);
+    empty.appendChild(description);
+    grid.appendChild(empty);
     return;
   }
   galaxies.forEach(function(g) {
     const card = document.createElement('div');
     card.className = 'galaxy-card';
     card.dataset.galaxyId = g._id;
+    card.dataset.template = g.template || 'galaxy';
+
+    const visual = document.createElement('div');
+    visual.className = 'galaxy-card-visual';
+
+    const visualMark = document.createElement('span');
+    visualMark.className = 'galaxy-visual-mark';
+    visualMark.setAttribute('aria-hidden', 'true');
+    visualMark.textContent = '✦';
+    visual.appendChild(visualMark);
 
     // ── Header: name + view shortcut ──────────────────
     const header = document.createElement('div');
@@ -127,7 +175,9 @@ function renderGalaxies(grid, galaxies) {
     name.textContent = g.name;
 
     const viewQuick = document.createElement('button');
+    viewQuick.type = 'button';
     viewQuick.className = 'btn-view-quick';
+    viewQuick.dataset.action = 'view';
     viewQuick.title = window.t.btnView || 'Xem';
     viewQuick.textContent = '↗';
     viewQuick.addEventListener('click', (e) => {
@@ -148,7 +198,9 @@ function renderGalaxies(grid, galaxies) {
 
     const status = document.createElement('div');
     status.className = `galaxy-status${g.status !== 'active' ? ' inactive' : ''}`;
-    status.textContent = g.status;
+    status.textContent = g.status === 'active'
+      ? (window.t.galaxyStatusActive || 'Active')
+      : (window.t.galaxyStatusInactive || 'Inactive');
 
     meta.appendChild(tmpl);
     meta.appendChild(status);
@@ -158,7 +210,9 @@ function renderGalaxies(grid, galaxies) {
     actions.className = 'galaxy-actions';
 
     const manageBtn = document.createElement('button');
+    manageBtn.type = 'button';
     manageBtn.className = 'btn-manage';
+    manageBtn.dataset.action = 'manage';
     manageBtn.textContent = window.t.btnManage || 'Quản lý';
     manageBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -166,8 +220,11 @@ function renderGalaxies(grid, galaxies) {
     });
 
     const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
     copyBtn.className = 'btn-copy-link';
-    copyBtn.title = 'Copy link chia sẻ';
+    copyBtn.dataset.action = 'copy';
+    copyBtn.title = window.t.portalCopyLink || 'Copy share link';
+    copyBtn.setAttribute('aria-label', copyBtn.title);
     copyBtn.textContent = '🔗';
     copyBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -196,6 +253,7 @@ function renderGalaxies(grid, galaxies) {
     actions.appendChild(manageBtn);
     actions.appendChild(copyBtn);
 
+    card.appendChild(visual);
     card.appendChild(header);
     card.appendChild(meta);
     card.appendChild(actions);
@@ -211,6 +269,12 @@ function renderGalaxies(grid, galaxies) {
 document.getElementById('btn-logout').addEventListener('click', logout);
 document.getElementById('btn-open-modal').addEventListener('click', openModal);
 document.getElementById('btn-cancel').addEventListener('click', closeModal);
+document.getElementById('modal').addEventListener('click', function(event) {
+  if (event.target === event.currentTarget) closeModal();
+});
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape' && document.getElementById('modal').classList.contains('open')) closeModal();
+});
 
 document.getElementById('btn-create').addEventListener('click', async function() {
   const name = document.getElementById('galaxy-name').value.trim();
@@ -323,6 +387,7 @@ async function loadSessions() {
       meta.appendChild(detail);
 
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'btn-session-revoke';
       btn.textContent = window.t.sessionsLogoutOne;
       btn.addEventListener('click', async function() {

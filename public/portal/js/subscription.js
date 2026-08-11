@@ -11,7 +11,7 @@
   let paymentConfig = { enabled: false, configurationComplete: false };
   let selectedPeriod = 'monthly';
   let currentSubscription = null;
-  let developmentBypass = false;
+  let paymentSimulationAllowed = false;
   let entitlementAccessMode = 'subscription';
   let historyPage = 1;
   let checkoutState = null;
@@ -74,36 +74,38 @@
     const cardRank = plan.rank || 0;
     const button = el('button', 'btn-subscribe'); button.type = 'button'; button.dataset.plan = planKey;
     button.dataset.trackAction = 'Subscription Review Open';
-    if (developmentBypass) {
-      button.classList.add('dev-action');
-      button.textContent = currentSubscription?.plan === planKey ? 'DEV · Gia hạn ' + plan.label : 'DEV · Kích hoạt ' + plan.label;
-      button.addEventListener('click', function () { openCheckoutReview(planKey); });
+    let actionNode = button;
+    if (paymentSimulationAllowed) {
+      const actions = el('div', 'admin-payment-actions');
+      button.textContent = 'ADMIN · Mở PayOS';
+      button.addEventListener('click', function () { openCheckoutReview(planKey, false); });
+      const simulate = el('button', 'btn-subscribe admin-test-action');
+      simulate.type = 'button'; simulate.dataset.plan = planKey;
+      simulate.dataset.trackAction = 'Admin Payment Simulation Review Open';
+      simulate.textContent = currentSubscription?.plan === planKey ? 'Mô phỏng gia hạn' : 'Mô phỏng kích hoạt';
+      simulate.addEventListener('click', function () { openCheckoutReview(planKey, true); });
+      actions.append(button, simulate);
+      actionNode = actions;
     } else if (currentRank > cardRank) {
       button.textContent = 'Đã bao gồm trong gói hiện tại'; button.disabled = true; button.dataset.blockedReason = 'already_included';
     } else if (!paymentConfig.enabled) {
       button.textContent = 'Thanh toán đang được hoàn thiện'; button.disabled = true; button.dataset.blockedReason = 'payments_disabled';
     } else {
       button.textContent = currentSubscription?.plan === planKey ? 'Gia hạn ' + plan.label : 'Nâng cấp ' + plan.label;
-      button.addEventListener('click', function () { openCheckoutReview(planKey); });
+      button.addEventListener('click', function () { openCheckoutReview(planKey, false); });
     }
-    card.append(name, featureList, price, button); return card;
+    card.append(name, featureList, price, actionNode); return card;
   }
 
   function renderPlans() {
     const section = document.getElementById('sub-section'); section.replaceChildren();
-    if (developmentBypass) {
-      const devNotice = el('div', 'dev-bypass-notice');
-      devNotice.textContent = 'DEV MODE · Đã mở khóa tính năng. Nút gói bên dưới tạo giao dịch mô phỏng trong local DB và không gọi PayOS.';
-      section.appendChild(devNotice);
-    } else if (entitlementAccessMode === 'admin' || entitlementAccessMode === 'partner') {
-      const privilegedNotice = el('div', 'dev-bypass-notice');
-      privilegedNotice.textContent = entitlementAccessMode === 'admin'
-        ? 'ADMIN · Backend đã cấp trực tiếp toàn bộ tính năng và không áp dụng giới hạn gói.'
-        : 'PARTNER · Backend đã cấp trực tiếp toàn bộ tính năng và không áp dụng giới hạn gói.';
+    if (entitlementAccessMode === 'admin') {
+      const privilegedNotice = el('div', 'admin-access-notice');
+      privilegedNotice.textContent = 'ADMIN · Có thể mở checkout PayOS thật hoặc chạy mô phỏng. Mô phỏng không gọi PayOS, không thu tiền và không tính vào doanh thu.';
       section.appendChild(privilegedNotice);
     }
     if (currentSubscription) section.appendChild(renderCurrentPlan(currentSubscription));
-    if (!paymentConfig.enabled && !developmentBypass) {
+    if (!paymentConfig.enabled && !paymentSimulationAllowed) {
       const notice = el('div', 'payment-disabled-notice');
       notice.textContent = 'Tính năng thanh toán đang được hoàn thiện. Bạn vẫn có thể sử dụng gói Free và xem thông tin các gói.';
       section.appendChild(notice);
@@ -164,16 +166,18 @@
     return overlay;
   }
 
-  function openCheckoutReview(planKey) {
-    const plan = plans[planKey]; if (!plan || (!paymentConfig.enabled && !developmentBypass)) return;
+  function openCheckoutReview(planKey, simulated) {
+    const adminPayOSAllowed = entitlementAccessMode === 'admin';
+    if (simulated && !paymentSimulationAllowed) return;
+    const plan = plans[planKey]; if (!plan || (!simulated && !paymentConfig.enabled && !adminPayOSAllowed)) return;
     const dates = expectedDates();
-    checkoutState = { planKey, period: selectedPeriod, idempotencyKey: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(16).slice(2), opener: document.activeElement, processing: false };
+    checkoutState = { planKey, period: selectedPeriod, simulated: Boolean(simulated), idempotencyKey: crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(16).slice(2), opener: document.activeElement, processing: false };
     const overlay = ensureCheckoutDialog();
-    overlay.querySelector('.checkout-intro').textContent = developmentBypass
-      ? 'Mô phỏng kích hoạt gói trong môi trường DEV. Yêu cầu này không gọi PayOS và không thu tiền thật.'
-      : 'Kiểm tra thông tin trước khi chuyển sang PayOS.';
-    const activation = developmentBypass ? 'Ngay sau khi xác nhận DEV' : 'Ngay sau khi xác nhận thanh toán';
-    const tax = developmentBypass ? 'Không áp dụng cho giao dịch mô phỏng DEV' : taxNotice;
+    overlay.querySelector('.checkout-intro').textContent = checkoutState.simulated
+      ? 'Mô phỏng giao dịch dành riêng cho admin. Yêu cầu này không gọi PayOS, không thu tiền thật và không tính vào doanh thu.'
+      : (adminPayOSAllowed ? 'ADMIN TEST · Kiểm tra thông tin trước khi tạo checkout thật trên PayOS.' : 'Kiểm tra thông tin trước khi chuyển sang PayOS.');
+    const activation = checkoutState.simulated ? 'Ngay sau khi admin xác nhận mô phỏng' : 'Ngay sau khi PayOS xác nhận thanh toán';
+    const tax = checkoutState.simulated ? 'Không áp dụng cho giao dịch mô phỏng admin' : taxNotice;
     const rows = [['Gói', plan.label], ['Chu kỳ', selectedPeriod === 'monthly' ? '1 tháng' : '1 năm'], ['Số tiền', fmtVND(plan[selectedPeriod])], ['Kích hoạt dự kiến', activation], ['Có hiệu lực đến', dates.end.toLocaleDateString('vi-VN')], ['Gia hạn', 'Không tự động gia hạn'], ['Thuế / phí', tax]];
     const summary = overlay.querySelector('#checkout-summary'); summary.replaceChildren();
     rows.forEach(function (row) { const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = row[0]; dd.textContent = row[1]; summary.append(dt, dd); });
@@ -182,7 +186,7 @@
     overlay.querySelector('#checkout-consent').checked = false;
     overlay.querySelector('#checkout-error').textContent = '';
     const confirm = overlay.querySelector('.checkout-confirm');
-    confirm.textContent = developmentBypass ? 'DEV · Kích hoạt ' + plan.label : 'Thanh toán ' + fmtVND(plan[selectedPeriod]);
+    confirm.textContent = checkoutState.simulated ? 'ADMIN TEST · Mô phỏng ' + plan.label : (adminPayOSAllowed ? 'ADMIN · Mở PayOS ' + fmtVND(plan[selectedPeriod]) : 'Thanh toán ' + fmtVND(plan[selectedPeriod]));
     confirm.disabled = true;
     overlay.hidden = false; overlay.querySelector('.checkout-back').focus();
     window.LumoraActivity?.log({ action: 'Payment Order Review Viewed', feature: 'payment', description: { plan: planKey, period: selectedPeriod } });
@@ -201,10 +205,10 @@
     const overlay = ensureCheckoutDialog(); const confirm = overlay.querySelector('.checkout-confirm');
     checkoutState.processing = true;
     const request = { planKey: checkoutState.planKey, period: checkoutState.period, idempotencyKey: checkoutState.idempotencyKey };
-    const simulated = developmentBypass;
-    confirm.disabled = true; confirm.textContent = simulated ? 'Đang kích hoạt DEV…' : 'Đang tạo thanh toán…'; overlay.querySelector('#checkout-error').textContent = '';
+    const simulated = checkoutState.simulated;
+    confirm.disabled = true; confirm.textContent = simulated ? 'Đang mô phỏng giao dịch…' : 'Đang tạo thanh toán…'; overlay.querySelector('#checkout-error').textContent = '';
     try {
-      const response = await fetch(simulated ? '/payment/dev-activate' : '/payment/create', {
+      const response = await fetch(simulated ? '/payment/admin-simulate' : '/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, 'Idempotency-Key': request.idempotencyKey },
         body: JSON.stringify({ plan: request.planKey, period: request.period }),
@@ -212,11 +216,11 @@
       const body = await response.json();
       if (!response.ok) { const error = new Error(body.message || 'Không thể tạo thanh toán'); error.status = response.status; throw error; }
       if (simulated) {
-        window.LumoraActivity?.log({ action: 'Development Subscription Activated', feature: 'subscription', status: 1, description: { plan: request.planKey, period: request.period, simulated: true } });
+        window.LumoraActivity?.log({ action: 'Admin Payment Simulated', feature: 'payment', status: 1, description: { plan: request.planKey, period: request.period, simulated: true } });
         overlay.hidden = true;
         checkoutState = null;
         historyPage = 1;
-        showToast('Đã kích hoạt ' + (plans[request.planKey]?.label || request.planKey) + ' trong DEV. Không có tiền thật được thu.', 'success');
+        showToast('Đã mô phỏng ' + (plans[request.planKey]?.label || request.planKey) + '. Không có tiền thật được thu.', 'success');
         await loadSubscription();
         return;
       }
@@ -231,7 +235,7 @@
       overlay.querySelector('#checkout-error').textContent = error.message || 'Không thể kết nối. Bạn có thể thử lại an toàn.';
       confirm.disabled = !overlay.querySelector('#checkout-consent').checked;
       const plan = plans[request.planKey];
-      confirm.textContent = simulated ? 'Thử lại DEV · ' + plan.label : 'Thử lại · ' + fmtVND(plan[request.period]);
+      confirm.textContent = simulated ? 'Thử lại ADMIN TEST · ' + plan.label : 'Thử lại · ' + fmtVND(plan[request.period]);
     }
   }
 
@@ -261,7 +265,8 @@
       const tbody = document.createElement('tbody');
       result.items.forEach(function (item) {
         const row = document.createElement('tr');
-        const values = [String(item.payosOrderCode), (plans[item.plan]?.label || item.plan) + ' · ' + (item.period === 'monthly' ? 'tháng' : 'năm'), fmtVND(item.amount)];
+        const simulationSuffix = item.isSimulation ? ' · ADMIN TEST' : '';
+        const values = [String(item.payosOrderCode), (plans[item.plan]?.label || item.plan) + ' · ' + (item.period === 'monthly' ? 'tháng' : 'năm') + simulationSuffix, fmtVND(item.amount)];
         values.forEach(function (value) { const cell = document.createElement('td'); cell.textContent = value; row.appendChild(cell); });
         const statusCell = document.createElement('td'); const status = el('span', 'payment-status ' + item.status); status.textContent = STATUS_LABELS[item.status] || item.status; statusCell.appendChild(status); row.appendChild(statusCell);
         const date = document.createElement('td'); date.textContent = fmtDate(item.paidAt || item.createdAt); row.appendChild(date);
@@ -282,9 +287,14 @@
   }
 
   function updatePlanBadges(sub) {
-    const planLabel = sub ? (plans[sub.plan]?.label || sub.plan).toUpperCase() : '';
-    const userInfo = document.getElementById('user-email');
-    if (userInfo) { let badge = document.getElementById('plan-badge-header'); if (!badge) { badge = el('span', 'plan-badge'); badge.id = 'plan-badge-header'; userInfo.appendChild(badge); } badge.textContent = planLabel; badge.hidden = !planLabel; }
+    const badge = document.getElementById('plan-badge-header');
+    if (!badge) return;
+    const planLabel = entitlementAccessMode === 'admin' || entitlementAccessMode === 'partner'
+      ? entitlementAccessMode.toUpperCase()
+      : (sub ? (plans[sub.plan]?.label || sub.plan).toUpperCase() : '');
+    badge.textContent = planLabel;
+    badge.dataset.accessMode = entitlementAccessMode;
+    badge.hidden = !planLabel;
   }
 
   async function loadSubscription() {
@@ -294,7 +304,7 @@
       const response = await fetch('/payment/status', { headers: { Authorization: 'Bearer ' + token } });
       if (response.status === 401) return;
       const body = await response.json();
-      developmentBypass = Boolean(body.meta?.developmentBypass);
+      paymentSimulationAllowed = Boolean(body.meta?.paymentSimulationAllowed);
       entitlementAccessMode = body.meta?.accessMode || 'subscription';
       currentSubscription = body.meta?._id ? body.meta : null;
       renderPlans(); updatePlanBadges(currentSubscription);

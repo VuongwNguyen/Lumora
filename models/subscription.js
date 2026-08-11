@@ -23,6 +23,11 @@ const subscriptionSchema = new Schema({
     enum: ["active", "expired", "cancelled"],
     default: "active",
   },
+  isSimulation: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
   startDate: {
     type: Date,
     required: true,

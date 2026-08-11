@@ -345,6 +345,275 @@
       #preview-pane { height: 35vh; flex: none; }
       #story-panel { width: 100%; height: 65vh; border-left: none; border-top: 1px solid var(--accent-border); }
     }
+
+    /* ── Lumora Story workspace redesign ── */
+    :root {
+      --panel-w: 430px;
+      --story-surface: rgba(8,7,18,.965);
+    }
+    body { background: #020207; }
+    #preview-pane {
+      background:
+        radial-gradient(circle at 50% 38%, rgba(124,58,237,.2), transparent 33%),
+        radial-gradient(circle at 12% 92%, rgba(30,64,175,.09), transparent 28%),
+        #030309;
+    }
+    #preview-pane::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 11;
+      pointer-events: none;
+      background: linear-gradient(90deg, transparent 72%, rgba(0,0,0,.18));
+    }
+    .story-preview-bar {
+      position: absolute;
+      z-index: 24;
+      top: 22px;
+      left: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .story-preview-brand, .story-preview-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 7px 11px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 11px;
+      color: rgba(255,255,255,.58);
+      background: rgba(5,5,13,.58);
+      box-shadow: 0 10px 32px rgba(0,0,0,.18);
+      backdrop-filter: blur(14px);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .story-preview-brand strong { color: var(--accent-light); font-size: 13px; }
+    .story-preview-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #6ee7b7;
+      box-shadow: 0 0 0 4px rgba(110,231,183,.1), 0 0 16px rgba(110,231,183,.5);
+    }
+    #se-center { padding: 70px 40px 36px; }
+    #preview-label { margin-bottom: 17px; color: rgba(196,181,253,.45); font-size: 9px; }
+    #preview-name { font-size: clamp(34px,4.8vw,68px); text-shadow: 0 0 50px rgba(139,92,246,.28); }
+    #se-bottom { padding: 100px clamp(26px,4vw,54px) clamp(28px,4vw,48px); }
+    #se-bottom-hook { max-width: 820px; }
+    #panel-toggle {
+      width: 27px;
+      height: 64px;
+      border-color: rgba(196,181,253,.18);
+      border-radius: 12px 0 0 12px;
+      background: rgba(8,7,18,.9);
+      box-shadow: -8px 0 28px rgba(0,0,0,.18);
+      backdrop-filter: blur(12px);
+    }
+    #panel-toggle:hover, #panel-toggle:focus-visible {
+      outline: none;
+      border-color: rgba(196,181,253,.36);
+      background: rgba(109,40,217,.3);
+    }
+    #story-panel {
+      z-index: 20;
+      border-left-color: rgba(196,181,253,.13);
+      background: radial-gradient(circle at 88% 0%, rgba(124,58,237,.14), transparent 28%), var(--story-surface);
+      box-shadow: -24px 0 80px rgba(0,0,0,.22);
+      transition: width .32s cubic-bezier(.22,1,.36,1), border-color .3s ease;
+    }
+    #story-panel.collapsed .panel-header,
+    #story-panel.collapsed .chat-wrap { opacity: 0; pointer-events: none; }
+    .panel-header {
+      padding: 20px 24px 18px;
+      border-bottom-color: rgba(255,255,255,.065);
+      background: rgba(255,255,255,.012);
+    }
+    .story-panel-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      margin: 0;
+      color: rgba(255,255,255,.38);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .back-btn:hover, .back-btn:focus-visible { color: var(--accent-light); outline: none; }
+    .story-mode-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 29px;
+      padding: 5px 9px;
+      border: 1px solid rgba(167,139,250,.14);
+      border-radius: 9px;
+      color: rgba(196,181,253,.68);
+      background: rgba(139,92,246,.055);
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .header-eyebrow { margin-bottom: 7px; opacity: 1; font-size: 9px; }
+    #galaxy-name-button { padding: 4px 7px; margin: -4px -7px; border-radius: 9px; }
+    #galaxy-name, #galaxy-name-input { font-size: 27px; line-height: 1.1; }
+    #galaxy-name-input {
+      min-height: 42px;
+      padding: 5px 8px;
+      margin: -4px -7px;
+      border-radius: 9px;
+      background: rgba(139,92,246,.1);
+    }
+    #galaxy-name-status { margin-top: 7px; }
+    .chat-wrap {
+      padding: 22px 22px 40px;
+      scrollbar-color: rgba(139,92,246,.3) transparent;
+    }
+    .chat-intro {
+      margin: 0 0 22px;
+      padding: 15px 16px;
+      border: 1px solid rgba(196,181,253,.09);
+      border-radius: 14px;
+      color: rgba(255,255,255,.36);
+      background: rgba(255,255,255,.018);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    .lmsg, .umsg { margin-bottom: 16px; }
+    .av {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: linear-gradient(145deg,#8b5cf6,#5b21b6);
+      box-shadow: 0 7px 18px rgba(109,40,217,.22);
+    }
+    .lbubble {
+      max-width: calc(100% - 38px);
+      padding: 12px 15px;
+      border-color: rgba(167,139,250,.13);
+      border-radius: 4px 14px 14px 14px;
+      background: rgba(139,92,246,.075);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+    .ububble {
+      padding: 10px 14px;
+      border-color: rgba(255,255,255,.08);
+      border-radius: 14px 4px 14px 14px;
+      background: rgba(255,255,255,.045);
+      color: rgba(255,255,255,.62);
+      font-size: 12px;
+    }
+    .typing-dots { border-radius: 4px 14px 14px 14px; }
+    .chips-wrap {
+      margin: 2px 0 18px 40px;
+      gap: 7px;
+    }
+    .chip {
+      min-height: 38px;
+      padding: 8px 14px;
+      border-radius: 11px;
+      color: rgba(196,181,253,.76);
+      background: rgba(139,92,246,.06);
+      font: 400 11px 'Jost',sans-serif;
+    }
+    .chip:hover, .chip:focus-visible {
+      outline: none;
+      color: #fff;
+      border-color: rgba(167,139,250,.42);
+      background: rgba(139,92,246,.14);
+    }
+    .chip.on { color: #fff; background: rgba(139,92,246,.22); }
+    .ch-card {
+      margin: 5px 0 11px 40px;
+      border-color: rgba(196,181,253,.11);
+      border-radius: 15px;
+      background: rgba(255,255,255,.022);
+      box-shadow: 0 14px 34px rgba(0,0,0,.1);
+    }
+    .ch-head { padding: 12px 14px; }
+    .ch-head:hover, .ch-head:focus-visible { outline: none; background: rgba(139,92,246,.045); }
+    .ch-num { color: rgba(196,181,253,.48); }
+    .ch-photos { padding: 12px 14px; gap: 8px; }
+    .ch-ph {
+      width: 54px;
+      height: 54px;
+      border-color: rgba(167,139,250,.2);
+      border-radius: 10px;
+      color: var(--accent-light);
+      background: rgba(139,92,246,.035);
+    }
+    .ch-ph:hover, .ch-ph:focus-visible { outline: none; border-color: rgba(167,139,250,.48); background: rgba(139,92,246,.1); }
+    .ch-hook-input {
+      min-height: 64px;
+      padding: 11px 14px 13px;
+      border-top-color: rgba(255,255,255,.055);
+      color: rgba(221,214,254,.78);
+    }
+    .ch-hook-input:focus { border-top-color: rgba(167,139,250,.35); background: rgba(139,92,246,.025); }
+    .action-row, .btn-yesno { margin-left: 40px; }
+    .btn-next, .btn-yes, .btn-no {
+      min-height: 40px;
+      padding: 9px 17px;
+      border-radius: 11px;
+      font-size: 11px;
+    }
+    .btn-next:not(:disabled):hover, .btn-next:not(:disabled):focus-visible,
+    .btn-yes:hover, .btn-yes:focus-visible,
+    .btn-no:hover, .btn-no:focus-visible { outline: none; }
+    @media (max-width: 900px) {
+      :root { --panel-w: 390px; }
+      .story-preview-brand span:last-child { display: none; }
+    }
+    @media (max-width: 640px) {
+      html, body { height: 100%; height: 100dvh; }
+      #preview-pane { height: 34dvh; min-height: 190px; flex: none; }
+      #preview-pane::after { background: linear-gradient(180deg,transparent 65%,rgba(0,0,0,.25)); }
+      #story-panel {
+        width: 100%;
+        height: 66dvh;
+        min-height: 0;
+        border-left: 0;
+        border-top-color: rgba(196,181,253,.13);
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -20px 60px rgba(0,0,0,.28);
+      }
+      #story-panel.collapsed { width: 100%; }
+      #panel-toggle { display: none; }
+      .story-preview-bar { top: 14px; left: 14px; }
+      .story-preview-brand, .story-preview-step { min-height: 30px; padding: 6px 9px; font-size: 8px; }
+      #se-center { padding: 58px 20px 24px; }
+      #preview-name { font-size: 34px; }
+      #preview-occasion { margin-bottom: 25px; }
+      #se-bottom { padding: 70px 20px 22px; }
+      #se-bottom-hook { font-size: 16px; }
+      .panel-header { padding: 15px 18px 14px; }
+      .story-panel-nav { margin-bottom: 11px; }
+      #galaxy-name, #galaxy-name-input { font-size: 23px; }
+      .chat-wrap { padding: 18px 16px 32px; }
+      .chat-intro { margin-bottom: 18px; }
+      .chips-wrap, .ch-card, .action-row, .btn-yesno { margin-left: 38px; }
+    }
+    @media (max-width: 390px) {
+      .chips-wrap, .ch-card, .action-row, .btn-yesno { margin-left: 0; }
+      .ch-card { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #story-panel, .preview-photo-bg, .se-star, .se-pulse { transition: none; animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -353,36 +622,61 @@
   <div id="preview-pane">
     <div id="preview-photos"></div>
     <canvas id="se-canvas"></canvas>
+    <div class="story-preview-bar" aria-hidden="true">
+      <div class="story-preview-brand"><strong>✦</strong><span data-i18n="storySetupPreviewLabel">Lumora · Xem trước</span></div>
+      <div class="story-preview-step"><span class="story-preview-dot"></span><span data-i18n="storySetupGuided">Dẫn chuyện</span></div>
+    </div>
     <div id="se-bottom">
       <div id="se-bottom-label"></div>
       <div id="se-bottom-hook"></div>
     </div>
     <div id="se-center">
-      <div id="preview-label">✦ Story Experience</div>
+      <div id="preview-label" data-i18n="storySetupPreviewTitle">✦ Story Experience</div>
       <div id="preview-name">—</div>
       <div id="preview-occasion"></div>
       <div class="se-pulse-wrap">
         <div class="se-pulse"></div>
       </div>
     </div>
-    <button id="panel-toggle">◀</button>
+    <button id="panel-toggle" type="button" aria-label="Ẩn bảng Story" title="Ẩn bảng Story" data-i18n-label="storySetupPanelHide" data-i18n-title="storySetupPanelHide" data-track-action="Story Panel Toggle" data-track-id="story_panel_toggle" aria-expanded="true">◀</button>
   </div>
 
   <!-- Chat Panel -->
   <div id="story-panel">
     <div class="panel-header">
-      <a id="back-link" href="/portal/" class="back-btn">← Portal</a>
-      <div class="header-eyebrow">✦ Story Experience</div>
-      <button id="galaxy-name-button" type="button" aria-label="Đổi tên Story Experience">
-        <span id="galaxy-name">Đang tải…</span><span class="edit-icon" aria-hidden="true">✎</span>
+      <div class="story-panel-nav">
+        <a id="back-link" href="/portal/" class="back-btn" data-track-action="Story Back Click" data-track-id="story_back"><span aria-hidden="true">←</span> <span data-i18n="storySetupBack">Thiết lập vũ trụ</span></a>
+        <span class="story-mode-badge"><span aria-hidden="true">✦</span><span data-i18n="storySetupMode">Story guide</span></span>
+      </div>
+      <div class="header-eyebrow" data-i18n="storySetupKicker">Không gian kể chuyện</div>
+      <button id="galaxy-name-button" type="button" aria-label="Đổi tên vũ trụ" data-i18n-label="setupRenameLabel" data-track-action="Story Rename Open" data-track-id="story_rename_open">
+        <span id="galaxy-name" data-i18n="setupLoading">Đang tải…</span><span class="edit-icon" aria-hidden="true">✎</span>
       </button>
-      <input id="galaxy-name-input" type="text" aria-label="Tên Story Experience" hidden />
+      <input id="galaxy-name-input" type="text" aria-label="Tên vũ trụ" data-i18n-label="setupNameLabel" autocomplete="off" hidden />
       <div id="galaxy-name-status" role="status" aria-live="polite"></div>
     </div>
-    <div class="chat-wrap" id="chat"></div>
+    <div class="chat-wrap" id="chat">
+      <div class="chat-intro" data-i18n="storySetupIntro">Lumora sẽ dẫn bạn qua từng bước để biến những bức ảnh thành một câu chuyện có cảm xúc.</div>
+    </div>
   </div>
 
+  <script src="/shared/js/i18n.js"></script>
   <script>
+    document.documentElement.lang = userLang;
+    document.title = t.storySetupPageTitle || document.title;
+    document.querySelectorAll('[data-i18n]').forEach(function (node) {
+      const value = t[node.dataset.i18n];
+      if (typeof value === 'string') node.textContent = value;
+    });
+    document.querySelectorAll('[data-i18n-label]').forEach(function (node) {
+      const value = t[node.dataset.i18nLabel];
+      if (typeof value === 'string') node.setAttribute('aria-label', value);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function (node) {
+      const value = t[node.dataset.i18nTitle];
+      if (typeof value === 'string') node.title = value;
+    });
+
     // ── CSS Stars ──────────────────────────────────────────
     const pane = document.getElementById('preview-pane');
     for (let i = 0; i < 80; i++) {
@@ -540,6 +834,9 @@
       const panel = document.getElementById('story-panel');
       const collapsed = panel.classList.toggle('collapsed');
       this.textContent = collapsed ? '▶' : '◀';
+      this.setAttribute('aria-expanded', String(!collapsed));
+      this.setAttribute('aria-label', collapsed ? t.storySetupPanelShow : t.storySetupPanelHide);
+      this.title = collapsed ? t.storySetupPanelShow : t.storySetupPanelHide;
     };
   </script>
   <script src="/shared/js/activityApi.js"></script>

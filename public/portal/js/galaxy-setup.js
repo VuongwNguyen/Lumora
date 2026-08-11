@@ -3,6 +3,11 @@ const galaxyId = params.get('galaxyId');
 const token    = localStorage.getItem('token');
 const activity = window.LumoraActivity;
 
+function tr(key, ...args) {
+  const value = window.t?.[key];
+  return typeof value === 'function' ? value(...args) : (value || key);
+}
+
 function trackResult(action, ok, metadata, error) {
   activity?.logResult(action, ok, metadata || {}, error, { galaxyId });
 }
@@ -22,25 +27,33 @@ function canUseFeature(feature) { return userFeatures.has(feature); }
 
 function applySubLocks() {
   const locks = [
-    { tabId: 'tab-theme', paneId: 'tab-theme', feature: 'themes', label: 'Plus', desc: 'Chọn giao diện cho galaxy' },
-    { tabId: 'tab-music', paneId: 'tab-music', feature: 'music', label: 'Pro', desc: 'Thêm nhạc nền cho galaxy' },
-    { tabId: 'tab-caption', paneId: 'tab-caption', feature: 'text', label: 'Pro', desc: 'Thêm caption vòng 3D' },
+    { tabId: 'tab-theme', paneId: 'tab-theme', feature: 'themes', label: 'Plus', descKey: 'setupFeatureTheme' },
+    { tabId: 'tab-music', paneId: 'tab-music', feature: 'music', label: 'Pro', descKey: 'setupFeatureMusic' },
+    { tabId: 'tab-caption', paneId: 'tab-caption', feature: 'text', label: 'Pro', descKey: 'setupFeatureCaption' },
   ];
-  locks.forEach(({ tabId, paneId, feature, label, desc }) => {
+  locks.forEach(({ tabId, paneId, feature, label, descKey }) => {
     if (canUseFeature(feature)) return;
     // Dim tab button
     const btn = document.querySelector(`.tab-btn[data-tab="${tabId.replace('tab-','')}"]`);
-    if (btn) { btn.style.opacity = '0.45'; btn.title = `Yêu cầu ${label}`; }
-    // Overlay pane with upgrade CTA
+    if (btn) { btn.style.opacity = '0.45'; btn.title = tr('setupRequiresPlan', label); }
+    // Replace premium content with a consistent upgrade state while retaining the tab heading.
     const pane = document.getElementById(paneId);
     if (!pane) return;
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'padding:32px 20px;text-align:center;';
-    overlay.innerHTML = `<div style="font-size:28px;margin-bottom:12px">🔒</div>
-      <div style="font-size:14px;color:rgba(237,233,248,0.7);margin-bottom:6px">${desc}</div>
-      <div style="font-size:12px;color:rgba(237,233,248,0.4);margin-bottom:20px">Yêu cầu gói <strong style="color:#c4b5fd">${label}</strong></div>
-      <a href="/portal/?tab=subscription" data-track-action="Galaxy Upgrade Click" data-track-id="upgrade_${feature}" style="display:inline-block;padding:9px 20px;background:#8b5cf6;color:#fff;border-radius:8px;font-size:13px;text-decoration:none">Nâng cấp →</a>`;
-    pane.replaceChildren(overlay);
+    const heading = pane.querySelector('.tab-heading');
+    const state = el('div', 'feature-lock-state');
+    const content = el('div');
+    content.appendChild(el('div', 'feature-lock-icon', '◇'));
+    content.appendChild(el('div', 'feature-lock-title', tr(descKey)));
+    content.appendChild(el('div', 'feature-lock-copy', tr('setupPlanBenefit', label)));
+    const action = el('a', 'feature-lock-action', tr('setupViewPlan', label));
+    action.href = '/portal/?tab=subscription';
+    action.dataset.trackAction = 'Galaxy Upgrade Click';
+    action.dataset.trackId = `upgrade_${feature}`;
+    content.appendChild(action);
+    state.appendChild(content);
+    pane.replaceChildren();
+    if (heading) pane.appendChild(heading);
+    pane.appendChild(state);
   });
 }
 
@@ -115,7 +128,7 @@ function setupNameEditor(initialName) {
     const nextName = input.value.trim();
     if (!nextName) {
       activity?.logBlocked('Galaxy Rename Blocked', 'missing_input', {}, { galaxyId });
-      status.textContent = 'Tên galaxy không được để trống.';
+      status.textContent = tr('setupNameEmpty');
       status.classList.add('error');
       input.focus();
       return;
@@ -130,7 +143,7 @@ function setupNameEditor(initialName) {
     saving = true;
     activity?.log({ action: 'Galaxy Rename Submit', feature: 'galaxy', galaxyId });
     input.disabled = true;
-    status.textContent = 'Đang lưu…';
+    status.textContent = tr('setupSaving');
     status.classList.remove('error');
 
     try {
@@ -153,15 +166,13 @@ function setupNameEditor(initialName) {
       document.title = `${savedName} — Lumora`;
       status.textContent = '';
       closeEditor();
-      showToast('✓ Đã đổi tên galaxy');
+      showToast(tr('setupRenamed'));
       trackResult('Galaxy Rename Result', true);
     } catch (err) {
       trackResult('Galaxy Rename Result', false, { errorType: 'galaxy_update_fail' }, err);
       input.disabled = false;
       const duplicate = err.status === 409 || /already exists|duplicate/i.test(err.message);
-      status.textContent = duplicate
-        ? 'Bạn đã có một galaxy với tên này.'
-        : 'Không thể lưu tên. Vui lòng thử lại.';
+      status.textContent = duplicate ? tr('setupNameDuplicate') : tr('setupNameSaveFail');
       status.classList.add('error');
       input.focus();
       input.select();
@@ -201,7 +212,8 @@ function updateChecklist() {
     if (isDone) done++;
   });
   document.getElementById('progress-fill').style.width = Math.round(done / checks.length * 100) + '%';
-  document.getElementById('progress-label').textContent = `${done} / ${checks.length} hoàn thành`;
+  document.getElementById('progress-label').textContent = tr('setupProgress', done, checks.length);
+  document.querySelector('.progress-bar-track')?.setAttribute('aria-valuenow', String(done));
 
   const shareBtn  = document.getElementById('share-btn');
   const shareHint = document.getElementById('share-hint');
@@ -221,6 +233,7 @@ function renderGallery() {
     const img  = el('img');
     img.src = item.imageUrl; img.alt = '';
     const delBtn = el('button', 'del-btn', '✕');
+    delBtn.type = 'button';
     delBtn.dataset.trackAction = 'Galaxy Photo Delete Click';
     delBtn.onclick = (e) => { e.stopPropagation(); deletePhoto(item._id); };
     wrap.appendChild(img);
@@ -239,7 +252,7 @@ async function deletePhoto(imageId) {
     renderGallery();
     updateChecklist();
     refreshPreview();
-  } catch { showToast('Xoá thất bại'); }
+  } catch { showToast(tr('setupDeletePhotoFail')); }
 }
 
 function handleUpload(files) {
@@ -269,12 +282,12 @@ function handleUpload(files) {
       renderGallery();
       updateChecklist();
       refreshPreview();
-      showToast('✓ Tải ảnh thành công');
+      showToast(tr('setupUploadSuccess'));
     } else {
-      showToast('Tải ảnh thất bại');
+      showToast(tr('setupUploadFail'));
     }
   };
-  xhr.onerror = () => { progBar.style.display = 'none'; showToast('Lỗi kết nối'); };
+  xhr.onerror = () => { progBar.style.display = 'none'; showToast(tr('errConnect')); };
   xhr.open('POST', '/gallary/upload');
   xhr.setRequestHeader('Authorization', 'Bearer ' + token);
   xhr.send(form);
@@ -289,19 +302,25 @@ function renderThemes() {
   if (!themes.length) {
     const empty = el('div', 'empty-state');
     empty.appendChild(el('div', 'empty-state-icon', '🎨'));
-    empty.appendChild(el('div', null, 'Chưa có theme nào.'));
+    empty.appendChild(el('div', null, tr('setupNoThemes')));
     wrap.appendChild(empty);
     return;
   }
 
   const grid = el('div', 'theme-grid');
 
-  const noTheme = el('div', 'theme-no' + (!galaxy.themeId ? ' selected' : ''), '— Không có');
+  const noTheme = el('button', 'theme-no' + (!galaxy.themeId ? ' selected' : ''), tr('setupNoTheme'));
+  noTheme.type = 'button';
+  noTheme.dataset.trackAction = 'Galaxy Theme Select';
+  noTheme.dataset.trackId = 'theme_none';
   noTheme.onclick = () => applyTheme(null);
   grid.appendChild(noTheme);
 
   themes.forEach(th => {
-    const card = el('div', 'theme-card' + (galaxy.themeId === th._id ? ' selected' : ''));
+    const card = el('button', 'theme-card' + (galaxy.themeId === th._id ? ' selected' : ''));
+    card.type = 'button';
+    card.dataset.trackAction = 'Galaxy Theme Select';
+    card.dataset.trackId = 'theme_option';
     if (th.previewUrl) {
       const img = el('img'); img.src = th.previewUrl; img.alt = th.name;
       card.appendChild(img);
@@ -331,10 +350,10 @@ async function applyTheme(themeId, name) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ themeId }),
     });
-    showToast(themeId ? `✓ Đã chọn: ${name}` : '✓ Đã bỏ giao diện');
+    showToast(themeId ? tr('setupSelected', name) : tr('setupThemeRemoved'));
     trackResult('Galaxy Theme Result', true, { selected: Boolean(themeId) });
     refreshPreview();
-  } catch (error) { trackResult('Galaxy Theme Result', false, { errorType: 'theme_save_fail' }, error); showToast('Lưu thất bại'); galaxy.themeId = null; renderThemes(); }
+  } catch (error) { trackResult('Galaxy Theme Result', false, { errorType: 'theme_save_fail' }, error); showToast(tr('setupSaveFail')); galaxy.themeId = null; renderThemes(); }
 }
 
 // ── Music ──────────────────────────────────────────────────
@@ -346,19 +365,28 @@ function renderMusics() {
   if (!musics.length) {
     const empty = el('div', 'empty-state');
     empty.appendChild(el('div', 'empty-state-icon', '🎵'));
-    empty.appendChild(el('div', null, 'Chưa có nhạc nào.'));
+    empty.appendChild(el('div', null, tr('setupNoMusicAvailable')));
     wrap.appendChild(empty);
     return;
   }
 
-  const noMusic = el('div', 'music-no' + (!galaxy.backgroundMusicId ? ' selected' : ''), '— Không có nhạc');
+  const noMusic = el('button', 'music-no' + (!galaxy.backgroundMusicId ? ' selected' : ''), tr('setupNoMusic'));
+  noMusic.type = 'button';
+  noMusic.dataset.trackAction = 'Galaxy Music Select';
+  noMusic.dataset.trackId = 'music_none';
   noMusic.onclick = () => applyMusic(null);
   wrap.appendChild(noMusic);
 
   musics.forEach(m => {
     const item = el('div', 'music-item' + (galaxy.backgroundMusicId === m._id ? ' selected' : ''));
+    item.tabIndex = 0;
+    item.setAttribute('role', 'button');
+    item.dataset.trackAction = 'Galaxy Music Select';
+    item.dataset.trackId = 'music_option';
 
-    const playBtn = el('div', 'music-play', '▶');
+    const playBtn = el('button', 'music-play', '▶');
+    playBtn.type = 'button';
+    playBtn.setAttribute('aria-label', tr('setupMusicPreview', m.name));
     const previewSrc = m.source === 'soundcloud' ? m.permalink : `/media/musics/${m._id}/stream`;
     playBtn.onclick = (e) => { e.stopPropagation(); togglePreviewMusic(previewSrc, playBtn); };
 
@@ -368,6 +396,12 @@ function renderMusics() {
     item.appendChild(playBtn);
     item.appendChild(info);
     item.onclick = () => applyMusic(m._id, m.name);
+    item.onkeydown = event => {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target === item) {
+        event.preventDefault();
+        applyMusic(m._id, m.name);
+      }
+    };
     wrap.appendChild(item);
   });
 }
@@ -395,10 +429,10 @@ async function applyMusic(musicId, name) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ backgroundMusicId: musicId }),
     });
-    showToast(musicId ? `✓ Đã chọn: ${name}` : '✓ Đã bỏ nhạc nền');
+    showToast(musicId ? tr('setupSelected', name) : tr('setupMusicRemoved'));
     trackResult('Galaxy Music Result', true, { selected: Boolean(musicId) });
     refreshPreview();
-  } catch (error) { trackResult('Galaxy Music Result', false, { errorType: 'music_save_fail' }, error); showToast('Lưu thất bại'); }
+  } catch (error) { trackResult('Galaxy Music Result', false, { errorType: 'music_save_fail' }, error); showToast(tr('setupSaveFail')); }
 }
 
 // ── Caption ────────────────────────────────────────────────
@@ -413,10 +447,12 @@ function renderCaptions() {
     item.dataset.idx = i;
 
     const handle = el('span', 'caption-drag', '⠿');
-    handle.title = 'Kéo để sắp xếp';
+    handle.title = tr('setupDragCaption');
     item.appendChild(handle);
     item.appendChild(el('span', null, text));
     const del = el('button', null, '✕');
+    del.type = 'button';
+    del.setAttribute('aria-label', tr('setupDeleteCaption'));
     del.onclick = () => deleteCaption(i);
     item.appendChild(del);
     list.appendChild(item);
@@ -446,7 +482,7 @@ function renderCaptions() {
       arr.splice(dropIdx, 0, moved);
       galaxy.caption = arr;
       renderCaptions();
-      try { await saveCaption(galaxy.caption); } catch { showToast('Lưu thất bại'); }
+      try { await saveCaption(galaxy.caption); } catch { showToast(tr('setupSaveFail')); }
     });
   });
 }
@@ -458,8 +494,8 @@ function renderUniverses() {
   if (!wrap) return;
   clear(wrap);
   const options = [
-    { id: 'galaxy', icon: '🌌', name: 'Galaxy Classic', desc: 'Thiên hà ảnh 3D dạng xoắn ốc.', tier: 0 },
-    { id: 'fall', icon: '🎞', name: 'Fall Through Memories', desc: 'Rơi xuyên qua dòng ký ức điện ảnh.', feature: 'fall_universe', requiredPlan: 'Pro', tier: 2 },
+    { id: 'galaxy', icon: '🌌', name: 'Galaxy Classic', desc: tr('setupGalaxyClassicDescription'), tier: 0 },
+    { id: 'fall', icon: '🎞', name: 'Fall Through Memories', desc: tr('setupFallDescription'), feature: 'fall_universe', requiredPlan: 'Pro', tier: 2 },
   ].sort((left, right) => {
     const leftLocked = left.feature && !canUseFeature(left.feature) ? 1 : 0;
     const rightLocked = right.feature && !canUseFeature(right.feature) ? 1 : 0;
@@ -486,7 +522,7 @@ function renderUniverses() {
 async function applyUniverse(template) {
   if (template === 'fall' && !canUseFeature('fall_universe')) {
     activity?.logBlocked('Galaxy Universe Change Blocked', 'plan_required', { template }, { galaxyId });
-    showToast('Fall Through Memories yêu cầu gói Pro');
+    showToast(tr('setupFallRequiresPro'));
     return;
   }
   const previous = galaxy.template || 'galaxy';
@@ -498,15 +534,15 @@ async function applyUniverse(template) {
       body: JSON.stringify({ template }),
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || 'Không thể đổi vũ trụ');
+    if (!response.ok) throw new Error(body.message || tr('setupUniverseChangeFail'));
     galaxy = body.meta || galaxy;
     refreshPreview();
     trackResult('Galaxy Universe Change Result', true, { template });
-    showToast('✓ Đã chuyển vũ trụ');
+    showToast(tr('setupUniverseChanged'));
   } catch (error) {
     galaxy.template = previous; renderUniverses();
     trackResult('Galaxy Universe Change Result', false, { template, errorType: 'universe_save_fail' }, error);
-    showToast(error.message || 'Không thể đổi vũ trụ');
+    showToast(error.message || tr('setupUniverseChangeFail'));
   }
 }
 
@@ -526,15 +562,15 @@ async function addCaption() {
   galaxy.caption = [...(galaxy.caption || []), text];
   input.value = '';
   renderCaptions();
-  try { await saveCaption(galaxy.caption); trackResult('Galaxy Caption Add Result', true, { count: galaxy.caption.length }); showToast('✓ Đã thêm caption'); }
-  catch (error) { trackResult('Galaxy Caption Add Result', false, { errorType: 'caption_save_fail' }, error); showToast('Lưu thất bại'); }
+  try { await saveCaption(galaxy.caption); trackResult('Galaxy Caption Add Result', true, { count: galaxy.caption.length }); showToast(tr('setupCaptionAdded')); }
+  catch (error) { trackResult('Galaxy Caption Add Result', false, { errorType: 'caption_save_fail' }, error); showToast(tr('setupSaveFail')); }
 }
 
 async function deleteCaption(idx) {
   galaxy.caption = (galaxy.caption || []).filter((_, i) => i !== idx);
   renderCaptions();
   try { await saveCaption(galaxy.caption); trackResult('Galaxy Caption Delete Result', true, { count: galaxy.caption.length }); }
-  catch (error) { trackResult('Galaxy Caption Delete Result', false, { errorType: 'caption_save_fail' }, error); showToast('Lưu thất bại'); }
+  catch (error) { trackResult('Galaxy Caption Delete Result', false, { errorType: 'caption_save_fail' }, error); showToast(tr('setupSaveFail')); }
 }
 
 // ── Story ──────────────────────────────────────────────────
@@ -545,18 +581,19 @@ function renderStory() {
 
   if (galaxy.storyType) {
     const status = el('div', 'story-status');
-    status.appendChild(el('div', 'story-badge', '✓ Story Experience đã được tạo'));
+    status.appendChild(el('div', 'story-badge', tr('setupStoryCreated')));
     status.appendChild(el('div', 'story-type-label', galaxy.storyType));
     if (galaxy.occasion) status.appendChild(el('div', 'story-occ', galaxy.occasion));
     wrap.appendChild(status);
   } else {
     const empty = el('div', 'empty-state');
     empty.appendChild(el('div', 'empty-state-icon', '🎭'));
-    empty.appendChild(el('div', null, 'Story Experience biến galaxy thành một cuộc trò chuyện cảm xúc trước khi người nhận bước vào.'));
+    empty.appendChild(el('div', null, tr('setupStoryEmpty')));
     wrap.appendChild(empty);
   }
 
-  const btn = el('button', 'btn-story', galaxy.storyType ? '✏️ Chỉnh sửa Story' : '✦ Tạo Story Experience');
+  const btn = el('button', 'btn-story', galaxy.storyType ? tr('setupStoryEdit') : tr('setupStoryCreate'));
+  btn.type = 'button';
   btn.onclick = () => { window.location.href = `/portal/story-setup.html?galaxyId=${galaxyId}`; };
   wrap.appendChild(btn);
 }
@@ -575,10 +612,11 @@ function updateGELock() {
     if (!hasStory) {
       if (!existing) {
         const banner = el('div', 'ge-lock-banner');
-        const strong = el('strong', null, '✦ Khuyến nghị setup Story Experience trước');
-        const link   = el('a', null, 'Setup ngay →');
+        const strong = el('strong', null, tr('setupStoryRecommendation'));
+        const link   = el('button', 'ge-lock-action', tr('setupStoryRecommendationAction'));
+        link.type = 'button';
         link.onclick = () => switchTab('story');
-        const text   = document.createTextNode(' Story Experience tạo ra cảm xúc trước khi người nhận bước vào galaxy. ');
+        const text   = document.createTextNode(tr('setupStoryRecommendationCopy'));
         banner.appendChild(strong);
         banner.appendChild(text);
         banner.appendChild(link);
@@ -593,7 +631,11 @@ function updateGELock() {
 // ── Tabs ───────────────────────────────────────────────────
 
 function switchTab(tabId) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const active = b.dataset.tab === tabId;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-selected', String(active));
+  });
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabId));
 }
 
@@ -647,7 +689,7 @@ async function init() {
   } catch (err) {
     trackResult('Galaxy Setup Failed', false, { errorType: 'galaxy_fetch_fail' }, err);
     console.error('[galaxy-setup] init error:', err);
-    showToast('Lỗi tải dữ liệu');
+    showToast(tr('setupLoadFail'));
   }
 }
 
@@ -664,6 +706,12 @@ document.querySelectorAll('.check-item').forEach(item => {
 const zone      = document.getElementById('upload-zone');
 const fileInput = document.getElementById('file-input');
 zone.onclick    = () => fileInput.click();
+zone.onkeydown = event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    fileInput.click();
+  }
+};
 fileInput.onchange = () => handleUpload(fileInput.files);
 zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
 zone.ondragleave = () => zone.classList.remove('dragover');
@@ -676,7 +724,7 @@ zone.ondrop = (e) => {
 document.getElementById('share-btn').onclick = () => {
   const url = `${location.origin}/view/?galaxyId=${galaxyId}`;
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(url).then(() => showToast('✓ Đã sao chép link!'));
+    navigator.clipboard.writeText(url).then(() => showToast(tr('setupLinkCopied')));
   } else {
     showToast(url);
   }
@@ -688,10 +736,13 @@ const panel     = document.getElementById('setup-panel');
 toggleBtn.onclick = () => {
   const collapsed = panel.classList.toggle('collapsed');
   toggleBtn.textContent = collapsed ? '▶' : '◀';
+  toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+  toggleBtn.setAttribute('aria-label', collapsed ? tr('setupPanelShow') : tr('setupPanelHide'));
+  toggleBtn.title = collapsed ? tr('setupPanelShow') : tr('setupPanelHide');
 };
 
 document.getElementById('delete-galaxy-btn').onclick = async () => {
-  if (!confirm('Xóa galaxy này? Hành động không thể hoàn tác.')) {
+  if (!confirm(tr('setupDeleteConfirm'))) {
     activity?.log({ action: 'Galaxy Delete Cancel', feature: 'galaxy', level: 'warn', galaxyId });
     return;
   }
@@ -702,12 +753,12 @@ document.getElementById('delete-galaxy-btn').onclick = async () => {
       headers: { Authorization: 'Bearer ' + token },
     });
     if (res.ok) {
-      showToast('Đã xóa galaxy');
+      showToast(tr('setupDeleted'));
       setTimeout(() => { window.location.href = '/portal/'; }, 1000);
     } else {
-      showToast('Xóa thất bại');
+      showToast(tr('setupDeleteFail'));
     }
-  } catch { showToast('Lỗi kết nối'); }
+  } catch { showToast(tr('errConnect')); }
 };
 
 document.getElementById('caption-add-btn').onclick = addCaption;

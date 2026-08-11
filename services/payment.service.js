@@ -2,8 +2,8 @@
 const { PayOS } = require('@payos/node');
 const SubscriptionModel = require('../models/subscription');
 const PaymentModel = require('../models/payment');
-const { PLANS, PLAN_KEYS, PLAN_RANK } = require('../config/plans');
-const { isDevelopmentBypass, getEntitlementBypassMode } = require('../config/runtime');
+const { PLANS, PLAN_KEYS, PLAN_RANK, FREE_MAX_GALAXIES } = require('../config/plans');
+const { getEntitlementBypassMode, getRoleEntitlementPlan } = require('../config/runtime');
 const { errorResponse } = require('../context/responseHandle');
 const crypto = require('crypto');
 require('dotenv').config();
@@ -97,9 +97,9 @@ class PaymentService {
     return { checkoutUrl: payosResponse.checkoutUrl, orderCode, reused: false };
   }
 
-  async devActivate({ userId, userEmail, plan, period, idempotencyKey }) {
-    if (!isDevelopmentBypass()) {
-      throw new errorResponse({ message: 'Not found', statusCode: 404 });
+  async adminSimulate({ userId, userEmail, userRole, plan, period, idempotencyKey }) {
+    if (userRole !== 'admin') {
+      throw new errorResponse({ message: 'Forbidden', statusCode: 403 });
     }
     if (!PLANS[plan]) {
       throw new errorResponse({ message: 'Invalid plan', statusCode: 400 });
@@ -119,7 +119,7 @@ class PaymentService {
           reused: true, simulated: true,
         };
       }
-      throw new errorResponse({ message: 'Yêu cầu DEV này đã được xử lý', statusCode: 409 });
+      throw new errorResponse({ message: 'Yêu cầu mô phỏng này đã được xử lý', statusCode: 409 });
     }
 
     const amount = PLANS[plan][period];
@@ -134,21 +134,22 @@ class PaymentService {
         plan,
         period,
         amount,
+        isSimulation: true,
         status: 'processing',
         processingAt: paidAt,
         buyerEmail: userEmail,
-        description: `[DEV] Galaxy ${PLANS[plan].label} - ${periodLabel}`,
+        description: `[ADMIN TEST] Galaxy ${PLANS[plan].label} - ${periodLabel}`,
         idempotencyKeyHash,
       });
     } catch (err) {
       if (err?.code === 11000) {
-        throw new errorResponse({ message: 'Yêu cầu DEV đang được xử lý, vui lòng thử lại', statusCode: 409 });
+        throw new errorResponse({ message: 'Yêu cầu mô phỏng đang được xử lý, vui lòng thử lại', statusCode: 409 });
       }
       throw err;
     }
 
     try {
-      const existingSub = await SubscriptionModel.findOne({ userId, status: 'active' });
+      const existingSub = await SubscriptionModel.findOne({ userId, status: 'active', isSimulation: true });
       let subscription;
       if (existingSub) {
         const baseDate = existingSub.expiredAt > paidAt ? existingSub.expiredAt : paidAt;
@@ -157,7 +158,7 @@ class PaymentService {
         else expiredAt.setFullYear(expiredAt.getFullYear() + 1);
         subscription = await SubscriptionModel.findByIdAndUpdate(
           existingSub._id,
-          { plan, period, status: 'active', expiredAt },
+          { plan, period, status: 'active', isSimulation: true, expiredAt },
           { new: true },
         );
       } else {
@@ -165,13 +166,13 @@ class PaymentService {
         if (period === 'monthly') expiredAt.setMonth(expiredAt.getMonth() + 1);
         else expiredAt.setFullYear(expiredAt.getFullYear() + 1);
         subscription = await SubscriptionModel.create({
-          userId, plan, period, status: 'active', startDate: paidAt, expiredAt,
+          userId, plan, period, status: 'active', isSimulation: true, startDate: paidAt, expiredAt,
         });
       }
 
       await PaymentModel.findByIdAndUpdate(payment._id, {
         status: 'paid', processingAt: null, paidAt, subscriptionId: subscription._id,
-        payosTransactionId: `DEV-${payment._id}`,
+        payosTransactionId: `ADMIN-SIM-${payment._id}`,
       });
       return {
         status: 'paid', paymentId: payment._id, subscriptionId: subscription._id,
@@ -179,7 +180,7 @@ class PaymentService {
       };
     } catch (err) {
       await PaymentModel.findByIdAndUpdate(payment._id, { status: 'failed', processingAt: null });
-      throw new errorResponse({ message: 'Không thể kích hoạt gói DEV: ' + err.message, statusCode: 500 });
+      throw new errorResponse({ message: 'Không thể hoàn tất mô phỏng admin: ' + err.message, statusCode: 500 });
     }
   }
 
@@ -193,7 +194,10 @@ class PaymentService {
 
     const { orderCode, reference, code } = webhookData;
 
-    const payment = await PaymentModel.findOne({ payosOrderCode: orderCode });
+    const payment = await PaymentModel.findOne({
+      payosOrderCode: orderCode,
+      isSimulation: { $ne: true },
+    });
     if (!payment) return { status: 'ignored' };
 
     if (code !== '00') {
@@ -227,7 +231,11 @@ class PaymentService {
 
     try {
       const paidAt = new Date();
-      const existingSub = await SubscriptionModel.findOne({ userId: claimedPayment.userId, status: 'active' });
+      const existingSub = await SubscriptionModel.findOne({
+        userId: claimedPayment.userId,
+        status: 'active',
+        isSimulation: { $ne: true },
+      });
 
       let subscription;
       if (existingSub) {
@@ -274,29 +282,40 @@ class PaymentService {
   }
 
   async getStatus(userId, userRole) {
-    const accessMode = getEntitlementBypassMode({ role: userRole });
+    const rolePlan = getRoleEntitlementPlan({ role: userRole });
+    const accessMode = getEntitlementBypassMode({ role: userRole }) || (rolePlan ? 'partner' : null);
     const entitlementBypass = accessMode !== null;
-    const developmentBypass = accessMode === 'development';
-    const privilegedBypass = accessMode === 'admin' || accessMode === 'partner';
-    let sub = await SubscriptionModel.findOne({ userId, status: 'active' }).sort({ expiredAt: -1 });
+    const adminBypass = accessMode === 'admin';
+    const subscriptionFilter = { userId, status: 'active' };
+    if (!adminBypass) subscriptionFilter.isSimulation = { $ne: true };
+    let sub = await SubscriptionModel.findOne(subscriptionFilter).sort({ expiredAt: -1 });
     if (sub && sub.expiredAt < new Date()) {
       await SubscriptionModel.findByIdAndUpdate(sub._id, { status: 'expired' });
       if (!entitlementBypass) return null;
       sub = null;
     }
     if (!sub && !entitlementBypass) return null;
-    const bypassPlan = privilegedBypass ? userRole : 'development';
-    const result = sub ? sub.toObject() : { plan: bypassPlan, status: 'active' };
-    if (entitlementBypass) {
+    const result = sub ? sub.toObject() : { plan: rolePlan || 'admin', status: 'active' };
+    if (adminBypass) {
       result.accessMode = accessMode;
-      result.developmentBypass = developmentBypass;
-      result.privilegedBypass = privilegedBypass;
+      result.paymentSimulationAllowed = true;
+      result.privilegedBypass = true;
       result.features = [...new Set(PLAN_KEYS.flatMap(key => PLANS[key].features || []))];
       result.maxGalaxies = Number.MAX_SAFE_INTEGER;
       result.effectivePlan = [...PLAN_KEYS].sort((left, right) => PLAN_RANK[right] - PLAN_RANK[left])[0] || 'free';
       return result;
     }
+    if (rolePlan) {
+      result.accessMode = accessMode;
+      result.paymentSimulationAllowed = false;
+      result.privilegedBypass = true;
+      result.features = [...(PLANS[rolePlan]?.features || [])];
+      result.maxGalaxies = PLANS[rolePlan]?.maxGalaxies ?? FREE_MAX_GALAXIES;
+      result.effectivePlan = rolePlan;
+      return result;
+    }
     result.accessMode = 'subscription';
+    result.paymentSimulationAllowed = false;
     result.features = [...(PLANS[sub.plan]?.features || [])];
     result.maxGalaxies = PLANS[sub.plan]?.maxGalaxies || 1;
     return result;
@@ -308,7 +327,7 @@ class PaymentService {
     const filter = { userId };
     const [items, total] = await Promise.all([
       PaymentModel.find(filter)
-        .select('payosOrderCode plan period amount status paidAt createdAt')
+        .select('payosOrderCode plan period amount status isSimulation paidAt createdAt')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)

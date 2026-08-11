@@ -10,6 +10,16 @@ var mode = 'login';
 var pendingEmail = '';
 var resendTimer = null;
 
+function syncAuthModeContent() {
+  var isLogin = mode === 'login';
+  document.getElementById('auth-kicker').textContent = isLogin ? window.t.authLoginKicker : window.t.authRegisterKicker;
+  document.getElementById('auth-heading').textContent = isLogin ? window.t.authLoginHeading : window.t.authRegisterHeading;
+  document.getElementById('auth-description').textContent = isLogin ? window.t.authLoginDescription : window.t.authRegisterDescription;
+  document.getElementById('tab-login').setAttribute('aria-selected', String(isLogin));
+  document.getElementById('tab-register').setAttribute('aria-selected', String(!isLogin));
+  document.getElementById('password').autocomplete = isLogin ? 'current-password' : 'new-password';
+}
+
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(function(s) {
     s.classList.remove('active');
@@ -70,6 +80,7 @@ document.getElementById('tab-login').addEventListener('click', function() {
   document.getElementById('tab-register').classList.remove('active');
   setLoading('submit-btn', false, window.t.btnLogin);
   setMsg('msg-auth', '', '');
+  syncAuthModeContent();
 });
 
 document.getElementById('tab-register').addEventListener('click', function() {
@@ -78,7 +89,10 @@ document.getElementById('tab-register').addEventListener('click', function() {
   document.getElementById('tab-login').classList.remove('active');
   setLoading('submit-btn', false, window.t.btnRegister);
   setMsg('msg-auth', '', '');
+  syncAuthModeContent();
 });
+
+syncAuthModeContent();
 
 document.getElementById('back-btn').addEventListener('click', function() {
   showScreen('auth');

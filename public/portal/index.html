@@ -50,6 +50,10 @@
       align-items: flex-start;
       margin-bottom: 44px;
     }
+    .header-brand {
+      flex: 1;
+      min-width: 0;
+    }
     .header-brand h1 {
       font-family: 'Cinzel', serif;
       font-size: clamp(18px, 3.5vw, 24px);
@@ -70,6 +74,15 @@
       font-size: 13px;
       color: var(--text-sub);
       letter-spacing: 0.02em;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .user-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-height: 22px;
     }
     .logout {
       background: var(--surface);
@@ -530,17 +543,31 @@
     .toast.success { border-color: rgba(110,231,183,0.4); color: var(--green); }
     .toast.error { border-color: rgba(248,113,113,0.4); color: var(--red); }
     .plan-badge {
-      display: inline-block;
-      padding: 1px 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      padding: 2px 8px;
       border-radius: 99px;
       font-size: 10px;
       font-weight: 600;
+      line-height: 1;
       letter-spacing: 0.08em;
       background: rgba(139,92,246,0.15);
       color: var(--accent-light);
       border: 1px solid rgba(139,92,246,0.3);
-      margin-left: 6px;
-      vertical-align: middle;
+      white-space: nowrap;
+    }
+    .plan-badge[hidden] { display: none; }
+    .plan-badge[data-access-mode="admin"] {
+      background: rgba(110,231,183,0.1);
+      color: var(--green);
+      border-color: rgba(110,231,183,0.34);
+    }
+    .plan-badge[data-access-mode="partner"] {
+      background: rgba(96,165,250,0.1);
+      color: #93c5fd;
+      border-color: rgba(96,165,250,0.34);
     }
     table td {
       padding: 12px;
@@ -831,11 +858,14 @@
       body { padding: 20px 14px 60px; }
 
       header {
+        align-items: stretch;
         flex-wrap: wrap;
         gap: 12px;
         margin-bottom: 28px;
       }
-      .header-brand h1 { font-size: 16px; }
+      .header-brand { flex-basis: 100%; width: 100%; }
+      .header-brand h1 { font-size: 16px; line-height: 1.45; }
+      .settings-wrap { margin-left: auto; }
 
       /* header buttons stack */
       header > div { flex-wrap: wrap; }
@@ -855,95 +885,589 @@
       /* toast no overflow */
       .toast { white-space: normal; max-width: calc(100vw - 48px); }
     }
+
+    /* ── Memory workspace redesign ──────────────── */
+    body.portal-page {
+      min-height: 100vh;
+      padding: 0 0 72px;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 8% -5%, rgba(124,58,237,.22), transparent 30%),
+        radial-gradient(circle at 95% 100%, rgba(76,29,149,.2), transparent 34%),
+        #05050d;
+    }
+    .portal-ambient {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        radial-gradient(circle at 15% 25%, rgba(255,255,255,.8) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 78% 18%, rgba(196,181,253,.8) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 46% 72%, rgba(255,255,255,.65) 0 1px, transparent 1.5px);
+      background-size: 230px 230px, 310px 310px, 390px 390px;
+    }
+    .portal-page .container {
+      position: relative;
+      z-index: 1;
+      width: min(1280px, calc(100% - 48px));
+      max-width: none;
+      margin: 0 auto;
+    }
+    .portal-page .portal-header {
+      min-height: 88px;
+      margin: 0;
+      padding: 20px 0;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .portal-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .portal-brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      flex: none;
+      border: 1px solid rgba(196,181,253,.25);
+      border-radius: 12px;
+      color: var(--accent-light);
+      background: rgba(139,92,246,.1);
+      box-shadow: 0 0 28px rgba(139,92,246,.14);
+    }
+    .portal-brand-copy { display: grid; gap: 2px; min-width: 0; }
+    .portal-brand-name {
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .portal-brand-tagline {
+      color: rgba(255,255,255,.34);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .portal-header-actions { display: flex; align-items: center; gap: 10px; }
+    .profile-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      padding: 7px 11px 7px 8px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 12px;
+      background: rgba(255,255,255,.025);
+    }
+    .profile-avatar {
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      flex: none;
+      border-radius: 9px;
+      color: #fff;
+      background: linear-gradient(145deg, #8b5cf6, #5b21b6);
+      box-shadow: 0 7px 18px rgba(109,40,217,.22);
+    }
+    .profile-chip .user-meta { display: grid; justify-items: start; gap: 3px; min-height: 0; }
+    .profile-chip .user-info { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+    .portal-page .plan-badge { min-height: 17px; padding: 2px 6px; font-size: 8px; }
+    .portal-page .btn-settings {
+      min-height: 46px;
+      padding: 9px 13px;
+      border-color: rgba(255,255,255,.075);
+      border-radius: 12px;
+      background: rgba(255,255,255,.025);
+    }
+    .portal-page .settings-menu {
+      top: calc(100% + 9px);
+      min-width: 190px;
+      padding: 6px;
+      border-color: rgba(255,255,255,.09);
+      border-radius: 13px;
+      background: rgba(12,11,24,.97);
+      box-shadow: 0 18px 50px rgba(0,0,0,.4);
+      backdrop-filter: blur(18px);
+    }
+    .portal-page .settings-item { border-radius: 8px; }
+
+    .portal-layout {
+      display: grid;
+      grid-template-columns: 218px minmax(0, 1fr);
+      gap: 26px;
+      padding-top: 28px;
+      align-items: start;
+    }
+    .portal-sidebar {
+      position: sticky;
+      top: 22px;
+      display: grid;
+      gap: 14px;
+    }
+    .workspace-card {
+      padding: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 90% 5%, rgba(139,92,246,.18), transparent 45%),
+        rgba(255,255,255,.025);
+    }
+    .workspace-kicker {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent-light);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+    .workspace-card strong {
+      display: block;
+      margin-bottom: 7px;
+      font-family: 'Cinzel', serif;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .workspace-card p { color: var(--text-sub); font-size: 11px; line-height: 1.55; }
+    .portal-page .tabs-nav {
+      display: grid;
+      gap: 5px;
+      margin: 0;
+      padding: 7px;
+      border: 1px solid rgba(255,255,255,.075);
+      border-radius: 16px;
+      background: rgba(255,255,255,.025);
+    }
+    .portal-page .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      margin: 0;
+      border: 0;
+      border-radius: 10px;
+      text-align: left;
+      color: rgba(255,255,255,.43);
+    }
+    .portal-page .tab-btn.active {
+      color: #fff;
+      border: 0;
+      background: linear-gradient(135deg, rgba(139,92,246,.24), rgba(109,40,217,.13));
+      box-shadow: inset 0 0 0 1px rgba(167,139,250,.18);
+    }
+    .portal-page .tab-btn:hover:not(.active) { background: rgba(255,255,255,.035); }
+    .tab-icon {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      flex: none;
+      border-radius: 7px;
+      color: var(--accent-light);
+      background: rgba(139,92,246,.08);
+      font-size: 12px;
+    }
+    .sidebar-note {
+      padding: 5px 10px;
+      color: rgba(255,255,255,.26);
+      font-size: 10px;
+      line-height: 1.55;
+    }
+    .portal-main { min-width: 0; }
+    .portal-page .tab-panel.active { animation: portalPanelIn .28s ease both; }
+    @keyframes portalPanelIn {
+      from { opacity: 0; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-hero {
+      position: relative;
+      min-height: 154px;
+      margin-bottom: 20px;
+      padding: clamp(24px, 4vw, 36px);
+      overflow: hidden;
+      border: 1px solid rgba(196,181,253,.1);
+      border-radius: 22px;
+      background:
+        linear-gradient(130deg, rgba(139,92,246,.13), rgba(255,255,255,.018) 58%),
+        rgba(255,255,255,.022);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .panel-hero::after {
+      content: '';
+      position: absolute;
+      width: 230px;
+      height: 230px;
+      right: -70px;
+      top: -120px;
+      border: 1px solid rgba(196,181,253,.1);
+      border-radius: 50%;
+      box-shadow: 0 0 0 36px rgba(196,181,253,.022), 0 0 0 76px rgba(196,181,253,.014);
+    }
+    .panel-hero-copy { position: relative; z-index: 1; max-width: 650px; }
+    .panel-kicker {
+      display: block;
+      margin-bottom: 9px;
+      color: var(--accent-light);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .panel-hero h1 {
+      margin-bottom: 7px;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(23px, 3.2vw, 34px);
+      font-weight: 500;
+      line-height: 1.18;
+    }
+    .panel-hero p { max-width: 590px; color: var(--text-sub); font-size: 13px; line-height: 1.65; }
+    .portal-page .btn-new {
+      position: relative;
+      z-index: 1;
+      min-height: 46px;
+      flex: none;
+      margin: 0;
+      padding: 11px 18px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      box-shadow: 0 12px 30px rgba(109,40,217,.22);
+    }
+
+    .galaxy-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin: 22px 2px 14px;
+    }
+    .galaxy-summary h2 { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 500; letter-spacing: .04em; }
+    .galaxy-count { color: var(--text-sub); font-size: 11px; }
+    .portal-page .galaxy-grid { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+    .portal-page .galaxy-card {
+      gap: 13px;
+      padding: 0 17px 17px;
+      border-color: rgba(255,255,255,.075);
+      border-radius: 18px;
+      background: rgba(255,255,255,.025);
+      box-shadow: 0 16px 48px rgba(0,0,0,.12);
+    }
+    .portal-page .galaxy-card::before { display: none; }
+    .portal-page .galaxy-card:hover {
+      border-color: rgba(167,139,250,.32);
+      background: rgba(255,255,255,.038);
+      box-shadow: 0 22px 58px rgba(28,12,61,.26);
+    }
+    .galaxy-card-visual {
+      position: relative;
+      height: 112px;
+      margin: 0 -17px 2px;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      border-radius: 17px 17px 0 0;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(167,139,250,.38), transparent 12%),
+        repeating-radial-gradient(ellipse at 50% 52%, transparent 0 17px, rgba(196,181,253,.1) 18px, transparent 19px 31px),
+        linear-gradient(135deg, rgba(76,29,149,.46), rgba(18,12,39,.72));
+    }
+    .galaxy-card-visual::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,.68) 0 1px, transparent 1.3px);
+      background-size: 31px 31px;
+      opacity: .24;
+    }
+    .galaxy-card[data-template="fall"] .galaxy-card-visual {
+      background:
+        linear-gradient(160deg, rgba(245,158,11,.14), transparent 40%),
+        radial-gradient(circle at 50% 35%, rgba(244,114,182,.26), transparent 18%),
+        linear-gradient(135deg, rgba(76,29,149,.38), rgba(30,15,28,.78));
+    }
+    .galaxy-visual-mark {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: rgba(255,255,255,.9);
+      font-size: 27px;
+      text-shadow: 0 0 26px rgba(196,181,253,.8);
+    }
+    .portal-page .galaxy-name { font-size: 16px; }
+    .portal-page .btn-view-quick { border-radius: 9px; }
+    .portal-page .galaxy-actions { margin-top: 2px; }
+    .portal-page .btn-manage { min-height: 38px; border-radius: 9px; background: rgba(139,92,246,.17); color: var(--accent-light); }
+    .portal-page .btn-manage:hover { background: var(--accent); color: #fff; }
+    .portal-page .btn-copy-link { width: 38px; height: 38px; border-radius: 9px; }
+    .empty-state {
+      grid-column: 1 / -1;
+      min-height: 260px;
+      padding: 38px 24px;
+      border: 1px dashed rgba(196,181,253,.15);
+      border-radius: 20px;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 10px;
+      text-align: center;
+      background: rgba(255,255,255,.015);
+    }
+    .empty-state-icon {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      color: var(--accent-light);
+      background: rgba(139,92,246,.1);
+      font-size: 20px;
+    }
+    .empty-state strong { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 500; }
+    .empty-state p { color: var(--text-sub); font-size: 12px; }
+
+    .portal-page #panel-subscription .sub-section,
+    .portal-page #panel-account .sub-section { max-width: none; }
+    .portal-page .sub-current,
+    .portal-page .plan-card,
+    .portal-page .history-section,
+    .portal-page .account-card {
+      border-color: rgba(255,255,255,.075);
+      border-radius: 18px;
+      background: rgba(255,255,255,.025);
+    }
+    .portal-page .sub-current { padding: 20px 22px; }
+    .portal-page .sub-plans { gap: 16px; }
+    .portal-page .plan-card { padding: 24px; }
+    .portal-page .plan-card:hover { border-color: rgba(167,139,250,.28); background: rgba(255,255,255,.035); }
+    .portal-page .period-toggle { padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.02); }
+    .portal-page .period-btn { border: 0; border-radius: 7px; }
+    .portal-page .period-btn.active { background: rgba(139,92,246,.25); box-shadow: inset 0 0 0 1px rgba(167,139,250,.2); }
+    .portal-page .btn-subscribe { min-height: 42px; border-radius: 10px; }
+    .portal-page .history-section { padding: 22px; }
+    .portal-page .history-table-wrap { border-radius: 12px; }
+
+    .account-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(300px, .92fr); gap: 16px; align-items: start; }
+    .account-column { display: grid; gap: 16px; }
+    .portal-page .account-card { padding: 22px; }
+    .portal-page .account-input { min-height: 46px; border-radius: 10px; background: rgba(255,255,255,.035); }
+    .portal-page .account-input:focus { box-shadow: 0 0 0 4px rgba(139,92,246,.08); }
+    .portal-page .account-section-title { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 500; }
+    .account-danger { background: rgba(248,113,113,.025) !important; }
+
+    .portal-page .modal-overlay { background: rgba(0,0,0,.76); }
+    .portal-page .modal {
+      width: min(420px, calc(100vw - 32px));
+      padding: 28px;
+      border-radius: 18px;
+      background: #0d0c19;
+      box-shadow: 0 28px 90px rgba(0,0,0,.5);
+    }
+    .portal-page .modal h3 { font-size: 18px; text-transform: none; }
+    .portal-page .modal input { min-height: 48px; border-radius: 10px; }
+
+    @media (max-width: 900px) {
+      .portal-page .container { width: min(760px, calc(100% - 32px)); }
+      .portal-layout { grid-template-columns: 1fr; padding-top: 20px; }
+      .portal-sidebar { position: static; }
+      .workspace-card, .sidebar-note { display: none; }
+      .portal-page .tabs-nav { display: flex; overflow-x: auto; padding: 5px; }
+      .portal-page .tab-btn { width: auto; min-width: max-content; justify-content: center; }
+      .account-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      body.portal-page { padding: 0 0 46px; }
+      .portal-page .container { width: calc(100% - 24px); }
+      .portal-page .portal-header { min-height: 76px; }
+      .portal-brand-tagline, .profile-chip .user-info, #settings-label { display: none; }
+      .profile-chip { padding: 6px; }
+      .profile-chip .user-meta { position: static; }
+      .portal-page .btn-settings { width: 43px; min-height: 43px; justify-content: center; padding: 0; }
+      .portal-layout { gap: 15px; }
+      .panel-hero { min-height: 0; padding: 24px 20px; align-items: stretch; flex-direction: column; gap: 18px; }
+      .panel-hero::after { opacity: .6; }
+      .portal-page .btn-new { width: 100%; justify-content: center; }
+      .portal-page .galaxy-grid { grid-template-columns: 1fr; }
+      .portal-page .sub-plans { grid-template-columns: 1fr; }
+      .portal-page .history-section { padding: 16px; }
+      .account-grid { gap: 12px; }
+      .portal-page .account-card { padding: 18px; }
+      .session-item { flex-direction: column; }
+      .session-ua { white-space: normal; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .portal-page .tab-panel.active { animation: none; }
+      .portal-page .galaxy-card { transition: none; }
+    }
   </style>
 </head>
-<body>
+<body class="portal-page">
+  <div class="portal-ambient" aria-hidden="true"></div>
   <div class="container">
-    <header>
-      <div class="header-brand">
-        <h1><i class="brand-star">✦</i> Lumora - ánh sáng của ký ức Portal</h1>
-        <div class="user-info" id="user-email"></div>
-      </div>
-      <div class="settings-wrap">
-        <button class="btn-settings" id="btn-settings">⚙ <span id="settings-label">Cài đặt</span> ▾</button>
-        <div class="settings-menu" id="settings-menu">
-          <button class="settings-item" id="btn-admin-panel" style="display:none">🛡 Admin Panel</button>
-          <div class="settings-divider" id="settings-divider" style="display:none"></div>
-          <button class="settings-item" id="btn-goto-account" data-tab="account">👤 Tài khoản</button>
-          <div class="settings-divider"></div>
-          <button class="settings-item danger" id="btn-logout">Đăng xuất</button>
+    <header class="portal-header">
+      <a class="portal-brand" href="/" aria-label="Lumora">
+        <span class="portal-brand-mark" aria-hidden="true">✦</span>
+        <span class="portal-brand-copy">
+          <strong class="portal-brand-name">Lumora</strong>
+          <small class="portal-brand-tagline" id="portal-brand-tagline">Không gian ký ức</small>
+        </span>
+      </a>
+      <div class="portal-header-actions">
+        <div class="profile-chip">
+          <span class="profile-avatar" aria-hidden="true">✦</span>
+          <span class="user-meta">
+            <span class="user-info" id="user-email"></span>
+            <span class="plan-badge" id="plan-badge-header" hidden></span>
+          </span>
+        </div>
+        <div class="settings-wrap">
+          <button class="btn-settings" id="btn-settings" type="button" aria-haspopup="true" aria-expanded="false">
+            <span aria-hidden="true">⚙</span><span id="settings-label">Cài đặt</span><span aria-hidden="true">▾</span>
+          </button>
+          <div class="settings-menu" id="settings-menu">
+            <button class="settings-item" id="btn-admin-panel" type="button" style="display:none">🛡 Admin Panel</button>
+            <div class="settings-divider" id="settings-divider" style="display:none"></div>
+            <button class="settings-item" id="btn-goto-account" type="button" data-tab="account">👤 Tài khoản</button>
+            <div class="settings-divider"></div>
+            <button class="settings-item danger" id="btn-logout" type="button">Đăng xuất</button>
+          </div>
         </div>
       </div>
     </header>
 
-    <div class="tabs-nav" id="tabs-nav">
-      <button class="tab-btn active" data-tab="galaxies">Galaxies</button>
-      <button class="tab-btn" data-tab="subscription">Subscription</button>
-    </div>
+    <div class="portal-layout">
+      <aside class="portal-sidebar">
+        <div class="workspace-card">
+          <span class="workspace-kicker" id="workspace-kicker">Không gian của bạn</span>
+          <strong id="workspace-title">Không gian ký ức</strong>
+          <p id="workspace-description">Nơi những khoảnh khắc được kể lại theo cách của riêng bạn.</p>
+        </div>
 
-    <div class="tab-panel active" id="panel-galaxies">
-      <button class="btn-new" id="btn-open-modal">+ Tạo galaxy mới</button>
-      <div class="galaxy-grid" id="galaxy-grid"></div>
-    </div>
+        <nav class="tabs-nav" id="tabs-nav" aria-label="Portal navigation">
+          <button class="tab-btn active" type="button" data-tab="galaxies" aria-selected="true">
+            <span class="tab-icon" aria-hidden="true">✦</span><span id="tab-galaxies-label">Vũ trụ</span>
+          </button>
+          <button class="tab-btn" type="button" data-tab="subscription" aria-selected="false">
+            <span class="tab-icon" aria-hidden="true">◇</span><span id="tab-subscription-label">Gói dịch vụ</span>
+          </button>
+          <button class="tab-btn" type="button" data-tab="account" aria-selected="false">
+            <span class="tab-icon" aria-hidden="true">○</span><span id="tab-account-label">Tài khoản</span>
+          </button>
+        </nav>
 
-    <div class="tab-panel" id="panel-subscription">
-      <div class="sub-section" id="sub-section">
-        <div class="empty" id="sub-loading">Dang tai...</div>
+        <p class="sidebar-note" id="sidebar-note">Mỗi galaxy là một vũ trụ riêng, sẵn sàng để bạn tiếp tục viết nên.</p>
+      </aside>
+
+      <main class="portal-main">
+
+    <section class="tab-panel active" id="panel-galaxies">
+      <div class="panel-hero">
+        <div class="panel-hero-copy">
+          <span class="panel-kicker" id="galaxies-kicker">Bộ sưu tập ký ức</span>
+          <h1 id="galaxies-title">Không gian của bạn</h1>
+          <p id="galaxies-description">Mở lại một câu chuyện đang viết dở, hoặc bắt đầu một vũ trụ hoàn toàn mới.</p>
+        </div>
+        <button class="btn-new" type="button" id="btn-open-modal">+ Tạo vũ trụ mới</button>
       </div>
-    </div>
+      <div class="galaxy-summary">
+        <h2 id="galaxy-list-title">Vũ trụ gần đây</h2>
+        <span class="galaxy-count" id="galaxy-count">0 vũ trụ</span>
+      </div>
+      <div class="galaxy-grid" id="galaxy-grid"></div>
+    </section>
 
-    <div class="tab-panel" id="panel-account">
-      <div class="sub-section" style="margin:0 auto">
+    <section class="tab-panel" id="panel-subscription">
+      <div class="panel-hero">
+        <div class="panel-hero-copy">
+          <span class="panel-kicker" id="subscription-kicker">Mở rộng trải nghiệm</span>
+          <h1 id="subscription-title">Gói dịch vụ</h1>
+          <p id="subscription-description">Chọn quyền lợi phù hợp cho cách bạn lưu giữ và chia sẻ ký ức.</p>
+        </div>
+      </div>
+      <div class="sub-section" id="sub-section">
+        <div class="empty" id="sub-loading">Đang tải...</div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-account">
+      <div class="panel-hero">
+        <div class="panel-hero-copy">
+          <span class="panel-kicker" id="account-kicker">Bảo mật &amp; truy cập</span>
+          <h1 id="account-title">Tài khoản của bạn</h1>
+          <p id="account-description">Quản lý thông tin đăng nhập, các phiên đang hoạt động và quyền riêng tư.</p>
+        </div>
+      </div>
+      <div class="account-grid">
+        <div class="account-column">
 
         <!-- Email info -->
-        <div class="account-card" style="margin-bottom:16px">
+        <div class="account-card">
           <div class="account-row">
-            <span class="account-label-text">Email</span>
-            <span id="account-email-display" style="font-size:14px;color:var(--text)"></span>
+            <span class="account-label-text" id="account-email-label">Email</span>
+            <span id="account-email-display"></span>
           </div>
         </div>
 
         <!-- Phiên đăng nhập -->
-        <div class="account-card" style="margin-bottom:16px" id="sessions-card">
+        <div class="account-card" id="sessions-card">
           <div class="account-section-title" id="sessions-title">Phiên đăng nhập</div>
           <div id="sessions-list"></div>
-          <button class="btn-danger-full" id="btn-logout-all" style="margin-top:12px">Đăng xuất tất cả thiết bị</button>
+          <button class="btn-danger-full" type="button" id="btn-logout-all">Đăng xuất tất cả thiết bị</button>
           <div class="account-msg" id="msg-sessions"></div>
         </div>
 
+        </div>
+        <div class="account-column">
         <!-- Đổi mật khẩu -->
-        <div class="account-card" style="margin-bottom:16px">
+        <div class="account-card">
           <div class="account-section-title" id="account-change-pw-title">Đổi mật khẩu</div>
-          <input type="password" class="account-input" id="acc-current-pw" placeholder="Mật khẩu hiện tại" />
-          <input type="password" class="account-input" id="acc-new-pw" placeholder="Mật khẩu mới" />
-          <input type="password" class="account-input" id="acc-confirm-pw" placeholder="Xác nhận mật khẩu mới" />
-          <button class="btn-subscribe" id="btn-change-pw" style="margin-top:4px">Đổi mật khẩu</button>
+          <input type="password" class="account-input" id="acc-current-pw" autocomplete="current-password" placeholder="Mật khẩu hiện tại" />
+          <input type="password" class="account-input" id="acc-new-pw" autocomplete="new-password" placeholder="Mật khẩu mới" />
+          <input type="password" class="account-input" id="acc-confirm-pw" autocomplete="new-password" placeholder="Xác nhận mật khẩu mới" />
+          <button class="btn-subscribe" type="button" id="btn-change-pw">Đổi mật khẩu</button>
           <div class="account-msg" id="msg-change-pw"></div>
         </div>
 
         <!-- Danger zone -->
         <div class="account-card account-danger">
-          <div class="account-section-title" id="account-danger-title" style="color:var(--red)">Vùng nguy hiểm</div>
+          <div class="account-section-title" id="account-danger-title">Vùng nguy hiểm</div>
           <p id="account-delete-hint" class="account-hint">Nhập mật khẩu để xác nhận xóa tài khoản vĩnh viễn.</p>
-          <input type="password" class="account-input account-input-danger" id="acc-delete-pw" placeholder="Mật khẩu" />
-          <button class="btn-danger-full" id="btn-delete-account">Xóa tài khoản</button>
+          <input type="password" class="account-input account-input-danger" id="acc-delete-pw" autocomplete="current-password" placeholder="Mật khẩu" />
+          <button class="btn-danger-full" type="button" id="btn-delete-account">Xóa tài khoản</button>
           <div class="account-msg" id="msg-delete-account"></div>
         </div>
 
+        </div>
       </div>
+    </section>
+      </main>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
 
-  <div class="modal-overlay" id="modal">
+  <div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal">
-      <h3>Tạo Galaxy mới</h3>
-      <input type="text" id="galaxy-name" placeholder="Tên galaxy (vd: moon, emiu…)" />
-      <div class="msg" id="modal-msg"></div>
+      <h3 id="modal-title">Tạo vũ trụ mới</h3>
+      <input type="text" id="galaxy-name" autocomplete="off" placeholder="Tên vũ trụ (vd: moon, emiu…)" />
+      <div class="msg" id="modal-msg" aria-live="polite"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="btn-cancel">Hủy</button>
-        <button class="btn-create" id="btn-create">Tạo</button>
+        <button class="btn-cancel" type="button" id="btn-cancel">Hủy</button>
+        <button class="btn-create" type="button" id="btn-create">Tạo</button>
       </div>
     </div>
   </div>
@@ -964,9 +1488,25 @@
         if (node && value) node.placeholder = value;
       };
       document.title = t.portalTitle || document.title;
-      setText('[data-tab="galaxies"]', t.tabGalaxies);
-      setText('[data-tab="subscription"]', t.tabSubscription);
-      setText('[data-tab="account"]', t.tabAccount);
+      setText('#tab-galaxies-label', t.tabGalaxies);
+      setText('#tab-subscription-label', t.tabSubscription);
+      setText('#tab-account-label', t.tabAccount);
+      setText('#portal-brand-tagline', t.portalBrandTagline);
+      setText('#workspace-kicker', t.portalWorkspaceKicker);
+      setText('#workspace-title', t.portalWorkspaceTitle);
+      setText('#workspace-description', t.portalWorkspaceDescription);
+      setText('#sidebar-note', t.portalSidebarNote);
+      setText('#galaxies-kicker', t.portalGalaxiesKicker);
+      setText('#galaxies-title', t.portalGalaxiesTitle);
+      setText('#galaxies-description', t.portalGalaxiesDescription);
+      setText('#galaxy-list-title', t.portalGalaxyListTitle);
+      setText('#subscription-kicker', t.portalSubscriptionKicker);
+      setText('#subscription-title', t.portalSubscriptionTitle);
+      setText('#subscription-description', t.portalSubscriptionDescription);
+      setText('#account-kicker', t.portalAccountKicker);
+      setText('#account-title', t.portalAccountTitle);
+      setText('#account-description', t.portalAccountDescription);
+      setText('#account-email-label', t.accountEmail);
       setText('#btn-open-modal', t.btnNewGalaxy);
       setText('#settings-label', t.tabSettings || 'Cài đặt');
       setText('#btn-goto-account', t.tabAccount && '👤 ' + t.tabAccount);

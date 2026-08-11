@@ -13,12 +13,12 @@ const getStats = asyncHandler(async (req, res) => {
 
   const [totalUsers, activeSubs, monthRevenue, totalPayments] = await Promise.all([
     UserModel.countDocuments(),
-    SubscriptionModel.countDocuments({ status: 'active', expiredAt: { $gt: now } }),
+    SubscriptionModel.countDocuments({ status: 'active', isSimulation: { $ne: true }, expiredAt: { $gt: now } }),
     PaymentModel.aggregate([
-      { $match: { status: 'paid', paidAt: { $gte: startOfMonth } } },
+      { $match: { status: 'paid', isSimulation: { $ne: true }, paidAt: { $gte: startOfMonth } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]),
-    PaymentModel.countDocuments({ status: 'paid' }),
+    PaymentModel.countDocuments({ status: 'paid', isSimulation: { $ne: true } }),
   ]);
 
   new successfullyResponse({
@@ -47,12 +47,14 @@ const getUsers = asyncHandler(async (req, res) => {
     if (planFilter === 'none') {
       const subscribedIds = await SubscriptionModel.distinct('userId', {
         status: 'active',
+        isSimulation: { $ne: true },
         expiredAt: { $gt: now },
       });
       userIdWhitelist = { $nin: subscribedIds };
     } else {
       const subscribedIds = await SubscriptionModel.distinct('userId', {
         status: 'active',
+        isSimulation: { $ne: true },
         expiredAt: { $gt: now },
         plan: planFilter,
       });
@@ -74,6 +76,7 @@ const getUsers = asyncHandler(async (req, res) => {
   const subs = await SubscriptionModel.find({
     userId: { $in: userIds },
     status: 'active',
+    isSimulation: { $ne: true },
     expiredAt: { $gt: now },
   }).lean();
 
@@ -95,9 +98,9 @@ const getUserDetail = asyncHandler(async (req, res) => {
 
   const now = new Date();
   const [subscription, galaxies, payments] = await Promise.all([
-    SubscriptionModel.findOne({ userId: user._id, status: 'active', expiredAt: { $gt: now } }).lean(),
+    SubscriptionModel.findOne({ userId: user._id, status: 'active', isSimulation: { $ne: true }, expiredAt: { $gt: now } }).lean(),
     GalaxyModel.find({ userId: user._id }, 'name status createdAt').lean(),
-    PaymentModel.find({ userId: user._id }, 'plan period amount status paidAt createdAt').sort({ createdAt: -1 }).limit(10).lean(),
+    PaymentModel.find({ userId: user._id }, 'plan period amount status isSimulation paidAt createdAt').sort({ createdAt: -1 }).limit(10).lean(),
   ]);
 
   new successfullyResponse({ meta: { user, subscription, galaxies, payments }, message: 'OK' }).json(res);
@@ -114,7 +117,7 @@ const grantSubscription = asyncHandler(async (req, res) => {
   if (!user) throw new errorResponse({ message: 'User not found', statusCode: 404 });
 
   const now = new Date();
-  await SubscriptionModel.updateMany({ userId: user._id, status: 'active' }, { status: 'cancelled' });
+  await SubscriptionModel.updateMany({ userId: user._id, status: 'active', isSimulation: { $ne: true } }, { status: 'cancelled' });
 
   const expiredAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
   const sub = await SubscriptionModel.create({
@@ -122,6 +125,7 @@ const grantSubscription = asyncHandler(async (req, res) => {
     plan,
     period: 'monthly',
     status: 'active',
+    isSimulation: false,
     startDate: now,
     expiredAt,
   });
@@ -135,7 +139,7 @@ const revokeSubscription = asyncHandler(async (req, res) => {
   if (!user) throw new errorResponse({ message: 'User not found', statusCode: 404 });
 
   const result = await SubscriptionModel.updateMany(
-    { userId: user._id, status: 'active' },
+    { userId: user._id, status: 'active', isSimulation: { $ne: true } },
     { status: 'cancelled' }
   );
 
@@ -217,7 +221,7 @@ const getPayments = asyncHandler(async (req, res) => {
   }
 
   const [payments, total] = await Promise.all([
-    PaymentModel.find(query, 'buyerEmail plan period amount status paidAt createdAt payosOrderCode')
+    PaymentModel.find(query, 'buyerEmail plan period amount status isSimulation paidAt createdAt payosOrderCode')
       .sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     PaymentModel.countDocuments(query),
   ]);
@@ -235,7 +239,7 @@ const getCancellationChart = asyncHandler(async (req, res) => {
   await PaymentModel.updateMany({ status: 'pending', createdAt: { $lt: cutoff } }, { status: 'cancelled' });
 
   const rows = await PaymentModel.aggregate([
-    { $match: { createdAt: { $gte: since }, status: { $in: ['paid', 'cancelled'] } } },
+    { $match: { createdAt: { $gte: since }, status: { $in: ['paid', 'cancelled'] }, isSimulation: { $ne: true } } },
     {
       $group: {
         _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },

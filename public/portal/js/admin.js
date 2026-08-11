@@ -725,7 +725,7 @@ function openAuDetail(userId, email) {
     if (payments.length) {
       payments.forEach(p => {
         const valWrap = makeEl('span', 'font-size:12px');
-        valWrap.appendChild(makeEl('span', null, p.plan + ' ' + fmtVND(p.amount) + ' '));
+        valWrap.appendChild(makeEl('span', null, p.plan + (p.isSimulation ? ' · ADMIN TEST' : '') + ' ' + fmtVND(p.amount) + ' '));
         const statusColor = p.status === 'paid' ? '#4ade80' : p.status === 'cancelled' ? '#f87171' : '#fbbf24';
         valWrap.appendChild(makeEl('span', `color:${statusColor}`, p.status));
         paySec.appendChild(makeDetailRow(fmtDate(p.paidAt || p.createdAt), valWrap));
@@ -802,6 +802,7 @@ async function loadAnalytics() {
       tr.appendChild(makeEl('td', 'padding:11px 12px;font-size:13px', p.buyerEmail));
       const tdPlan = makeEl('td', 'padding:11px 12px');
       tdPlan.appendChild(makeSpanBadge(p.plan.toUpperCase(), 'rgba(139,92,246,0.2)', '#a78bfa'));
+      if (p.isSimulation) tdPlan.appendChild(makeSpanBadge('ADMIN TEST', 'rgba(16,185,129,0.15)', '#6ee7b7'));
       const bg = p.status === 'paid' ? 'rgba(34,197,94,0.15)' : p.status === 'cancelled' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)';
       const color = p.status === 'paid' ? '#4ade80' : p.status === 'cancelled' ? '#f87171' : '#fbbf24';
       const tdStatus = makeEl('td', 'padding:11px 12px');

@@ -3,7 +3,6 @@ const PaymentService = require('../services/payment.service');
 const { successfullyResponse, errorResponse } = require('../context/responseHandle');
 const { safeLog } = require('../middlewares/activityTracking');
 const { getComplianceConfig } = require('../config/compliance');
-const { isDevelopmentBypass } = require('../config/runtime');
 
 class PaymentController {
   async createPaymentLink(req, res, next) {
@@ -11,9 +10,21 @@ class PaymentController {
     if (!plan || !period) {
       return next(new errorResponse({ message: 'plan and period are required', statusCode: 400 }));
     }
-    if (!getComplianceConfig().payments.enabled) {
+    const isAdmin = req.user.role === 'admin';
+    if (!getComplianceConfig().payments.enabled && !isAdmin) {
       return next(new errorResponse({
         message: 'Tính năng thanh toán đang được hoàn thiện',
+        statusCode: 503,
+      }));
+    }
+    const payosConfigured = [
+      process.env.PAYOS_CLIENT_ID,
+      process.env.PAYOS_API_KEY,
+      process.env.PAYOS_CHECKSUM_KEY,
+    ].every(value => String(value || '').trim().length > 0);
+    if (isAdmin && !payosConfigured) {
+      return next(new errorResponse({
+        message: 'Chưa cấu hình đầy đủ PayOS credentials cho ADMIN TEST',
         statusCode: 503,
       }));
     }
@@ -31,13 +42,16 @@ class PaymentController {
       returnUrl: baseUrl + '/portal/?payment=success',
       cancelUrl: baseUrl + '/payment/cancel',
     });
+    if (isAdmin) {
+      safeLog({
+        action: 'Admin PayOS Checkout Created', feature: 'payment', status: 1,
+        metadata: { plan, period, orderCode: result.orderCode, reused: result.reused },
+      }, req, { dedupKey: `payment:admin-payos:${result.orderCode}` });
+    }
     return new successfullyResponse({ message: 'Payment link created', meta: result }).json(res);
   }
 
-  async devActivate(req, res, next) {
-    if (!isDevelopmentBypass()) {
-      return next(new errorResponse({ message: 'Not found', statusCode: 404 }));
-    }
+  async adminSimulate(req, res, next) {
     const { plan, period } = req.body;
     if (!plan || !period) {
       return next(new errorResponse({ message: 'plan and period are required', statusCode: 400 }));
@@ -46,19 +60,20 @@ class PaymentController {
     if (!idempotencyKey) {
       return next(new errorResponse({ message: 'Idempotency-Key is required', statusCode: 400 }));
     }
-    const result = await PaymentService.devActivate({
+    const result = await PaymentService.adminSimulate({
       userId: req.user._id,
       userEmail: req.user.email,
+      userRole: req.user.role,
       plan,
       period,
       idempotencyKey,
     });
     safeLog({
-      action: result.extended ? 'Development Subscription Extended' : 'Development Subscription Activated',
+      action: result.extended ? 'Admin Subscription Simulation Extended' : 'Admin Subscription Simulation Activated',
       feature: 'subscription', status: 1, paymentId: result.paymentId,
       metadata: { plan, period, simulated: true, reused: result.reused },
-    }, req, { dedupKey: `subscription:dev-activated:${result.paymentId}` });
-    return new successfullyResponse({ message: 'Development subscription activated', meta: result }).json(res);
+    }, req, { dedupKey: `subscription:admin-simulated:${result.paymentId}` });
+    return new successfullyResponse({ message: 'Admin payment simulation completed', meta: result }).json(res);
   }
 
   async webhook(req, res, next) {

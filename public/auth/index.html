@@ -294,100 +294,578 @@
       background-color: transparent;
     }
     #transition-canvas { width: 100%; height: 100%; display: block; }
+
+    /* ── Immersive auth layout ───────────────────── */
+    body.auth-page {
+      display: block;
+      min-height: 100vh;
+      padding: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 14% 8%, rgba(124,58,237,.22), transparent 31%),
+        radial-gradient(circle at 88% 92%, rgba(76,29,149,.19), transparent 34%),
+        #05050d;
+    }
+    .auth-ambient {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .auth-ambient::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: .28;
+      background-image:
+        radial-gradient(circle at 15% 25%, rgba(255,255,255,.8) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 78% 18%, rgba(196,181,253,.8) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 46% 72%, rgba(255,255,255,.65) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 92% 64%, rgba(167,139,250,.8) 0 1px, transparent 1.5px);
+      background-size: 210px 210px, 270px 270px, 330px 330px, 390px 390px;
+    }
+    .ambient-glow {
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: .11;
+    }
+    .ambient-glow.one { left: -160px; top: 24%; background: #8b5cf6; }
+    .ambient-glow.two { right: -180px; bottom: -110px; background: #c084fc; }
+
+    .auth-shell {
+      position: relative;
+      z-index: 1;
+      width: min(1240px, calc(100% - 48px));
+      min-height: calc(100vh - 116px);
+      margin: 0 auto;
+      padding: 32px 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(430px, .92fr);
+      gap: clamp(32px, 6vw, 88px);
+      align-items: center;
+    }
+
+    .auth-story {
+      position: relative;
+      min-height: min(760px, calc(100vh - 64px));
+      padding: clamp(28px, 4vw, 52px);
+      overflow: hidden;
+      border: 1px solid rgba(196,181,253,.12);
+      border-radius: 30px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.015)),
+        radial-gradient(circle at 70% 22%, rgba(139,92,246,.2), transparent 36%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 30px 100px rgba(0,0,0,.26);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .auth-story::after {
+      content: '';
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -90px;
+      top: -100px;
+      border: 1px solid rgba(196,181,253,.12);
+      border-radius: 50%;
+      box-shadow: 0 0 0 38px rgba(196,181,253,.025), 0 0 0 82px rgba(196,181,253,.018);
+    }
+    .story-brand, .mobile-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      width: fit-content;
+      color: var(--text);
+      text-decoration: none;
+      font-family: 'Cinzel', serif;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .story-brand-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(196,181,253,.25);
+      border-radius: 11px;
+      color: var(--accent-light);
+      background: rgba(139,92,246,.09);
+      box-shadow: 0 0 24px rgba(139,92,246,.14);
+    }
+
+    .memory-stage {
+      position: relative;
+      width: min(430px, 82%);
+      aspect-ratio: 1;
+      margin: 12px auto 4px;
+      display: grid;
+      place-items: center;
+    }
+    .memory-orbit {
+      position: absolute;
+      inset: 13%;
+      border: 1px solid rgba(196,181,253,.15);
+      border-radius: 50%;
+      transform: rotate(-16deg) scaleY(.72);
+    }
+    .memory-orbit::before,
+    .memory-orbit::after {
+      content: '';
+      position: absolute;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      box-shadow: 0 0 18px rgba(196,181,253,.85);
+    }
+    .memory-orbit::before { left: 8%; top: 24%; }
+    .memory-orbit::after { right: 5%; bottom: 29%; }
+    .memory-orbit.second {
+      inset: 24%;
+      transform: rotate(34deg) scaleY(.76);
+      opacity: .65;
+    }
+    .memory-core {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      display: grid;
+      place-items: center;
+      border-radius: 36px;
+      color: #f5f3ff;
+      font-size: 30px;
+      background: radial-gradient(circle at 35% 28%, #a78bfa, #6d28d9 46%, #25114e 100%);
+      box-shadow: 0 0 0 12px rgba(139,92,246,.05), 0 0 70px rgba(139,92,246,.4);
+      transform: rotate(8deg);
+    }
+    .memory-core span { transform: rotate(-8deg); }
+    .memory-card {
+      position: absolute;
+      width: 150px;
+      padding: 13px 14px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      background: rgba(10,9,24,.76);
+      box-shadow: 0 18px 48px rgba(0,0,0,.32);
+      backdrop-filter: blur(12px);
+    }
+    .memory-card span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--accent-light);
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .memory-card strong { font-size: 12px; line-height: 1.45; font-weight: 400; color: rgba(255,255,255,.72); }
+    .memory-card.one { left: 0; top: 22%; transform: rotate(-5deg); }
+    .memory-card.two { right: 0; bottom: 20%; transform: rotate(5deg); }
+
+    .story-copy { position: relative; z-index: 1; max-width: 620px; }
+    .story-eyebrow, .auth-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--accent-light);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .story-eyebrow::before, .auth-kicker::before {
+      content: '';
+      width: 22px;
+      height: 1px;
+      background: currentColor;
+      opacity: .65;
+    }
+    .story-copy h1 {
+      max-width: 590px;
+      margin: 14px 0 16px;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(34px, 4.3vw, 58px);
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -.025em;
+    }
+    .story-copy > p {
+      max-width: 520px;
+      color: rgba(255,255,255,.52);
+      font-size: 15px;
+      line-height: 1.75;
+    }
+    .story-points {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 24px;
+    }
+    .story-point {
+      padding: 7px 11px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 99px;
+      color: rgba(255,255,255,.52);
+      background: rgba(255,255,255,.025);
+      font-size: 11px;
+      letter-spacing: .03em;
+    }
+
+    .auth-access {
+      width: 100%;
+      display: grid;
+      justify-items: center;
+    }
+    .auth-access .card {
+      width: min(100%, 480px);
+      max-width: none;
+      padding: clamp(28px, 4vw, 44px);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 24px;
+      background: rgba(13,12,25,.78);
+      box-shadow: 0 26px 80px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.045);
+      backdrop-filter: blur(20px);
+    }
+    .mobile-brand { display: none; margin-bottom: 28px; }
+    .auth-intro { margin-bottom: 24px; }
+    .auth-intro h2, .screen-heading {
+      margin: 10px 0 8px;
+      font-family: 'Cinzel', serif;
+      font-size: clamp(24px, 3vw, 31px);
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -.01em;
+    }
+    .auth-description, .screen-description {
+      color: var(--text-sub);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .screen-header { margin-bottom: 24px; }
+    .screen-header .otp-hint { margin: 8px 0 0; text-align: left; }
+
+    .auth-access .tabs {
+      gap: 7px;
+      padding: 5px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px;
+      background: rgba(255,255,255,.025);
+    }
+    .auth-access .tab {
+      min-height: 40px;
+      padding: 8px 12px;
+      margin: 0;
+      border: 0;
+      border-radius: 8px;
+    }
+    .auth-access .tab.active {
+      color: #fff;
+      border: 0;
+      background: rgba(139,92,246,.2);
+      box-shadow: inset 0 0 0 1px rgba(167,139,250,.22);
+    }
+    .field-label {
+      display: block;
+      margin: 0 0 7px 2px;
+      color: rgba(255,255,255,.68);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .auth-access .input-group { margin-bottom: 16px; }
+    .auth-access input {
+      min-height: 52px;
+      padding: 13px 15px;
+      border-color: rgba(255,255,255,.09);
+      border-radius: 12px;
+      background: rgba(255,255,255,.035);
+      font-size: 14px;
+    }
+    .auth-access input:hover { border-color: rgba(196,181,253,.2); }
+    .auth-access input:focus {
+      border-color: rgba(167,139,250,.65);
+      background: rgba(139,92,246,.055);
+      box-shadow: 0 0 0 4px rgba(139,92,246,.09);
+    }
+    .auth-access .eye-btn {
+      right: 10px;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 8px;
+    }
+    .auth-access .eye-btn:focus-visible,
+    .auth-access button:focus-visible,
+    .story-brand:focus-visible {
+      outline: 2px solid var(--accent-light);
+      outline-offset: 3px;
+    }
+    .auth-access .btn-primary {
+      min-height: 52px;
+      margin-top: 4px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed 58%, #6d28d9);
+      box-shadow: 0 12px 28px rgba(109,40,217,.2);
+    }
+    .auth-access .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #9d72fa, #8b5cf6 58%, #7c3aed);
+      box-shadow: 0 15px 34px rgba(109,40,217,.3);
+    }
+    .auth-access .btn-secondary {
+      min-height: 42px;
+      border-color: rgba(255,255,255,.07);
+      border-radius: 10px;
+      background: rgba(255,255,255,.02);
+    }
+    #btn-forgot {
+      width: auto;
+      min-height: 0;
+      padding: 5px 0;
+      margin: 13px auto 0 !important;
+      display: block;
+      border: 0;
+      background: none;
+      color: rgba(196,181,253,.72);
+    }
+    #btn-forgot:hover { color: var(--accent-light); }
+    .auth-access .legal-note {
+      margin-top: 18px;
+      padding-top: 17px;
+      border-top: 1px solid rgba(255,255,255,.06);
+      color: rgba(255,255,255,.38);
+      font-size: 11px;
+      line-height: 1.65;
+    }
+    .auth-access .msg {
+      min-height: 22px;
+      margin-top: 12px;
+      padding: 0 4px;
+    }
+    .auth-access .msg:not(:empty) {
+      padding: 10px 12px;
+      border: 1px solid currentColor;
+      border-radius: 9px;
+      background: rgba(255,255,255,.025);
+    }
+    .auth-access .otp-input {
+      min-height: 62px;
+      padding-left: 29px;
+      font-variant-numeric: tabular-nums;
+    }
+    .auth-access .back-btn {
+      margin-bottom: 20px;
+      padding: 5px 0;
+      color: rgba(255,255,255,.48);
+    }
+    .auth-access .screen.active { animation: authScreenIn .28s ease both; }
+    @keyframes authScreenIn {
+      from { opacity: 0; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    body.auth-page > .lumora-legal-footer {
+      position: relative;
+      z-index: 1;
+      width: min(1240px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 25px 0 32px;
+      border-top-color: rgba(255,255,255,.07);
+      background: transparent;
+    }
+    body.auth-page > .lumora-legal-footer .legal-footer-inner { max-width: none; }
+    body.auth-page > .lumora-legal-footer .legal-footer-links { gap: 9px 20px; }
+    body.auth-page > .lumora-legal-footer a { font-size: 12px; }
+
+    @media (max-width: 980px) {
+      .auth-shell {
+        width: min(680px, calc(100% - 36px));
+        min-height: auto;
+        grid-template-columns: 1fr;
+        padding: 28px 0 38px;
+      }
+      .auth-story { display: none; }
+      .mobile-brand { display: inline-flex; }
+      body.auth-page > .lumora-legal-footer { width: min(680px, calc(100% - 36px)); }
+    }
+    @media (max-width: 560px) {
+      .auth-shell { width: 100%; padding: 0; }
+      .auth-access { min-height: 100vh; align-items: center; padding: 18px 14px 28px; }
+      .auth-access .card {
+        padding: 28px 20px;
+        border-radius: 20px;
+        background: rgba(10,9,20,.86);
+      }
+      .auth-intro h2, .screen-heading { font-size: 25px; }
+      .auth-access .otp-input { font-size: 24px; letter-spacing: 11px; padding-left: 24px; }
+      body.auth-page > .lumora-legal-footer { width: calc(100% - 28px); padding-bottom: 26px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .auth-access .screen.active { animation: none; }
+      .btn-primary, input { transition: none; }
+    }
   </style>
 </head>
-<body>
-  <div class="card">
-    <div class="brand">
-      <span class="brand-star">✦</span>
-      <h1>Lumora</h1>
-    </div>
-
-    <!-- Screen 1: Login / Register -->
-    <div class="screen active" id="screen-auth">
-      <div class="tabs">
-        <button class="tab active" id="tab-login">Đăng nhập</button>
-        <button class="tab" id="tab-register">Đăng ký</button>
-      </div>
-      <form id="form-auth">
-        <div class="input-group">
-          <input type="email" id="email" placeholder="Email" required />
-        </div>
-        <div class="input-group">
-          <input type="password" id="password" class="has-eye" placeholder="Mật khẩu" required />
-          <button type="button" class="eye-btn" id="toggle-password" tabindex="-1" aria-label="Hiện/ẩn mật khẩu">
-            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-        <button type="submit" class="btn-primary" id="submit-btn">Đăng nhập</button>
-      </form>
-      <p class="legal-note">
-        <span id="legal-prefix">Bằng việc sử dụng dịch vụ, bạn đồng ý với</span>
-        <a href="/terms/" id="legal-terms">Điều khoản dịch vụ</a>
-        <span id="legal-and">và</span>
-        <a href="/privacy/" id="legal-privacy">Chính sách bảo mật</a>
-        <span id="legal-suffix">của chúng tôi.</span>
-      </p>
-      <button class="btn-secondary" id="btn-forgot" style="margin-top:12px;">Quên mật khẩu?</button>
-      <div class="msg" id="msg-auth"></div>
-    </div>
-
-    <!-- Screen 2: OTP Verification -->
-    <div class="screen" id="screen-otp">
-      <button class="back-btn" id="back-btn">← Quay lại</button>
-      <p class="otp-hint">Nhập mã OTP 6 số đã gửi tới<br><strong id="otp-email-display"></strong></p>
-      <form id="form-otp">
-        <div class="input-group">
-          <input type="text" class="otp-input" id="otp" placeholder="______"
-            maxlength="6" inputmode="numeric" autocomplete="one-time-code" required />
-        </div>
-        <button type="submit" class="btn-primary" id="verify-btn">Xác thực</button>
-      </form>
-      <button class="btn-secondary" id="btn-resend">Gửi lại OTP</button>
-      <div class="msg" id="msg-otp"></div>
-    </div>
-
-    <!-- Screen 3: Forgot Password — nhập email -->
-    <div class="screen" id="screen-forgot">
-      <button class="back-btn" id="back-from-forgot">← Quay lại</button>
-      <p class="otp-hint" id="forgot-hint">Nhập email để nhận mã OTP đặt lại mật khẩu</p>
-      <form id="form-forgot">
-        <div class="input-group">
-          <input type="email" id="forgot-email" placeholder="Email" required />
-        </div>
-        <button type="submit" class="btn-primary" id="forgot-send-btn">Gửi OTP</button>
-      </form>
-      <div class="msg" id="msg-forgot"></div>
-    </div>
-
-    <!-- Screen 4: Forgot Password — nhập OTP + mật khẩu mới -->
-    <div class="screen" id="screen-reset">
-      <button class="back-btn" id="back-from-reset">← Quay lại</button>
-      <p class="otp-hint">Nhập mã OTP đã gửi tới<br><strong id="reset-email-display"></strong></p>
-      <form id="form-reset">
-        <div class="input-group">
-          <input type="text" class="otp-input" id="reset-otp" placeholder="______"
-            maxlength="6" inputmode="numeric" autocomplete="one-time-code" required />
-        </div>
-        <div class="input-group">
-          <input type="password" id="new-password" class="has-eye" placeholder="Mật khẩu mới (tối thiểu 8 ký tự)" required />
-          <button type="button" class="eye-btn" id="toggle-new-password" tabindex="-1" aria-label="Hiện/ẩn mật khẩu">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-        <div class="input-group">
-          <input type="password" id="confirm-password" placeholder="Xác nhận mật khẩu mới" required />
-        </div>
-        <button type="submit" class="btn-primary" id="reset-btn">Đặt lại mật khẩu</button>
-      </form>
-      <button class="btn-secondary" id="btn-resend-reset">Gửi lại OTP</button>
-      <div class="msg" id="msg-reset"></div>
-    </div>
+<body class="auth-page">
+  <div class="auth-ambient" aria-hidden="true">
+    <span class="ambient-glow one"></span>
+    <span class="ambient-glow two"></span>
   </div>
+
+  <main class="auth-shell">
+    <section class="auth-story" aria-label="Lumora">
+      <a class="story-brand" href="/" aria-label="Lumora — trang chủ">
+        <span class="story-brand-mark">✦</span>
+        <span>Lumora</span>
+      </a>
+
+      <div class="memory-stage" aria-hidden="true">
+        <span class="memory-orbit"></span>
+        <span class="memory-orbit second"></span>
+        <div class="memory-core"><span>✦</span></div>
+        <div class="memory-card one"><span>Story</span><strong data-vi="Mỗi bức ảnh đều có một điều muốn kể." data-en="Every photo has something it wants to say.">Mỗi bức ảnh đều có một điều muốn kể.</strong></div>
+        <div class="memory-card two"><span>Galaxy</span><strong data-vi="Một không gian chỉ thuộc về câu chuyện của bạn." data-en="A space made only for your story.">Một không gian chỉ thuộc về câu chuyện của bạn.</strong></div>
+      </div>
+
+      <div class="story-copy">
+        <span class="story-eyebrow" data-vi="Ánh sáng của ký ức" data-en="The light of memories">Ánh sáng của ký ức</span>
+        <h1 data-vi="Biến ký ức thành một nơi có thể bước vào." data-en="Turn memories into a place you can step into.">Biến ký ức thành một nơi có thể bước vào.</h1>
+        <p data-vi="Gom câu chuyện, ảnh, âm nhạc và những điều chưa nói thành một trải nghiệm riêng — rồi gửi đi bằng một đường link." data-en="Bring stories, photos, music, and everything left unsaid into one private experience — then share it with a single link.">Gom câu chuyện, ảnh, âm nhạc và những điều chưa nói thành một trải nghiệm riêng — rồi gửi đi bằng một đường link.</p>
+        <div class="story-points" aria-label="Lumora features">
+          <span class="story-point" data-vi="✦ Story có cảm xúc" data-en="✦ Emotional stories">✦ Story có cảm xúc</span>
+          <span class="story-point" data-vi="✦ Không gian 3D" data-en="✦ 3D experiences">✦ Không gian 3D</span>
+          <span class="story-point" data-vi="✦ Chia sẻ riêng tư" data-en="✦ Private sharing">✦ Chia sẻ riêng tư</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="auth-access" aria-label="Tài khoản Lumora">
+      <div class="card">
+        <a class="mobile-brand" href="/" aria-label="Lumora — trang chủ">
+          <span class="story-brand-mark">✦</span>
+          <span>Lumora</span>
+        </a>
+
+        <!-- Screen 1: Login / Register -->
+        <div class="screen active" id="screen-auth">
+          <div class="auth-intro">
+            <span class="auth-kicker" id="auth-kicker">Chào mừng trở lại</span>
+            <h2 id="auth-heading">Tiếp tục câu chuyện của bạn</h2>
+            <p class="auth-description" id="auth-description">Đăng nhập để tiếp tục tạo và chia sẻ những không gian ký ức.</p>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Tài khoản">
+            <button type="button" class="tab active" id="tab-login" role="tab" aria-selected="true">Đăng nhập</button>
+            <button type="button" class="tab" id="tab-register" role="tab" aria-selected="false">Đăng ký</button>
+          </div>
+          <form id="form-auth">
+            <div class="input-group">
+              <label class="field-label" for="email" data-vi="Email" data-en="Email">Email</label>
+              <input type="email" id="email" placeholder="Email" autocomplete="email" required />
+            </div>
+            <div class="input-group">
+              <label class="field-label" for="password" data-vi="Mật khẩu" data-en="Password">Mật khẩu</label>
+              <input type="password" id="password" class="has-eye" placeholder="Mật khẩu" autocomplete="current-password" required />
+              <button type="button" class="eye-btn" id="toggle-password" aria-label="Hiện/ẩn mật khẩu">
+                <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <button type="submit" class="btn-primary" id="submit-btn">Đăng nhập</button>
+          </form>
+          <button type="button" class="btn-secondary" id="btn-forgot">Quên mật khẩu?</button>
+          <div class="msg" id="msg-auth" aria-live="polite"></div>
+          <p class="legal-note">
+            <span id="legal-prefix">Bằng việc sử dụng dịch vụ, bạn đồng ý với</span>
+            <a href="/terms/" id="legal-terms">Điều khoản dịch vụ</a>
+            <span id="legal-and">và</span>
+            <a href="/privacy/" id="legal-privacy">Chính sách bảo mật</a>
+            <span id="legal-suffix">của chúng tôi.</span>
+          </p>
+        </div>
+
+        <!-- Screen 2: OTP Verification -->
+        <div class="screen" id="screen-otp">
+          <button type="button" class="back-btn" id="back-btn">← Quay lại</button>
+          <div class="screen-header">
+            <span class="auth-kicker" data-vi="Xác minh tài khoản" data-en="Verify account">Xác minh tài khoản</span>
+            <h2 class="screen-heading" data-vi="Kiểm tra email của bạn" data-en="Check your email">Kiểm tra email của bạn</h2>
+            <p class="otp-hint"><span data-vi="Nhập mã OTP 6 số đã gửi tới" data-en="Enter the 6-digit OTP sent to">Nhập mã OTP 6 số đã gửi tới</span><br><strong id="otp-email-display"></strong></p>
+          </div>
+          <form id="form-otp">
+            <div class="input-group">
+              <label class="field-label" for="otp">OTP</label>
+              <input type="text" class="otp-input" id="otp" placeholder="______"
+                maxlength="6" inputmode="numeric" autocomplete="one-time-code" required />
+            </div>
+            <button type="submit" class="btn-primary" id="verify-btn">Xác thực</button>
+          </form>
+          <button type="button" class="btn-secondary" id="btn-resend">Gửi lại OTP</button>
+          <div class="msg" id="msg-otp" aria-live="polite"></div>
+        </div>
+
+        <!-- Screen 3: Forgot Password — nhập email -->
+        <div class="screen" id="screen-forgot">
+          <button type="button" class="back-btn" id="back-from-forgot">← Quay lại</button>
+          <div class="screen-header">
+            <span class="auth-kicker" data-vi="Khôi phục truy cập" data-en="Recover access">Khôi phục truy cập</span>
+            <h2 class="screen-heading" data-vi="Quên mật khẩu?" data-en="Forgot your password?">Quên mật khẩu?</h2>
+            <p class="screen-description" id="forgot-hint">Nhập email để nhận mã OTP đặt lại mật khẩu</p>
+          </div>
+          <form id="form-forgot">
+            <div class="input-group">
+              <label class="field-label" for="forgot-email" data-vi="Email tài khoản" data-en="Account email">Email tài khoản</label>
+              <input type="email" id="forgot-email" placeholder="Email" autocomplete="email" required />
+            </div>
+            <button type="submit" class="btn-primary" id="forgot-send-btn">Gửi OTP</button>
+          </form>
+          <div class="msg" id="msg-forgot" aria-live="polite"></div>
+        </div>
+
+        <!-- Screen 4: Forgot Password — nhập OTP + mật khẩu mới -->
+        <div class="screen" id="screen-reset">
+          <button type="button" class="back-btn" id="back-from-reset">← Quay lại</button>
+          <div class="screen-header">
+            <span class="auth-kicker" data-vi="Bảo mật tài khoản" data-en="Account security">Bảo mật tài khoản</span>
+            <h2 class="screen-heading" data-vi="Tạo mật khẩu mới" data-en="Create a new password">Tạo mật khẩu mới</h2>
+            <p class="otp-hint"><span data-vi="Nhập mã OTP đã gửi tới" data-en="Enter the OTP sent to">Nhập mã OTP đã gửi tới</span><br><strong id="reset-email-display"></strong></p>
+          </div>
+          <form id="form-reset">
+            <div class="input-group">
+              <label class="field-label" for="reset-otp">OTP</label>
+              <input type="text" class="otp-input" id="reset-otp" placeholder="______"
+                maxlength="6" inputmode="numeric" autocomplete="one-time-code" required />
+            </div>
+            <div class="input-group">
+              <label class="field-label" for="new-password" data-vi="Mật khẩu mới" data-en="New password">Mật khẩu mới</label>
+              <input type="password" id="new-password" class="has-eye" placeholder="Mật khẩu mới (tối thiểu 8 ký tự)" autocomplete="new-password" required />
+              <button type="button" class="eye-btn" id="toggle-new-password" aria-label="Hiện/ẩn mật khẩu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <div class="input-group">
+              <label class="field-label" for="confirm-password" data-vi="Xác nhận mật khẩu" data-en="Confirm password">Xác nhận mật khẩu</label>
+              <input type="password" id="confirm-password" placeholder="Xác nhận mật khẩu mới" autocomplete="new-password" required />
+            </div>
+            <button type="submit" class="btn-primary" id="reset-btn">Đặt lại mật khẩu</button>
+          </form>
+          <button type="button" class="btn-secondary" id="btn-resend-reset">Gửi lại OTP</button>
+          <div class="msg" id="msg-reset" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <div id="transition-overlay">
     <canvas id="transition-canvas"></canvas>
