@@ -9,45 +9,20 @@ const imagekit = new ImageKit({
 });
 
 class ImageKitMiddleware {
-  async uploadImage(req, res, next) {
-    if (!req.files) return next();
-    try {
-      const uploadResults = await Promise.all(
-        req.files.map((file) =>
-          imagekit.upload({
-            file: file.buffer,
-            fileName: `${Date.now()}-${file.originalname}`,
-            folder: "moon/images",
-          })
-        )
-      );
-
-      req.uploadedFiles = uploadResults;
-
-      next();
-    } catch (error) {
-      console.log(error);
-      throw new errorResponse({
-        message: error.message,
-        statusCode: 400,
-      });
-    }
-  }
-
   async deleteImage(err, req, res, next) {
     if (err) {
-      console.log(err);
-      const images = req?.body?.image || [];
+      const images = Array.isArray(req.files) ? req.files : [];
       try {
         await Promise.all(
           images.map((image) => {
-            if (image.public_id) {
-              return imagekit.deleteFile(image.public_id);
+            if (image.fileId) {
+              return imagekit.deleteFile(image.fileId);
             }
+            return null;
           })
         );
       } catch (error) {
-        console.log("ImageKit delete error:", error);
+        console.error("ImageKit upload rollback failed:", error.message);
       } finally {
         return next(err);
       }

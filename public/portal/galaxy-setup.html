@@ -235,6 +235,31 @@
       transition: opacity 0.2s; display: flex; align-items: center; justify-content: center;
     }
     .gallery-thumb:hover .del-btn { opacity: 1; }
+    .gallery-bulk-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-top: 14px;
+    }
+    .gallery-bulk-actions { display: flex; align-items: center; gap: 7px; }
+    .gallery-bulk-toolbar[hidden], .gallery-bulk-actions[hidden] { display: none; }
+    .gallery-bulk-count { color: var(--text-sub); font-size: 11px; }
+    .gallery-bulk-btn {
+      min-height: 30px; padding: 6px 10px; border-radius: 9px;
+      border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+      color: var(--text); font: 500 11px 'Jost',sans-serif; cursor: pointer;
+    }
+    .gallery-bulk-btn:hover, .gallery-bulk-btn:focus-visible { border-color: rgba(167,139,250,.42); outline: none; }
+    .gallery-bulk-btn.danger { color: #fda4af; border-color: rgba(244,63,94,.24); background: rgba(244,63,94,.08); }
+    .gallery-bulk-btn:disabled { opacity: .42; cursor: not-allowed; }
+    .gallery-thumb.selecting { cursor: pointer; }
+    .gallery-thumb.selected { box-shadow: 0 0 0 2px #8b5cf6, 0 0 22px rgba(139,92,246,.22); }
+    .gallery-thumb .select-btn {
+      position: absolute; top: 6px; left: 6px; z-index: 2;
+      width: 25px; height: 25px; display: grid; place-items: center;
+      border-radius: 50%; border: 1px solid rgba(255,255,255,.28);
+      color: #fff; background: rgba(5,5,12,.72); cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+    .gallery-thumb.selected .select-btn { background: #7c3aed; border-color: #c4b5fd; }
 
     .upload-progress-bar {
       height: 3px; background: rgba(255,255,255,0.08);
@@ -1024,12 +1049,21 @@
           <div class="upload-zone-text">
             <strong data-i18n="setupUploadPrimary">Kéo thả ảnh vào đây</strong><br>
             <span data-i18n="setupUploadSecondary">hoặc nhấn để chọn ảnh</span><br>
-            <span style="font-size:11px;opacity:0.6" data-i18n="setupUploadLimits">JPG, PNG, WebP · Tối đa 20MB</span>
+            <span id="upload-limits" style="font-size:11px;opacity:0.6" data-i18n="setupUploadLimitsLoading">Đang tải giới hạn ảnh…</span>
           </div>
         </div>
-        <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+        <input type="file" id="file-input" multiple accept="image/jpeg,image/png,image/webp" style="display:none">
         <div class="upload-progress-bar" id="upload-progress">
           <div class="upload-progress-fill" id="upload-progress-fill"></div>
+        </div>
+        <div class="gallery-bulk-toolbar" id="gallery-bulk-toolbar" hidden>
+          <button class="gallery-bulk-btn" type="button" id="gallery-select-mode" data-track-action="Galaxy Photo Bulk Select Open" data-i18n="setupBulkSelect">Chọn nhiều</button>
+          <div class="gallery-bulk-actions" id="gallery-bulk-actions" hidden>
+            <span class="gallery-bulk-count" id="gallery-bulk-count"></span>
+            <button class="gallery-bulk-btn" type="button" id="gallery-bulk-all" data-track-action="Galaxy Photo Bulk Select All"></button>
+            <button class="gallery-bulk-btn danger" type="button" id="gallery-bulk-delete" data-track-action="Galaxy Photo Bulk Delete Click" disabled></button>
+            <button class="gallery-bulk-btn" type="button" id="gallery-bulk-cancel" data-track-action="Galaxy Photo Bulk Select Cancel" data-i18n="setupBulkCancel">Hủy</button>
+          </div>
         </div>
         <div class="gallery-grid" id="gallery-grid"></div>
       </div>

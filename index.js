@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const { rateLimit } = require("express-rate-limit");
 const connectToDatabase = require("./connection");
+const { IMAGE_UPLOAD_MAX_FILES, IMAGE_UPLOAD_MAX_TOTAL_SIZE_MB } = require('./config/uploads');
 const { activityRequestContext, logUnhandledError } = require('./middlewares/activityTracking');
 require("dotenv").config();
 const ActivityService = require('./services/activity.service');
@@ -214,7 +215,27 @@ app.use((err, req, res, next) => {
     return res.status(404).json({ status: false, message: "Not found", statusCode: 404 });
 
   if (err.code === "LIMIT_FILE_SIZE")
-    return res.status(413).json({ status: false, message: "File quá lớn, tối đa 20MB", statusCode: 413 });
+    return res.status(413).json({
+      status: false,
+      message: `Tổng dung lượng ảnh tối đa ${IMAGE_UPLOAD_MAX_TOTAL_SIZE_MB}MB`,
+      statusCode: 413,
+    });
+
+  if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE')
+    return res.status(413).json({
+      status: false,
+      message: `Tối đa ${IMAGE_UPLOAD_MAX_FILES} ảnh trong mỗi lượt tải lên`,
+      statusCode: 413,
+    });
+
+  if (err.code === 'LIMIT_TOTAL_FILE_SIZE')
+    return res.status(413).json({ status: false, message: err.message, statusCode: 413 });
+
+  if (err.code === 'UNSUPPORTED_IMAGE_TYPE' || err.code === 'INVALID_IMAGE_SIGNATURE')
+    return res.status(415).json({ status: false, message: err.message, statusCode: 415 });
+
+  if (err.code === 'IMAGEKIT_UPLOAD_FAILED' || err.code === 'IMAGE_STORAGE_UNAVAILABLE')
+    return res.status(err.statusCode).json({ status: false, message: err.message, statusCode: err.statusCode });
 
   if (!isDev) {
     // Không leak stack trace lên production

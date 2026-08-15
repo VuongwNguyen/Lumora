@@ -10,8 +10,9 @@
     "test:activity": "node --test tests/activity-core.test.js tests/activity-full.test.js",
     "test:database": "node --test tests/database-config.test.js",
     "test:soundscape": "node --test tests/soundscape-engine.test.js",
+    "test:upload": "node --test tests/gallery-upload.test.js",
     "test:tmdt": "node --test tests/tmdt-compliance.test.js",
-    "test": "npm run test:database && npm run test:soundscape && npm run test:activity && npm run test:tmdt",
+    "test": "npm run test:database && npm run test:soundscape && npm run test:upload && npm run test:activity && npm run test:tmdt",
     "audit:activity": "node scripts/audit-activity-coverage.js",
     "deploy": "git push origin main",
     "redeploy": "gh workflow run deploy.yml --ref main"

@@ -51,6 +51,7 @@ function domainOperation(method, path) {
     [/^PUT \/galaxies\/:id$/, 'Galaxy Update Server Result'],
     [/^DELETE \/galaxies\/:id$/, 'Galaxy Delete Server Result'],
     [/^POST \/gallary\/upload$/, 'Gallery Upload Server Result'],
+    [/^POST \/gallary\/items\/bulk-delete$/, 'Gallery Bulk Delete Server Result'],
     [/^DELETE \/gallary\/items\/:id$/, 'Gallery Delete Server Result'],
     [/^POST \/payment\/create$/, 'Payment Checkout Server Result'],
     [/^POST \/support\/requests$/, 'Support Request Server Result'],

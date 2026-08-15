@@ -4,17 +4,25 @@ const uploader = require("../middlewares/uploader");
 const ImageKit = require("../middlewares/ImageKit");
 const { requireAuth } = require("../middlewares/auth");
 const GalleryController = require("../controllers/gallery.controller");
+const { IMAGE_UPLOAD_MAX_FILES } = require('../config/uploads');
 
+router.get('/upload-policy', (req, res) => GalleryController.getUploadPolicy(req, res));
 router.post(
   "/upload",
   requireAuth,
-  uploader.array("files", 50),
-  ImageKit.uploadImage,
-  asyncHandler(GalleryController.createGallery)
+  asyncHandler(GalleryController.authorizeUpload),
+  uploader.array("files", IMAGE_UPLOAD_MAX_FILES),
+  asyncHandler(GalleryController.createGallery),
+  ImageKit.deleteImage
 );
 router.get(
   "/items",
   asyncHandler(GalleryController.getGalleryItems)
+);
+router.post(
+  '/items/bulk-delete',
+  requireAuth,
+  asyncHandler(GalleryController.deleteGalleryItems)
 );
 router.delete(
   "/items/:id",

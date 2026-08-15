@@ -162,7 +162,19 @@ async function typingThen(text, italicText, delayMs = 700) {
 
 // ── API ───────────────────────────────────────────────────────────────────────
 
-const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB — must match server limit
+let imageUploadPolicyPromise;
+
+function getImageUploadPolicy() {
+  if (!imageUploadPolicyPromise) {
+    imageUploadPolicyPromise = fetch('/gallary/upload-policy')
+      .then(response => {
+        if (!response.ok) throw new Error(tr('setupUploadPolicyFail'));
+        return response.json();
+      })
+      .then(body => body.meta);
+  }
+  return imageUploadPolicyPromise;
+}
 
 async function saveChapter(chapterId) {
   const files = chapterFiles[chapterId] || [];
@@ -170,8 +182,14 @@ async function saveChapter(chapterId) {
 
   activity?.log({ action: 'Story Chapter Photo Upload Submit', feature: 'story', galaxyId, description: { chapterId, count: files.length } });
 
-  const oversized = files.find(f => f.size > MAX_UPLOAD_SIZE);
-  if (oversized) throw new Error(tr('storySetupPhotoTooLarge', oversized.name));
+  const uploadPolicy = await getImageUploadPolicy();
+  if (files.length > uploadPolicy.maxFiles) throw new Error(tr('setupUploadTooMany', uploadPolicy.maxFiles));
+  const unsupported = files.find(file => !uploadPolicy.mimeTypes.includes(file.type));
+  if (unsupported) throw new Error(tr('setupUploadUnsupported', unsupported.name));
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalSize > uploadPolicy.maxTotalSize) {
+    throw new Error(tr('setupUploadTotalTooLarge', uploadPolicy.maxTotalSize / 1024 / 1024));
+  }
 
   // Delete old photos for this chapter before uploading new ones (replace semantics)
   const oldIds = window._galleryIdsByChapter?.[chapterId] || [];
@@ -183,23 +201,22 @@ async function saveChapter(chapterId) {
   ));
 
   const form = new FormData();
-  form.append('galaxyId', galaxyId);
   form.append('title', 'Uploaded image');
   form.append('description', 'Image uploaded from story setup');
   form.append('stage', chapterId);
-  files.forEach(f => form.append('files', f));
-  const res = await fetch('/gallary/upload', {
+  files.forEach(file => form.append('files', file));
+  const response = await fetch(`/gallary/upload?galaxyId=${encodeURIComponent(galaxyId)}`, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + token },
     body: form,
   });
-  if (!res.ok) {
-    let msg = tr('storySetupUploadFail', res.status);
+  if (!response.ok) {
+    let message = tr('storySetupUploadFail', response.status);
     try {
-      const body = await res.json();
-      if (body.message) msg = body.message;
+      const body = await response.json();
+      if (body.message) message = body.message;
     } catch {}
-    const error = new Error(msg);
+    const error = new Error(message);
     storyResult('Story Chapter Photo Upload Result', false, { chapterId, count: files.length, errorType: 'story_photo_upload_fail' }, error);
     throw error;
   }
@@ -407,7 +424,7 @@ function buildChapterCard(chapter, chapterIdx, totalChapters, editMode = false) 
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
-  fileInput.accept = 'image/*';
+  fileInput.accept = 'image/jpeg,image/png,image/webp';
   fileInput.multiple = chapter.photoCount.max > 1;
   fileInput.style.display = 'none';
   fileInput.dataset.trackAction = 'Story Chapter Photo Picker Open';

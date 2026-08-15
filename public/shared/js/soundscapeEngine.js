@@ -3,6 +3,20 @@
 
   const AudioContextClass = root.AudioContext || root.webkitAudioContext;
   const AUDIO_RESUME_TIMEOUT_MS = 1600;
+  const ACOUSTIC_ENVIRONMENTS = Object.freeze({
+    neutral: Object.freeze({
+      clarityGain: 3.2, delayWetScale: 1, reverbWetScale: 1,
+      stereoWidthScale: 1, outputScale: 1,
+    }),
+    open_space: Object.freeze({
+      clarityGain: 4.1, delayWetScale: 1.18, reverbWetScale: 1.28,
+      stereoWidthScale: 1.12, outputScale: 0.98,
+    }),
+    memory_focus: Object.freeze({
+      clarityGain: 5.4, delayWetScale: 0.48, reverbWetScale: 0.56,
+      stereoWidthScale: 0.62, outputScale: 1.08,
+    }),
+  });
   const RECIPES = Object.freeze({
     deep_focus: {
       root: 220, ratios: [1, 1.2599, 1.4983], wave: 'sine', filter: 5200, highpass: 220, noise: 0,
@@ -154,6 +168,25 @@
     if (node.pan) node.pan.value = value;
   }
 
+  function smoothAudioParam(param, target, context, durationSeconds) {
+    if (!param || !context) return;
+    const now = context.currentTime;
+    const duration = clamp(durationSeconds, 0, 8, 1.8);
+    if (typeof param.cancelAndHoldAtTime === 'function') {
+      param.cancelAndHoldAtTime(now);
+    } else {
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(param.value, now);
+    }
+    if (duration === 0) {
+      param.setValueAtTime(target, now);
+    } else if (typeof param.linearRampToValueAtTime === 'function') {
+      param.linearRampToValueAtTime(target, now + duration);
+    } else {
+      param.setTargetAtTime(target, now, Math.max(0.01, duration / 3));
+    }
+  }
+
   function configurePlaybackAudioSession() {
     try {
       if (root.navigator?.audioSession) root.navigator.audioSession.type = 'playback';
@@ -205,6 +238,9 @@
       this._melodyDelay = null;
       this._melodyReverb = null;
       this._padOscillators = [];
+      this._acousticEnvironment = 'neutral';
+      this._acousticNodes = null;
+      this._stereoWidthScale = 1;
       this._phraseState = null;
       this._phraseNumber = 0;
       this._lastVariation = -1;
@@ -235,6 +271,45 @@
       const now = this._context.currentTime;
       this._master.gain.cancelScheduledValues(now);
       this._master.gain.setTargetAtTime(this._targetGain(), now, 0.18);
+    }
+
+    setEnvironment(name, options) {
+      const environment = ACOUSTIC_ENVIRONMENTS[name];
+      if (!environment) return false;
+      this._acousticEnvironment = name;
+      this._stereoWidthScale = environment.stereoWidthScale;
+      if (!this._context || !this._acousticNodes) return true;
+
+      const transitionSeconds = clamp(options?.transitionSeconds, 0, 8, 1.8);
+      const nodes = this._acousticNodes;
+      smoothAudioParam(nodes.clarity.gain, environment.clarityGain, this._context, transitionSeconds);
+      smoothAudioParam(
+        nodes.delayWetGain.gain,
+        nodes.baseDelayWet * environment.delayWetScale,
+        this._context,
+        transitionSeconds,
+      );
+      smoothAudioParam(
+        nodes.reverbGain.gain,
+        nodes.baseReverbWet * environment.reverbWetScale,
+        this._context,
+        transitionSeconds,
+      );
+      smoothAudioParam(
+        nodes.environmentGain.gain,
+        environment.outputScale,
+        this._context,
+        transitionSeconds,
+      );
+      nodes.padPanners.forEach(({ node, basePan }) => {
+        smoothAudioParam(
+          node.pan,
+          basePan * environment.stereoWidthScale,
+          this._context,
+          transitionSeconds,
+        );
+      });
+      return true;
     }
 
     _createNoiseBuffer(seconds) {
@@ -309,6 +384,7 @@
       const lowCut = context.createBiquadFilter();
       const clarity = context.createBiquadFilter();
       const compressor = context.createDynamicsCompressor();
+      const environmentGain = context.createGain();
       const outputGain = context.createGain();
       master.gain.value = 0.0001;
       lowCut.type = 'highpass';
@@ -322,20 +398,23 @@
       compressor.ratio.value = 3;
       compressor.attack.value = 0.02;
       compressor.release.value = 0.3;
+      environmentGain.gain.value = 1;
       outputGain.gain.value = 1.8;
       master.connect(lowCut);
       lowCut.connect(clarity);
       clarity.connect(compressor);
-      compressor.connect(outputGain);
+      compressor.connect(environmentGain);
+      environmentGain.connect(outputGain);
       outputGain.connect(context.destination);
 
       this._master = master;
-      this._nodes.push(master, lowCut, clarity, compressor, outputGain);
+      this._nodes.push(master, lowCut, clarity, compressor, environmentGain, outputGain);
 
       const warmth = this.config.warmth / 100;
       const motion = this.config.motion / 100;
       const space = this.config.space / 100;
       const detuneBase = (this._random() - 0.5) * 7;
+      const padPanners = [];
 
       const padOffsets = recipe.chords?.[0]
         || recipe.ratios.map(ratio => 12 * Math.log2(ratio));
@@ -350,9 +429,11 @@
         oscillator.frequency.value = recipe.root * (2 ** (semitone / 12));
         oscillator.detune.value = detuneBase + (index - 1) * 2.5;
         gain.gain.value = recipe.padGain / (1 + index * 0.45);
-        setPan(panner, padOffsets.length === 1
+        const basePan = padOffsets.length === 1
           ? 0
-          : ((index / (padOffsets.length - 1)) - 0.5) * 0.72);
+          : ((index / (padOffsets.length - 1)) - 0.5) * 0.72;
+        setPan(panner, basePan);
+        padPanners.push({ node: panner, basePan });
         lfo.type = 'sine';
         lfo.frequency.value = 0.025 + motion * 0.075 + index * 0.011;
         lfoDepth.gain.value = 0.018 + motion * 0.025;
@@ -403,6 +484,17 @@
       reverbGain.connect(master);
       this._melodyReverb = melodyReverb;
       this._nodes.push(melodyReverb, reverbFilter, reverbGain);
+
+      this._acousticNodes = {
+        clarity,
+        delayWetGain,
+        reverbGain,
+        environmentGain,
+        padPanners,
+        baseDelayWet: delayWetGain.gain.value,
+        baseReverbWet: reverbGain.gain.value,
+      };
+      this.setEnvironment(this._acousticEnvironment, { transitionSeconds: 0 });
 
       if (recipe.noise > 0) {
         const noise = context.createBufferSource();
@@ -479,7 +571,9 @@
       const warmth = this.config.warmth / 100;
       const intensity = this.config.intensity / 100;
       const duration = recipe.noteLength * (0.85 + warmth * 0.35);
-      const pan = Math.sin(this._melodyStep * 1.7) * (recipe.panWidth ?? 0.48);
+      const pan = Math.sin(this._melodyStep * 1.7)
+        * (recipe.panWidth ?? 0.48)
+        * this._stereoWidthScale;
       const noteVelocity = this._phraseState.velocity * (0.94 + this._random() * 0.12);
       this._playInstrumentNote({
         frequency,
@@ -735,6 +829,8 @@
       this._melodyDelay = null;
       this._melodyReverb = null;
       this._padOscillators = [];
+      this._acousticNodes = null;
+      this._stereoWidthScale = 1;
       this._phraseState = null;
     }
   }
@@ -795,6 +891,10 @@
       },
 
       pause() { this.audio?.pause(); },
+
+      setEnvironment(name, options) {
+        return this.audio?.setEnvironment(name, options) ?? false;
+      },
 
       toggle() {
         if (!this.audio) return;

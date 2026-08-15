@@ -617,7 +617,9 @@ const intro = document.getElementById('intro');
 function startExperience() {
   started = true;
   intro.classList.add('hidden');
-  window.musicManager?.play().catch(() => {});
+  window.musicManager?.play()
+    .then(() => window.musicManager?.setEnvironment('open_space', { transitionSeconds: 4 }))
+    .catch(() => {});
   const el = document.documentElement;
   (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen)?.call(el);
 }
@@ -898,6 +900,7 @@ function handlePointerDown(clientX, clientY) {
     const parent = polaroids.find(p => p.children.includes(hits[0].object));
     if (parent) {
       activity?.log({ action: 'Viewer Photo Open', feature: 'viewer', galaxyId, description: { template: 'fall' } });
+      window.musicManager?.setEnvironment('memory_focus', { transitionSeconds: 1.4 });
       clickedPolaroid = parent;
       parent.userData.targetScale = 3.0;
       // 4 units ahead of camera along its look direction
@@ -911,6 +914,7 @@ function handlePointerUp() {
   _dragging = false;
   if (clickedPolaroid) {
     activity?.log({ action: 'Viewer Photo Close', feature: 'viewer', galaxyId, description: { template: 'fall', via: 'release' } });
+    window.musicManager?.setEnvironment('open_space', { transitionSeconds: 3.2 });
     clickedPolaroid.userData.targetScale = 1.0;
     delete clickedPolaroid.userData.targetPosition;
     // Đẩy ảnh ra khỏi camera sau khi nhả

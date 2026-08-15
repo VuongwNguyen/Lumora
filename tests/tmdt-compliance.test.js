@@ -454,6 +454,8 @@ test('auth interface keeps every workflow while using the responsive Lumora spli
   assert.match(auth, /class="auth-access"/);
   assert.match(auth, /@media \(max-width: 980px\)/);
   assert.match(auth, /@media \(max-width: 560px\)/);
+  assert.match(auth, /@media \(max-width: 560px\)[\s\S]*?\.auth-access input \{ font-size: 16px; \}/);
+  assert.match(auth, /\.auth-access \.eye-btn \{[\s\S]*?top: auto;[\s\S]*?bottom: 9px;[\s\S]*?transform: none;/);
   assert.match(auth, /autocomplete="email"/);
   assert.match(auth, /autocomplete="current-password"/);
   assert.match(auth, /aria-live="polite"/);
@@ -671,6 +673,21 @@ test('soundscape playback is unlocked inside mobile gestures after viewer data i
   assert.match(setup, /previewAudio\.play\(\)\.catch/);
 });
 
+test('Fall drives allowlisted acoustic environments from memory interactions', () => {
+  const engine = fs.readFileSync(path.join(__dirname, '../public/shared/js/soundscapeEngine.js'), 'utf8');
+  const fall = fs.readFileSync(path.join(__dirname, '../public/fall/js/fall.js'), 'utf8');
+
+  assert.match(engine, /const ACOUSTIC_ENVIRONMENTS = Object\.freeze/);
+  assert.match(engine, /open_space: Object\.freeze/);
+  assert.match(engine, /memory_focus: Object\.freeze/);
+  assert.match(engine, /setEnvironment\(name, options\)/);
+  assert.match(engine, /linearRampToValueAtTime/);
+  assert.match(fall, /setEnvironment\('open_space', \{ transitionSeconds: 4 \}\)/);
+  assert.match(fall, /setEnvironment\('memory_focus', \{ transitionSeconds: 1\.4 \}\)/);
+  assert.match(fall, /setEnvironment\('open_space', \{ transitionSeconds: 3\.2 \}\)/);
+  assert.doesNotMatch(fall, /createGain|createConvolver|createBiquadFilter/);
+});
+
 test('legacy music endpoints require admin and stay quarantined', () => {
   const routes = fs.readFileSync(path.join(__dirname, '../routes/media.routes.js'), 'utf8');
   const controller = fs.readFileSync(path.join(__dirname, '../controllers/media.controller.js'), 'utf8');
@@ -681,6 +698,35 @@ test('legacy music endpoints require admin and stay quarantined', () => {
   assert.match(routes, /router\.post\('\/upload-music', requireAdmin, MediaController\.musicQuarantined\)/);
   assert.match(routes, /router\.get\('\/musics\/:id\/stream', requireAdmin, MediaController\.musicQuarantined\)/);
   assert.match(controller, /musicQuarantined[\s\S]*?statusCode: 503/);
+});
+
+test('gallery uploads verify ownership before streaming allowlisted images to ImageKit', () => {
+  const routes = fs.readFileSync(path.join(__dirname, '../routes/gallary.routes.js'), 'utf8');
+  const uploader = fs.readFileSync(path.join(__dirname, '../middlewares/uploader.js'), 'utf8');
+  const setup = fs.readFileSync(path.join(__dirname, '../public/portal/js/galaxy-setup.js'), 'utf8');
+  const legacySetup = fs.readFileSync(path.join(__dirname, '../public/portal/js/galaxy.js'), 'utf8');
+  const storySetup = fs.readFileSync(path.join(__dirname, '../public/portal/js/story-setup.js'), 'utf8');
+  const uploadRoute = routes.slice(routes.indexOf('router.post('), routes.indexOf('router.get(', routes.indexOf('router.post(')));
+
+  assert.ok(uploadRoute.indexOf('requireAuth') < uploadRoute.indexOf('authorizeUpload'));
+  assert.ok(uploadRoute.indexOf('authorizeUpload') < uploadRoute.indexOf('uploader.array'));
+  assert.match(uploader, /file\.stream\.pipe\(validationStream\)/);
+  assert.match(uploader, /client\.upload\(\{/);
+  assert.match(uploader, /ImageSignatureStream/);
+  assert.match(uploader, /req\.imageUploadBytes/);
+  assert.match(setup, /maxTotalSize/);
+  assert.match(legacySetup, /maxTotalSize/);
+  assert.match(storySetup, /maxTotalSize/);
+  assert.match(setup, /filesFromDrop\(event\.dataTransfer\)/);
+  assert.match(legacySetup, /void this\.handleUpload\(\)/);
+  assert.doesNotMatch(uploader, /memoryStorage|file\.buffer/);
+  assert.match(setup, /\/gallary\/upload\?galaxyId=/);
+  assert.match(legacySetup, /\/gallary\/upload\?galaxyId=/);
+  assert.match(storySetup, /\/gallary\/upload\?galaxyId=/);
+  assert.match(routes, /router\.post\([\s\S]*?'\/items\/bulk-delete'[\s\S]*?requireAuth[\s\S]*?deleteGalleryItems/);
+  assert.match(setup, /selectedPhotoIds/);
+  assert.match(setup, /\/gallary\/items\/bulk-delete\?galaxyId=/);
+  assert.match(setup, /setupBulkDeleteConfirm/);
 });
 
 test('galaxy setup translates both static and dynamic interface copy', () => {

@@ -2,6 +2,7 @@ class GalaxyManager {
   constructor() {
     this.galaxyId = new URLSearchParams(window.location.search).get('galaxyId');
     this.token = localStorage.getItem('token');
+    this.uploadPolicy = null;
     this.init();
   }
 
@@ -22,10 +23,27 @@ class GalaxyManager {
       window.location.href = '/portal/';
       return;
     }
+    await this.loadUploadPolicy();
     this.setupLightbox();
     this.setupEventListeners();
     await this.loadImages();
     await this.loadGalaxyInfo();
+  }
+
+  async loadUploadPolicy() {
+    try {
+      const response = await fetch('/gallary/upload-policy');
+      if (!response.ok) throw new Error('upload policy unavailable');
+      this.uploadPolicy = (await response.json()).meta;
+      const maxSizeMb = this.uploadPolicy.maxTotalSize / 1024 / 1024;
+      document.getElementById('uploadHint').textContent = window.t.setupUploadLimits(
+        this.uploadPolicy.maxFiles,
+        maxSizeMb,
+      );
+      document.getElementById('fileInput').accept = this.uploadPolicy.mimeTypes.join(',');
+    } catch {
+      this.showToast(window.t.setupUploadPolicyFail, 'error');
+    }
   }
 
   setupLightbox() {
@@ -53,19 +71,27 @@ class GalaxyManager {
     const zone = document.getElementById('uploadZone');
     zone.addEventListener('dragover', (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
       zone.classList.add('drag-over');
     });
     zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
     zone.addEventListener('drop', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       zone.classList.remove('drag-over');
-      const files = e.dataTransfer.files;
+      const itemFiles = Array.from(e.dataTransfer?.items || [])
+        .filter(item => item.kind === 'file')
+        .map(item => item.getAsFile())
+        .filter(Boolean);
+      const files = itemFiles.length ? itemFiles : Array.from(e.dataTransfer?.files || []);
       if (files.length) {
         const input = document.getElementById('fileInput');
         const dt = new DataTransfer();
         for (const f of files) dt.items.add(f);
         input.files = dt.files;
         document.getElementById('uploadHint').textContent = window.t.filesSelected(files.length);
+        void this.handleUpload();
       }
     });
   }
@@ -172,10 +198,29 @@ class GalaxyManager {
       this.showToast(window.t.selectImages, 'error');
       return;
     }
+    if (!this.uploadPolicy) {
+      this.showToast(window.t.setupUploadPolicyFail, 'error');
+      return;
+    }
+    if (files.length > this.uploadPolicy.maxFiles) {
+      this.showToast(window.t.setupUploadTooMany(this.uploadPolicy.maxFiles), 'error');
+      return;
+    }
+    const unsupported = Array.from(files).find(file => !this.uploadPolicy.mimeTypes.includes(file.type));
+    if (unsupported) {
+      this.showToast(window.t.setupUploadUnsupported(unsupported.name), 'error');
+      return;
+    }
+    const totalSize = Array.from(files).reduce((sum, file) => sum + file.size, 0);
+    if (totalSize > this.uploadPolicy.maxTotalSize) {
+      this.showToast(window.t.setupUploadTotalTooLarge(
+        this.uploadPolicy.maxTotalSize / 1024 / 1024,
+      ), 'error');
+      return;
+    }
 
     const formData = new FormData();
     for (const file of files) formData.append('files', file);
-    formData.append('galaxyId', this.galaxyId);
     formData.append('title', 'Uploaded image');
     formData.append('description', 'Image uploaded from portal');
 
@@ -187,39 +232,38 @@ class GalaxyManager {
 
     try {
       const xhr = new XMLHttpRequest();
-
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
-          progressBar.style.width = `${pct}%`;
-          progressLabel.textContent = `${window.t.uploading} ${pct}%`;
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable) {
+          const percent = Math.round(event.loaded / event.total * 100);
+          progressBar.style.width = `${percent}%`;
+          progressLabel.textContent = `${window.t.uploading} ${percent}%`;
         }
       };
-
       xhr.onload = () => {
         progressWrap.classList.add('hidden');
-        if (xhr.status === 200) {
+        if (xhr.status >= 200 && xhr.status < 300) {
           fileInput.value = '';
-          document.getElementById('uploadHint').textContent = window.t.uploadHint;
+          document.getElementById('uploadHint').textContent = window.t.setupUploadLimits(
+            this.uploadPolicy.maxFiles,
+            this.uploadPolicy.maxTotalSize / 1024 / 1024,
+          );
           this.loadImages();
           this.showToast(window.t.uploadSuccess, 'success');
         } else {
           this.showToast(window.t.uploadFailed, 'error');
         }
       };
-
       xhr.onerror = () => {
         progressWrap.classList.add('hidden');
         this.showToast(window.t.uploadFailed, 'error');
       };
-
-      xhr.open('POST', '/gallary/upload');
+      xhr.open('POST', `/gallary/upload?galaxyId=${encodeURIComponent(this.galaxyId)}`);
       xhr.setRequestHeader('Authorization', `Bearer ${this.token}`);
       xhr.send(formData);
     } catch (e) {
       console.error('Upload error:', e);
-      progressWrap.classList.add('hidden');
       this.showToast(window.t.uploadFailed, 'error');
+      progressWrap.classList.add('hidden');
     }
   }
 

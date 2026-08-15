@@ -24,6 +24,10 @@ let previewTake  = 0;
 let userPlan     = 'free'; // 'free' | 'plus' | 'pro'
 let userFeatures = new Set();
 let soundscapeInstruments = [];
+let imageUploadPolicy = null;
+let gallerySelectionMode = false;
+let galleryBulkDeleting = false;
+const selectedPhotoIds = new Set();
 
 function canUseFeature(feature) { return userFeatures.has(feature); }
 
@@ -267,8 +271,12 @@ function updateChecklist() {
 function renderGallery() {
   const grid = document.getElementById('gallery-grid');
   clear(grid);
+  document.getElementById('gallery-bulk-toolbar').hidden = galleryItems.length === 0;
   galleryItems.forEach(item => {
     const wrap = el('div', 'gallery-thumb');
+    const isSelected = selectedPhotoIds.has(item._id);
+    wrap.classList.toggle('selecting', gallerySelectionMode);
+    wrap.classList.toggle('selected', isSelected);
     const img  = el('img');
     img.src = item.imageUrl; img.alt = '';
     const delBtn = el('button', 'del-btn', '✕');
@@ -276,9 +284,124 @@ function renderGallery() {
     delBtn.dataset.trackAction = 'Galaxy Photo Delete Click';
     delBtn.onclick = (e) => { e.stopPropagation(); deletePhoto(item._id); };
     wrap.appendChild(img);
-    wrap.appendChild(delBtn);
+    if (gallerySelectionMode) {
+      const selectBtn = el('button', 'select-btn', isSelected ? '✓' : '');
+      selectBtn.type = 'button';
+      selectBtn.setAttribute('aria-label', tr(isSelected ? 'setupBulkDeselectPhoto' : 'setupBulkSelectPhoto'));
+      selectBtn.setAttribute('aria-pressed', String(isSelected));
+      selectBtn.onclick = event => {
+        event.stopPropagation();
+        togglePhotoSelection(item._id);
+      };
+      wrap.appendChild(selectBtn);
+      wrap.onclick = () => togglePhotoSelection(item._id);
+    }
+    if (!gallerySelectionMode) wrap.appendChild(delBtn);
     grid.appendChild(wrap);
   });
+  updateGalleryBulkActions();
+}
+
+function updateGalleryBulkActions() {
+  const selectModeButton = document.getElementById('gallery-select-mode');
+  const actions = document.getElementById('gallery-bulk-actions');
+  const count = selectedPhotoIds.size;
+  selectModeButton.hidden = gallerySelectionMode;
+  actions.hidden = !gallerySelectionMode;
+  document.getElementById('gallery-bulk-count').textContent = tr('setupBulkSelected', count);
+  const deleteButton = document.getElementById('gallery-bulk-delete');
+  deleteButton.textContent = tr('setupBulkDelete', count);
+  deleteButton.disabled = count === 0 || galleryBulkDeleting;
+  const allSelected = galleryItems.length > 0 && count === galleryItems.length;
+  const selectAllButton = document.getElementById('gallery-bulk-all');
+  selectAllButton.textContent = tr(allSelected ? 'setupBulkDeselectAll' : 'setupBulkSelectAll');
+  selectAllButton.disabled = galleryBulkDeleting;
+}
+
+function setGallerySelectionMode(enabled) {
+  gallerySelectionMode = enabled;
+  if (!enabled) selectedPhotoIds.clear();
+  renderGallery();
+}
+
+function togglePhotoSelection(imageId) {
+  if (galleryBulkDeleting) return;
+  if (selectedPhotoIds.has(imageId)) selectedPhotoIds.delete(imageId);
+  else selectedPhotoIds.add(imageId);
+  renderGallery();
+}
+
+function toggleAllPhotoSelections() {
+  if (galleryBulkDeleting) return;
+  if (selectedPhotoIds.size === galleryItems.length) selectedPhotoIds.clear();
+  else galleryItems.forEach(item => selectedPhotoIds.add(item._id));
+  renderGallery();
+}
+
+async function deleteSelectedPhotos() {
+  const ids = [...selectedPhotoIds];
+  if (!ids.length || galleryBulkDeleting) return;
+  if (!confirm(tr('setupBulkDeleteConfirm', ids.length))) return;
+  if (!imageUploadPolicy?.maxBulkDeleteItems) {
+    showToast(tr('setupBulkDeleteFail'));
+    return;
+  }
+
+  galleryBulkDeleting = true;
+  updateGalleryBulkActions();
+  const deletedIds = [];
+  const failedIds = [];
+  try {
+    for (let offset = 0; offset < ids.length; offset += imageUploadPolicy.maxBulkDeleteItems) {
+      const batch = ids.slice(offset, offset + imageUploadPolicy.maxBulkDeleteItems);
+      const response = await fetch(`/gallary/items/bulk-delete?galaxyId=${encodeURIComponent(galaxyId)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token,
+        },
+        body: JSON.stringify({ ids: batch }),
+      });
+      if (!response.ok) throw new Error('bulk photo delete failed');
+      const result = (await response.json()).meta || {};
+      deletedIds.push(...(result.deletedIds || []));
+      failedIds.push(...(result.failedIds || []));
+    }
+
+    const deletedSet = new Set(deletedIds);
+    galleryItems = galleryItems.filter(item => !deletedSet.has(item._id));
+    selectedPhotoIds.clear();
+    failedIds.forEach(id => selectedPhotoIds.add(id));
+    gallerySelectionMode = failedIds.length > 0;
+    trackResult('Galaxy Photo Bulk Delete Result', failedIds.length === 0, {
+      requestedCount: ids.length,
+      deletedCount: deletedIds.length,
+      failedCount: failedIds.length,
+      ...(failedIds.length && { errorType: 'photo_delete_fail' }),
+    });
+    showToast(failedIds.length
+      ? tr('setupBulkDeletePartial', deletedIds.length, failedIds.length)
+      : tr('setupBulkDeleteSuccess', deletedIds.length));
+    updateChecklist();
+    previewController.refresh();
+  } catch (error) {
+    if (deletedIds.length) {
+      const deletedSet = new Set(deletedIds);
+      galleryItems = galleryItems.filter(item => !deletedSet.has(item._id));
+      deletedIds.forEach(id => selectedPhotoIds.delete(id));
+      updateChecklist();
+      previewController.refresh();
+    }
+    trackResult('Galaxy Photo Bulk Delete Result', false, {
+      requestedCount: ids.length,
+      deletedCount: deletedIds.length,
+      errorType: 'photo_delete_fail',
+    }, error);
+    showToast(tr('setupBulkDeleteFail'));
+  } finally {
+    galleryBulkDeleting = false;
+    renderGallery();
+  }
 }
 
 async function deletePhoto(imageId) {
@@ -295,21 +418,45 @@ async function deletePhoto(imageId) {
   } catch { showToast(tr('setupDeletePhotoFail')); }
 }
 
-function handleUpload(files) {
+function validateUploadFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return [];
+  if (!imageUploadPolicy) {
+    showToast(tr('setupUploadPolicyFail'));
+    return [];
+  }
+  if (files.length > imageUploadPolicy.maxFiles) {
+    showToast(tr('setupUploadTooMany', imageUploadPolicy.maxFiles));
+    return [];
+  }
+  const unsupported = files.find(file => !imageUploadPolicy.mimeTypes.includes(file.type));
+  if (unsupported) {
+    showToast(tr('setupUploadUnsupported', unsupported.name));
+    return [];
+  }
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalSize > imageUploadPolicy.maxTotalSize) {
+    showToast(tr('setupUploadTotalTooLarge', imageUploadPolicy.maxTotalSize / 1024 / 1024));
+    return [];
+  }
+  return files;
+}
+
+function handleUpload(fileList) {
+  const files = validateUploadFiles(fileList);
   if (!files.length) return;
   const form = new FormData();
-  form.append('galaxyId', galaxyId);
   form.append('title', 'Uploaded image');
   form.append('description', 'Image uploaded from portal');
-  Array.from(files).forEach(f => form.append('files', f));
+  files.forEach(file => form.append('files', file));
 
   const progBar  = document.getElementById('upload-progress');
   const progFill = document.getElementById('upload-progress-fill');
   progBar.style.display = 'block';
 
   const xhr = new XMLHttpRequest();
-  xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) progFill.style.width = Math.round(e.loaded / e.total * 100) + '%';
+  xhr.upload.onprogress = event => {
+    if (event.lengthComputable) progFill.style.width = Math.round(event.loaded / event.total * 100) + '%';
   };
   xhr.onload = async () => {
     progBar.style.display = 'none';
@@ -324,11 +471,20 @@ function handleUpload(files) {
       previewController.refresh();
       showToast(tr('setupUploadSuccess'));
     } else {
-      showToast(tr('setupUploadFail'));
+      try {
+        showToast(JSON.parse(xhr.responseText).message || tr('setupUploadFail'));
+      } catch {
+        showToast(tr('setupUploadFail'));
+      }
     }
+    fileInput.value = '';
   };
-  xhr.onerror = () => { progBar.style.display = 'none'; showToast(tr('errConnect')); };
-  xhr.open('POST', '/gallary/upload');
+  xhr.onerror = () => {
+    progBar.style.display = 'none';
+    fileInput.value = '';
+    showToast(tr('errConnect'));
+  };
+  xhr.open('POST', `/gallary/upload?galaxyId=${encodeURIComponent(galaxyId)}`);
   xhr.setRequestHeader('Authorization', 'Bearer ' + token);
   xhr.send(form);
 }
@@ -894,13 +1050,14 @@ function switchTab(tabId) {
 
 async function init() {
   try {
-    const [galaxyRes, galleryRes, themesRes, soundscapesRes, instrumentsRes, subRes] = await Promise.all([
+    const [galaxyRes, galleryRes, themesRes, soundscapesRes, instrumentsRes, subRes, uploadPolicyRes] = await Promise.all([
       fetch(`/galaxies/${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch(`/gallary/my-items?galaxyId=${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch('/media/themes'),
       fetch('/media/soundscapes'),
       fetch('/media/soundscape-instruments'),
       fetch('/payment/status', { headers: { Authorization: 'Bearer ' + token } }),
+      fetch('/gallary/upload-policy'),
     ]);
 
     if (!galaxyRes.ok) { window.location.href = '/portal/'; return; }
@@ -911,6 +1068,7 @@ async function init() {
     const soundscapesData = soundscapesRes.ok ? await soundscapesRes.json() : {};
     const instrumentsData = instrumentsRes.ok ? await instrumentsRes.json() : {};
     const subData      = subRes.ok      ? await subRes.json()      : {};
+    const uploadPolicyData = uploadPolicyRes.ok ? await uploadPolicyRes.json() : {};
 
     galaxy       = galaxyData.meta;
     galleryItems = galleryData.meta  || [];
@@ -919,6 +1077,14 @@ async function init() {
     soundscapeInstruments = instrumentsData.meta || [];
     userPlan     = subData.meta?.plan || 'free';
     userFeatures = new Set(subData.meta?.features || []);
+    imageUploadPolicy = uploadPolicyData.meta || null;
+    if (imageUploadPolicy) {
+      const maxSizeMb = imageUploadPolicy.maxTotalSize / 1024 / 1024;
+      document.getElementById('upload-limits').textContent = tr(
+        'setupUploadLimits', imageUploadPolicy.maxFiles, maxSizeMb,
+      );
+      document.getElementById('file-input').accept = imageUploadPolicy.mimeTypes.join(',');
+    }
 
     document.getElementById('galaxy-name').textContent = galaxy.name || 'Galaxy';
     document.getElementById('preview-caption').textContent = galaxy.name || 'Galaxy';
@@ -957,6 +1123,11 @@ document.querySelectorAll('.check-item').forEach(item => {
   item.onclick = () => switchTab(item.dataset.tab);
 });
 
+document.getElementById('gallery-select-mode').onclick = () => setGallerySelectionMode(true);
+document.getElementById('gallery-bulk-cancel').onclick = () => setGallerySelectionMode(false);
+document.getElementById('gallery-bulk-all').onclick = toggleAllPhotoSelections;
+document.getElementById('gallery-bulk-delete').onclick = deleteSelectedPhotos;
+
 const zone      = document.getElementById('upload-zone');
 const fileInput = document.getElementById('file-input');
 zone.onclick    = () => fileInput.click();
@@ -967,12 +1138,34 @@ zone.onkeydown = event => {
   }
 };
 fileInput.onchange = () => handleUpload(fileInput.files);
-zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
-zone.ondragleave = () => zone.classList.remove('dragover');
-zone.ondrop = (e) => {
-  e.preventDefault();
+
+function filesFromDrop(dataTransfer) {
+  const itemFiles = Array.from(dataTransfer?.items || [])
+    .filter(item => item.kind === 'file')
+    .map(item => item.getAsFile())
+    .filter(Boolean);
+  return itemFiles.length ? itemFiles : Array.from(dataTransfer?.files || []);
+}
+
+zone.ondragenter = event => {
+  event.preventDefault();
+  event.stopPropagation();
+  zone.classList.add('dragover');
+};
+zone.ondragover = event => {
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  zone.classList.add('dragover');
+};
+zone.ondragleave = event => {
+  if (!zone.contains(event.relatedTarget)) zone.classList.remove('dragover');
+};
+zone.ondrop = event => {
+  event.preventDefault();
+  event.stopPropagation();
   zone.classList.remove('dragover');
-  handleUpload(e.dataTransfer.files);
+  handleUpload(filesFromDrop(event.dataTransfer));
 };
 
 document.getElementById('share-btn').onclick = () => {
