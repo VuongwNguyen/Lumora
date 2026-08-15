@@ -3,7 +3,7 @@
 
   const token = localStorage.getItem('token');
   const FEATURE_LABELS = {
-    themes: 'Giao diện màu sắc', music: 'Nhạc nền', text: 'Caption và lời nhắn',
+    themes: 'Giao diện màu sắc', text: 'Caption và lời nhắn',
     fall_universe: 'Chuyển vũ trụ Fall Through Memories',
   };
   let plans = {};

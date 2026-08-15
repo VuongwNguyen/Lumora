@@ -37,6 +37,8 @@ const ERROR_TYPE_DESCRIPTIONS = Object.freeze({
   music_load_fail: 'Không thể tải danh sách nhạc.',
   music_save_fail: 'Không thể lưu nhạc nền.',
   audio_preview_fail: 'Không thể phát nhạc nghe thử.',
+  soundscape_init_fail: 'Không thể khởi tạo Web Audio soundscape.',
+  soundscape_save_fail: 'Không thể lưu cấu hình soundscape.',
   caption_save_fail: 'Không thể lưu caption.',
   story_generate_fail: 'Tạo nội dung Story thất bại.',
   story_save_fail: 'Lưu Story thất bại.',

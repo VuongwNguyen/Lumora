@@ -11,7 +11,9 @@ const PLANS = {
   pro: {
     monthly: 29000,
     yearly: 189000,
-    features: ['themes', 'music', 'text', 'fall_universe'],
+    // The legacy music catalog is quarantined until every track has a valid
+    // commercial license. Original Lumora soundscapes are a free base feature.
+    features: ['themes', 'text', 'fall_universe'],
     label: 'Pro',
     maxGalaxies: 10,
     featured: true,

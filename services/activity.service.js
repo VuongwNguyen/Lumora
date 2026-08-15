@@ -159,6 +159,9 @@ function normalizeActivityPayload(payload, context = {}) {
 
 class ActivityService {
   isEnabled() {
+    // Development must never write activity records, even when a developer's
+    // local .env still carries the production-facing toggle.
+    if (process.env.NODE_ENV === 'development') return false;
     return process.env.ACTIVITY_TRACKING_ENABLED !== 'false';
   }
 

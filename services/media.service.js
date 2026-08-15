@@ -1,6 +1,7 @@
 const ThemeModel = require('../models/theme');
 const BackgroundMusicModel = require('../models/backgroundMusic');
 const { errorResponse } = require('../context/responseHandle');
+const { publicSoundscapes } = require('../config/soundscapes');
 
 class MediaService {
   async createTheme(data) {
@@ -25,6 +26,10 @@ class MediaService {
 
   async getMusics() {
     return BackgroundMusicModel.find({ status: 'active' });
+  }
+
+  getSoundscapes() {
+    return publicSoundscapes();
   }
 
   async updateMusic(id, data) {

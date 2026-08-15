@@ -113,54 +113,9 @@
   <script src="/shared/js/activityLogger.js"></script>
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
-  <script src="/shared/js/sc-widget-audio.js"></script>
+  <script src="/shared/js/soundscapeEngine.js"></script>
   <script>
-    // ── Music Manager ──────────────────────────────
-    const musicManager = {
-      audio: null,
-      isPlaying: false,
-      _initialized: false,
-
-      init(url) {
-        if (this._initialized) return;
-        this._initialized = true;
-        const btn = document.getElementById('btn-audio');
-        if (!url) { if (btn) btn.classList.add('hidden'); return; }
-
-        this.audio = window.createGalaxyAudio(url);
-        this.audio.loop = true;
-        this.audio.volume = 0.7;
-        this.audio.preload = 'auto';
-
-        this.audio.onplay  = () => { this.isPlaying = true;  if (btn) btn.textContent = '🔊'; };
-        this.audio.onpause = () => { this.isPlaying = false; if (btn) btn.textContent = '🔇'; };
-        this.audio.oncanplay    = () => this.audio.play().catch(() => {});
-        this.audio.onloadeddata = () => this.audio.play().catch(() => {});
-        this.audio.play().catch(() => {});
-
-        let attempts = 0;
-        const retry = () => {
-          if (attempts++ < 10 && !this.isPlaying)
-            this.audio.play().catch(() => { if (attempts < 10) setTimeout(retry, 500); });
-        };
-        setTimeout(retry, 100);
-
-        if (btn) {
-          btn.classList.remove('hidden');
-          btn.addEventListener('click', () => this.toggle());
-        }
-
-        window.addEventListener('focus', () => {
-          if (this.audio && !this.isPlaying) this.audio.play().catch(() => {});
-        });
-        document.addEventListener('visibilitychange', () => {
-          if (!document.hidden && this.audio && !this.isPlaying) this.audio.play().catch(() => {});
-        });
-      },
-
-      play()   { return this.audio?.play() ?? Promise.reject('no audio'); },
-      toggle() { this.audio?.paused ? this.play().catch(() => {}) : this.audio?.pause(); }
-    };
+    const musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio', hiddenClass: 'hidden' });
     window.musicManager = musicManager;
 
     // ── Orientation check ──────────────────────────

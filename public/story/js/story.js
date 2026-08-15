@@ -135,7 +135,7 @@ async function main() {
 
   elIntroTitle.textContent    = view.name || 'Lumora';
   elIntroOccasion.textContent = occasionConf.label || '';
-  window.musicManager.init(view.music?.url || null);
+  window.musicManager.init(view.soundscape || null);
 
   await new Promise(resolve => {
     const start = () => { elIntro.classList.add('hidden'); resolve(); };

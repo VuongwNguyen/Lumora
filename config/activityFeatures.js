@@ -30,7 +30,7 @@ function deriveFeature(action = '') {
   if (/^Account\b/.test(value)) return 'account';
   if (/^(Story|Chapter)\b/.test(value)) return 'story';
   if (/^(Viewer|View Public)\b/.test(value)) return 'viewer';
-  if (/^(Galaxy|Gallery|Photo|Theme|Music|Caption)\b/.test(value)) return 'galaxy';
+  if (/^(Galaxy|Gallery|Photo|Theme|Music|Soundscape|Caption)\b/.test(value)) return 'galaxy';
   if (/^Portal\b/.test(value)) return 'portal';
   if (/^(Landing|View Landing)\b/.test(value)) return 'landing';
   if (/^Share\b/.test(value)) return 'share';

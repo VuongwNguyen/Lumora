@@ -1,4 +1,16 @@
 const { model, Schema } = require("mongoose");
+const { SOUNDSCAPE_KEYS } = require('../config/soundscapes');
+
+const soundscapeSchema = new Schema({
+  preset: {
+    type: String,
+    enum: [...SOUNDSCAPE_KEYS],
+    default: 'none',
+  },
+  intensity: { type: Number, min: 0, max: 100, default: 0 },
+  warmth: { type: Number, min: 0, max: 100, default: 50 },
+  motion: { type: Number, min: 0, max: 100, default: 0 },
+}, { _id: false });
 
 const galaxySchema = new Schema({
   userId: {
@@ -19,6 +31,10 @@ const galaxySchema = new Schema({
   backgroundMusicId: {
     type: Schema.Types.ObjectId,
     ref: "BackgroundMusic",
+  },
+  soundscape: {
+    type: soundscapeSchema,
+    default: () => ({ preset: 'none', intensity: 0, warmth: 50, motion: 0 }),
   },
   caption: {
     type: [String],

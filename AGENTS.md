@@ -109,7 +109,9 @@ Nguồn chuẩn duy nhất cho paid plan là `config/plans.js`.
 Quyền hiện tại:
 
 - Plus: `themes`, tối đa 3 galaxy.
-- Pro: `themes`, `music`, `text`, `fall_universe`, tối đa 10 galaxy.
+- Pro: `themes`, `text`, `fall_universe`, tối đa 10 galaxy.
+- Soundscape nguyên bản của Lumora là tính năng cơ bản miễn phí, không dùng sample hoặc URL audio bên thứ ba.
+- Feature `music` và catalog nhạc cũ đang bị quarantine cho tới khi từng track có giấy phép thương mại hợp lệ; public API/viewer không được trả hoặc phát URL catalog cũ.
 - Giá hiện tại phải đọc trực tiếp từ `config/plans.js`, không sao chép từ tài liệu này.
 
 ## 7. Payment và subscription safety
@@ -144,6 +146,8 @@ Quyền hiện tại:
 
 Mục tiêu là tracking toàn diện mọi bề mặt end-user; admin UI được loại trừ có chủ đích.
 
+- `NODE_ENV=development` luôn tắt persistence của activity, bất kể `ACTIVITY_TRACKING_ENABLED`; production vẫn tuân theo biến cấu hình này.
+
 - Mọi page end-user mới phải load stack tracking dùng chung theo pattern hiện có.
 - Mọi CTA/nút/tab/form quan trọng phải có action ổn định, dễ lọc và không phụ thuộc text dịch.
 - Mutation backend quan trọng phải `safeLog` success/failure với feature và metadata tối thiểu cần thiết.
@@ -167,6 +171,7 @@ Mục tiêu là tracking toàn diện mọi bề mặt end-user; admin UI đư�
 - Backend phải kiểm tra `fall_universe` khi lưu `template: "fall"`; frontend lock chỉ là UX.
 - Admin entitlement có thể dùng Fall nhưng UI vẫn nên thể hiện đây là feature Pro.
 - Khi đổi template trong setup, preview vẫn đi qua `/view/` để server chọn template đúng.
+- `soundscape` chỉ nhận preset và các tham số nằm trong allowlist server; không nhận audio URL, sample hoặc cấu hình node tùy ý từ client.
 
 ## 11. Frontend và UX
 

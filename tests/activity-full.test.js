@@ -138,6 +138,31 @@ test('tracked fetch logs API failures and mapped domain results without recursin
   assert.deepEqual(events, []);
 });
 
+test('disabled browser activity transport emits no network request', async () => {
+  const source = fs.readFileSync(path.join(__dirname, '../public/shared/js/activityApi.js'), 'utf8');
+  let fetchCalls = 0;
+  const window = {
+    __LUMORA_ACTIVITY_ENABLED__: false,
+    fetch: async () => { fetchCalls += 1; throw new Error('should not fetch'); },
+  };
+
+  vm.runInNewContext(source, { window, globalThis: window, console });
+  const result = await window.LumoraActivityApi.send({ action: 'View Landing Page' });
+
+  assert.equal(fetchCalls, 0);
+  assert.equal(result.disabled, true);
+  assert.equal(result.id, null);
+});
+
+test('server dynamically bootstraps the browser activity state before static assets', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../index.js'), 'utf8');
+  const routeIndex = source.indexOf('app.get("/shared/js/activityApi.js"');
+  const staticIndex = source.indexOf('app.use(express.static');
+
+  assert.ok(routeIndex >= 0 && routeIndex < staticIndex);
+  assert.match(source, /__LUMORA_ACTIVITY_ENABLED__ = \$\{ActivityService\.isEnabled\(\)\}/);
+});
+
 test('all end-user HTML entry points load tracking and admin is explicitly excluded', () => {
   const files = [
     'public/index.html', 'public/auth/index.html', 'public/portal/index.html',

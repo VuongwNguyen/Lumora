@@ -130,7 +130,7 @@ async function loadThemes() {
 async function loadMusics() {
   setTableLoading('music-table', 4);
   try {
-    const res = await fetch(`${API}/media/musics`);
+    const res = await fetch(`${API}/media/musics`, { headers: { Authorization: `Bearer ${authToken}` } });
     const data = await res.json();
     const musics = data.meta || [];
     const tbody = document.getElementById('music-table');

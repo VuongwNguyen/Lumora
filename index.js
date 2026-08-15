@@ -10,6 +10,7 @@ const { rateLimit } = require("express-rate-limit");
 const connectToDatabase = require("./connection");
 const { activityRequestContext, logUnhandledError } = require('./middlewares/activityTracking');
 require("dotenv").config();
+const ActivityService = require('./services/activity.service');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -177,6 +178,16 @@ app.get("/fall/", (req, res, next) => {
   const { galaxyId } = req.query;
   if (galaxyId) return res.redirect(`/view/?galaxyId=${encodeURIComponent(galaxyId)}`);
   next();
+});
+
+// Bootstrap the browser transport from the same server-side activity guard.
+// In development (or when explicitly disabled), client loggers become no-ops
+// and therefore never emit POST /activity/add requests.
+const activityApiSource = fs.readFileSync(path.join(__dirname, "public/shared/js/activityApi.js"), "utf8");
+app.get("/shared/js/activityApi.js", (req, res) => {
+  res.type("application/javascript");
+  res.set("Cache-Control", "no-store");
+  res.send(`window.__LUMORA_ACTIVITY_ENABLED__ = ${ActivityService.isEnabled()};\n${activityApiSource}`);
 });
 
 app.use(express.static(path.join(__dirname, "public")));

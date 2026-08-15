@@ -1,7 +1,7 @@
 # Lumora — Các quyết định PO còn chờ xác nhận
 
 **Trạng thái:** Chưa được PO duyệt
-**Cập nhật kỹ thuật:** 11/08/2026
+**Cập nhật kỹ thuật:** 15/08/2026
 **Nguyên tắc:** Không điền dữ liệu định danh thật vào Git. Cấu hình production chỉ thực hiện qua biến môi trường.
 
 ## Cơ chế an toàn hiện tại
@@ -87,7 +87,7 @@ Các nguồn trên được dùng để định hướng công khai, minh bạch
 1. Xác nhận chủ thể ký kết hợp đồng dịch vụ và thông tin công khai tại `/owner-info/`.
 2. Duyệt câu thuế/phí hiển thị tại trang chính sách và màn hình rà soát đơn.
 3. Duyệt SLA hỗ trợ, thời hạn hoàn tiền và phương thức hoàn tiền.
-4. Xác nhận danh sách nhà cung cấp dữ liệu trong Privacy: hạ tầng lưu trữ, ImageKit, PayOS, Gmail và SoundCloud.
+4. Xác nhận danh sách nhà cung cấp dữ liệu trong Privacy: hạ tầng lưu trữ, ImageKit, PayOS và Gmail. SoundCloud legacy đang bị quarantine và không còn được nhúng ở bề mặt end-user.
 5. Xác nhận thời gian lưu từng nhóm dữ liệu ngoài activity log 180 ngày, đặc biệt tài khoản, media, payment và support request.
 6. Duyệt quy trình thay đổi Điều khoản/Chính sách và phương thức thông báo cho user.
 7. Duyệt ngôn ngữ Việt/Anh là tương đương về ý nghĩa.
@@ -98,6 +98,8 @@ Các nguồn trên được dùng để định hướng công khai, minh bạch
 - Mọi bảng giá và quyền lợi user-facing lấy từ `config/plans.js` qua public-config; không sửa giá lặp ở từng màn hình.
 - `Fall Through Memories` là tính năng **Chuyển vũ trụ** thuộc gói Pro (`fall_universe`).
 - Mỗi giao dịch mua một kỳ riêng, không tự động trừ tiền và không tự động gia hạn.
+- Ngày 15/08/2026: tạm ngừng feature `music` và quarantine toàn bộ catalog upload/SoundCloud hiện tại vì chưa có giấy phép; không xóa dữ liệu, không trả URL hoặc phát nhạc qua public viewer.
+- Soundscape do Lumora tổng hợp hoàn toàn bằng Web Audio, không dùng sample bên thứ ba, là tính năng cơ bản miễn phí cho mọi user.
 
 ## Việc bên ngoài repository
 

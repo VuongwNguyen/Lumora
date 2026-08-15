@@ -119,130 +119,25 @@
     <script src="/shared/js/activityAutoTracker.js"></script>
     <script type="module" src="./js/script.js"></script>
 
-    <!-- Khởi tạo Music Manager -->
-    <script src="/shared/js/sc-widget-audio.js"></script>
+    <!-- Shared original Web Audio soundscape engine -->
+    <script src="/shared/js/soundscapeEngine.js"></script>
     <script>
-        const musicManager = {
-            audio: null,
-            isPlaying: false,
-            _initialized: false,
-
-            init(url) {
-                if (this._initialized) return;
-                this._initialized = true;
-
-                const toggleBtn = document.getElementById('toggle-audio');
-
-                if (!url) {
-                    if (toggleBtn) toggleBtn.style.display = 'none';
-                    return;
-                }
-
-                this.audio = window.createGalaxyAudio(url);
-                this.audio.loop = true;
-                this.audio.volume = 0.7;
-                this.audio.preload = "auto";
-                this.audio.muted = false;
-
-                this.audio.onplay = () => {
-                    this.isPlaying = true;
-                    this.updateUI();
-                };
-
-                this.audio.onpause = () => {
-                    this.isPlaying = false;
-                    this.updateUI();
-                };
-
-                this.audio.oncanplay = () => {
-                    this.audio.play().catch(e => console.warn('oncanplay play failed:', e));
-                };
-
-                this.audio.onloadeddata = () => {
-                    this.audio.play().catch(e => console.warn('onloadeddata play failed:', e));
-                };
-
-                this.audio.onloadedmetadata = () => {
-                    this.audio.play().catch(e => console.warn('onloadedmetadata play failed:', e));
-                };
-
-                this.audio.play().catch(e => console.warn('Immediate play failed:', e));
-
-                let attempts = 0;
-                const maxAttempts = 10;
-                const retryPlay = () => {
-                    if (attempts < maxAttempts && !this.isPlaying) {
-                        attempts++;
-                        this.audio.play().catch(e => {
-                            if (attempts < maxAttempts) setTimeout(retryPlay, 500);
-                        });
-                    }
-                };
-                setTimeout(retryPlay, 100);
-
-                this.updateUI();
-            },
-
-            play() {
-                if (!this.audio) return Promise.reject('Audio not initialized');
-                return this.audio.play();
-            },
-
-            pause() {
-                if (!this.audio) return;
-                this.audio.pause();
-            },
-
-            togglePlayback() {
-                if (!this.audio) return;
-                if (this.audio.paused) {
-                    this.audio.play().catch(e => {
-                        console.warn('Lỗi phát nhạc:', e);
-                    });
-                } else {
-                    this.audio.pause();
-                }
-            },
-
-            updateUI() {
-                const icon = document.getElementById('audio-icon');
+        const musicManager = window.LumoraSoundscape.createManager({
+            buttonId: 'toggle-audio',
+            updateButton(button, isPlaying) {
+                const icon = button?.querySelector('#audio-icon');
                 if (!icon) return;
-                
-                if (this.isPlaying) {
+                if (isPlaying) {
                     icon.classList.remove('fa-volume-xmark');
                     icon.classList.add('fa-volume-high');
                 } else {
                     icon.classList.remove('fa-volume-high');
                     icon.classList.add('fa-volume-xmark');
                 }
-            }
-        };
-
-        // Gán musicManager vào window object để script.js có thể truy cập
-        window.musicManager = musicManager;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Force autoplay khi trang được focus (sau khi init đã được gọi từ script.js)
-            window.addEventListener('focus', () => {
-                if (musicManager.audio && !musicManager.isPlaying) {
-                    musicManager.audio.play().catch(e => console.warn('Focus play failed:', e));
-                }
-            });
-
-            // Force autoplay khi page visibility thay đổi
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden && musicManager.audio && !musicManager.isPlaying) {
-                    musicManager.audio.play().catch(e => console.warn('Visibility play failed:', e));
-                }
-            });
-
-            const toggleBtn = document.getElementById('toggle-audio');
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', () => {
-                    musicManager.togglePlayback();
-                });
-            }
+            },
         });
+
+        window.musicManager = musicManager;
     </script>
 </body>
 

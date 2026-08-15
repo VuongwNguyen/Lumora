@@ -5,7 +5,7 @@ const galaxyId = new URLSearchParams(window.location.search).get('galaxyId');
 
 let currentCaptions = [];
 let themes = [];
-let musics = [];
+let soundscapes = [];
 let saveTimer = null;
 let dragSrcIndex = null;
 let canSelectTemplate = false;
@@ -53,11 +53,14 @@ function scheduleSave(field = 'caption') {
 
 async function performSave() {
   const themeId = document.getElementById('themeSelect').value || null;
-  const musicId = document.getElementById('musicSelect').value || null;
+  const soundscapeId = document.getElementById('soundscapeSelect').value || 'none';
   const fields = new Set(pendingFields); pendingFields.clear();
   const payload = {};
   if (fields.has('themeId')) payload.themeId = themeId;
-  if (fields.has('backgroundMusicId')) payload.backgroundMusicId = musicId;
+  if (fields.has('soundscape')) {
+    const selected = soundscapes.find(item => item.id === soundscapeId);
+    payload.soundscape = { preset: soundscapeId, ...(selected?.defaults || { intensity: 0, warmth: 50, motion: 0 }) };
+  }
   if (fields.has('caption')) payload.caption = currentCaptions;
   if (fields.has('seEffect')) payload.seEffect = document.getElementById('effectSelect').value || 'none';
   if (fields.has('template') && canSelectTemplate) payload.template = document.getElementById('templateSelect').value || 'galaxy';
@@ -110,20 +113,19 @@ async function applySubscriptionLock() {
       document.getElementById('templateSection').style.display = 'block';
     }
     if (!features.has('themes')) applyLock('themeSection', 'Plus');
-    if (!features.has('music'))  applyLock('musicSection', 'Pro');
     if (!features.has('text'))   applyLock('captionSection', 'Pro');
   } catch { /* silent */ }
 }
 
-// ── Load themes / musics ──────────────────────────
+// ── Load themes / original soundscapes ────────────
 async function loadOptions() {
   try {
-    const [themesRes, musicsRes] = await Promise.all([
+    const [themesRes, soundscapesRes] = await Promise.all([
       fetch(`${API_BASE}/media/themes`),
-      fetch(`${API_BASE}/media/musics`),
+      fetch(`${API_BASE}/media/soundscapes`),
     ]);
     themes = (await themesRes.json()).meta || [];
-    musics = (await musicsRes.json()).meta || [];
+    soundscapes = (await soundscapesRes.json()).meta || [];
     populateSelects();
   } catch (err) {
     console.error('Failed to load options:', err);
@@ -132,18 +134,18 @@ async function loadOptions() {
 
 function populateSelects() {
   const themeSelect = document.getElementById('themeSelect');
-  const musicSelect = document.getElementById('musicSelect');
+  const soundscapeSelect = document.getElementById('soundscapeSelect');
   themes.forEach(theme => {
     const opt = document.createElement('option');
     opt.value = theme._id;
     opt.textContent = theme.name;
     themeSelect.appendChild(opt);
   });
-  musics.forEach(music => {
+  soundscapes.filter(item => item.id !== 'none').forEach(soundscape => {
     const opt = document.createElement('option');
-    opt.value = music._id;
-    opt.textContent = music.name;
-    musicSelect.appendChild(opt);
+    opt.value = soundscape.id;
+    opt.textContent = userLang === 'en' ? soundscape.labelEn : soundscape.label;
+    soundscapeSelect.appendChild(opt);
   });
 }
 
@@ -157,7 +159,7 @@ async function loadGalaxyCustomization() {
     const galaxy = data.meta;
     if (!galaxy) return;
     if (galaxy.themeId) document.getElementById('themeSelect').value = galaxy.themeId;
-    if (galaxy.backgroundMusicId) document.getElementById('musicSelect').value = galaxy.backgroundMusicId;
+    document.getElementById('soundscapeSelect').value = galaxy.soundscape?.preset || 'none';
     if (galaxy.template) document.getElementById('templateSelect').value = galaxy.template;
     const effectEl = document.getElementById('effectSelect');
     if (effectEl) effectEl.value = galaxy.seEffect || 'none';
@@ -265,7 +267,7 @@ document.getElementById('captionInput').addEventListener('keydown', (e) => {
 
 // ── Trigger auto-save on select changes ──────────
 document.getElementById('themeSelect').addEventListener('change', () => scheduleSave('themeId'));
-document.getElementById('musicSelect').addEventListener('change', () => scheduleSave('backgroundMusicId'));
+document.getElementById('soundscapeSelect').addEventListener('change', () => scheduleSave('soundscape'));
 document.getElementById('templateSelect').addEventListener('change', () => scheduleSave('template'));
 document.getElementById('effectSelect').addEventListener('change', () => scheduleSave('seEffect'));
 

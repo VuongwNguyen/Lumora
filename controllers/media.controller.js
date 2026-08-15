@@ -33,6 +33,18 @@ class MediaController {
     return new successfullyResponse({ message: 'Musics fetched', meta: musics }).json(res);
   }
 
+  async getSoundscapes(req, res, next) {
+    const soundscapes = MediaService.getSoundscapes();
+    return new successfullyResponse({ message: 'Soundscapes fetched', meta: soundscapes }).json(res);
+  }
+
+  musicQuarantined(req, res, next) {
+    return next(new errorResponse({
+      message: 'Background music is temporarily unavailable while licensing is reviewed',
+      statusCode: 503,
+    }));
+  }
+
   async updateMusic(req, res, next) {
     const music = await MediaService.updateMusic(req.params.id, req.body);
     return new successfullyResponse({ message: 'Music updated', meta: music }).json(res);
