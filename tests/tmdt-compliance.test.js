@@ -18,7 +18,10 @@ const SubscriptionModel = require('../models/subscription');
 const GalaxyService = require('../services/galaxy.service');
 const { getEntitlementBypassMode, getRoleEntitlementPlan, hasEntitlementBypass } = require('../config/runtime');
 const { requireSubscription } = require('../middlewares/subscription');
-const { SOUNDSCAPE_KEYS, normalizeSoundscape, validateSoundscape } = require('../config/soundscapes');
+const {
+  SOUNDSCAPE_INSTRUMENT_KEYS, SOUNDSCAPE_KEYS, normalizeSoundscape,
+  publicSoundscapeInstruments, validateSoundscape,
+} = require('../config/soundscapes');
 
 const completeEnv = {
   OWNER_NAME: 'Lumora Owner', OWNER_TAX_ID: 'TAX-001', OWNER_ADDRESS: 'Business address',
@@ -66,14 +69,26 @@ test('plan capabilities are centralized and Fall universe belongs to Pro', () =>
 
 test('original soundscapes are allowlisted, bounded and persisted on Galaxy', () => {
   assert.deepEqual(SOUNDSCAPE_KEYS, ['none', 'deep_focus', 'cosmic_drift', 'aurora_bloom', 'memory_glow', 'falling_stars']);
-  assert.equal(validateSoundscape({ preset: 'deep_focus', intensity: 48, warmth: 72, motion: 44 }), true);
+  assert.equal(validateSoundscape({
+    preset: 'deep_focus', intensity: 48, warmth: 72, motion: 44,
+    instrument: 'harp', tempo: 82, space: 64, variation: 70,
+  }), true);
   assert.equal(validateSoundscape({ preset: 'cosmic_drift', intensity: 50, warmth: 40, motion: 30 }), true);
   assert.equal(validateSoundscape({ preset: 'unknown', intensity: 50 }), false);
   assert.equal(validateSoundscape({ preset: 'cosmic_drift', intensity: 101 }), false);
-  assert.deepEqual(normalizeSoundscape({ preset: 'falling_stars', intensity: 58, warmth: 35, motion: 72 }), {
+  assert.equal(validateSoundscape({ preset: 'cosmic_drift', instrument: 'youtube_audio' }), false);
+  assert.equal(validateSoundscape({ preset: 'cosmic_drift', tempo: 141 }), false);
+  assert.deepEqual(normalizeSoundscape({
     preset: 'falling_stars', intensity: 58, warmth: 35, motion: 72,
+    instrument: 'kalimba', tempo: 116, space: 74, variation: 84,
+  }), {
+    preset: 'falling_stars', intensity: 58, warmth: 35, motion: 72,
+    instrument: 'kalimba', tempo: 116, space: 74, variation: 84,
   });
+  assert.ok(SOUNDSCAPE_INSTRUMENT_KEYS.includes('airy_voice'));
+  assert.deepEqual(publicSoundscapeInstruments().map(instrument => instrument.id), [...SOUNDSCAPE_INSTRUMENT_KEYS]);
   assert.deepEqual(GalaxyModel.schema.path('soundscape.preset').enumValues, [...SOUNDSCAPE_KEYS]);
+  assert.deepEqual(GalaxyModel.schema.path('soundscape.instrument').enumValues, [...SOUNDSCAPE_INSTRUMENT_KEYS]);
 });
 
 test('role entitlements prioritize admin and grant partner a Pro-equivalent scope', () => {
@@ -568,8 +583,19 @@ test('galaxy setup uses the responsive Lumora workspace while retaining every se
   assert.match(setupScript, /setAttribute\('aria-expanded'/);
   assert.match(setupScript, /zone\.onkeydown/);
   assert.match(setupScript, /fetch\('\/media\/soundscapes'\)/);
+  assert.match(setupScript, /fetch\('\/media\/soundscape-instruments'\)/);
   assert.match(setupScript, /Soundscape Saved/);
   assert.match(setupScript, /previewConfig\.seed \+= `:take:/);
+  assert.match(setupScript, /const previewController = \(\(\) =>/);
+  assert.match(setupScript, /frame\.contentWindow\.location\.replace\(buildUrl\(\)\)/);
+  assert.match(setupScript, /refreshTimer = setTimeout\(navigate, refreshDelay\)/);
+  assert.doesNotMatch(setupScript, /frame\.src\s*=/);
+  assert.doesNotMatch(setupScript, /function refreshPreview/);
+  assert.match(setupPage, /id="galaxy-frame" src="about:blank"/);
+  assert.match(setupScript, /setupSoundscapeCustomTitle/);
+  assert.match(setupScript, /Soundscape Instrument Change/);
+  assert.match(setupScript, /resetSoundscapeControls/);
+  assert.match(setupPage, /\.soundscape-controls-actions/);
   assert.doesNotMatch(setupScript, /\/media\/musics/);
 });
 
@@ -584,7 +610,7 @@ test('soundscape engine is shared by public viewers and uses generated Web Audio
   assert.match(engine, /createBufferSource\(\)/);
   assert.match(engine, /deep_focus/);
   assert.match(engine, /recipe\.melody/);
-  assert.match(engine, /60000 \/ recipe\.tempo/);
+  assert.match(engine, /60000 \/ this\.config\.tempo/);
   assert.match(engine, /this\._volume = 0\.98/);
   assert.match(engine, /lowCut\.type = 'highpass'/);
   assert.match(engine, /clarity\.type = 'highshelf'/);
@@ -595,10 +621,7 @@ test('soundscape engine is shared by public viewers and uses generated Web Audio
   assert.match(engine, /reverbSeconds/);
   assert.match(engine, /recipe\.noteSpacing/);
   assert.match(engine, /recipe\.panWidth/);
-  for (const instrument of [
-    'soft_keys', 'glass', 'harp', 'flute', 'bell',
-    'celesta', 'kalimba', 'nylon', 'marimba', 'airy_voice',
-  ]) {
+  for (const instrument of SOUNDSCAPE_INSTRUMENT_KEYS.filter(id => id !== 'auto')) {
     assert.match(engine, new RegExp(`${instrument}: Object\\.freeze`));
   }
   assert.match(engine, /_playInstrumentNote/);
@@ -614,7 +637,38 @@ test('soundscape engine is shared by public viewers and uses generated Web Audio
   assert.match(engine, /accentChance/);
   assert.match(engine, /recipe\.phraseSteps \?\? recipe\.chordEvery/);
   assert.match(engine, /_lastInversion/);
+  assert.match(engine, /phraseInstrument = this\.config\.instrument/);
+  assert.match(engine, /this\.config\.space \/ 100/);
+  assert.match(engine, /this\.config\.variation \/ 100/);
+  assert.match(engine, /root\.addEventListener\('pagehide'/);
   assert.doesNotMatch(engine, /new Audio\(|fetch\(|soundcloud|\.mp3/);
+});
+
+test('soundscape playback is unlocked inside mobile gestures after viewer data is ready', () => {
+  const engine = fs.readFileSync(path.join(__dirname, '../public/shared/js/soundscapeEngine.js'), 'utf8');
+  const story = fs.readFileSync(path.join(__dirname, '../public/story/js/story.js'), 'utf8');
+  const galaxy = fs.readFileSync(path.join(__dirname, '../public/galaxy-moon/js/script.js'), 'utf8');
+  const fall = fs.readFileSync(path.join(__dirname, '../public/fall/js/fall.js'), 'utf8');
+  const aurora = fs.readFileSync(path.join(__dirname, '../public/aurora/js/aurora.js'), 'utf8');
+  const setup = fs.readFileSync(path.join(__dirname, '../public/portal/js/galaxy-setup.js'), 'utf8');
+  const setupPage = fs.readFileSync(path.join(__dirname, '../public/portal/galaxy-setup.html'), 'utf8');
+  const playBody = engine.slice(engine.indexOf('async play()'), engine.indexOf('\n    pause()', engine.indexOf('async play()')));
+
+  assert.match(engine, /_resumeContextFromGesture\(\)/);
+  assert.match(engine, /context\.createBuffer\(1, 1, context\.sampleRate\)/);
+  assert.match(engine, /navigator\?\.audioSession/);
+  assert.match(engine, /AUDIO_RESUME_TIMEOUT_MS/);
+  assert.match(engine, /typeof context\.createStereoPanner === 'function'/);
+  assert.ok(playBody.indexOf('_resumeContextFromGesture()') < playBody.indexOf('_buildGraph()'));
+  assert.match(story, /const start = \(\) => \{[\s\S]*?musicManager\.play[\s\S]*?resolve\(\)/);
+  assert.doesNotMatch(story, /addEventListener\('touchend',\s*start/);
+  assert.ok(fall.indexOf('musicManager?.init(data.soundscape)') < fall.indexOf("intro.addEventListener('click', startExperience"));
+  assert.ok(aurora.indexOf('musicManager.init(data.soundscape)') < aurora.indexOf("addEventListener('click',startExperience"));
+  assert.doesNotMatch(galaxy, /musicManager\.audio\.muted = true/);
+  assert.ok(setupPage.indexOf('/shared/js/soundscapeEngine.js') < setupPage.indexOf('js/galaxy-setup.js'));
+  assert.match(setup, /playBtn\.onclick = \(event\) => \{[\s\S]*?togglePreviewSoundscape\(soundscape, playBtn\)/);
+  assert.match(setup, /previewAudio\.onplay = \(\) => \{[\s\S]*?btn\.textContent = btn\.dataset\.playingLabel/);
+  assert.match(setup, /previewAudio\.play\(\)\.catch/);
 });
 
 test('legacy music endpoints require admin and stay quarantined', () => {
@@ -622,6 +676,7 @@ test('legacy music endpoints require admin and stay quarantined', () => {
   const controller = fs.readFileSync(path.join(__dirname, '../controllers/media.controller.js'), 'utf8');
 
   assert.match(routes, /router\.get\('\/soundscapes', asyncHandler\(MediaController\.getSoundscapes\)\)/);
+  assert.match(routes, /router\.get\('\/soundscape-instruments', asyncHandler\(MediaController\.getSoundscapeInstruments\)\)/);
   assert.match(routes, /router\.get\('\/musics', requireAdmin, asyncHandler\(MediaController\.getMusics\)\)/);
   assert.match(routes, /router\.post\('\/upload-music', requireAdmin, MediaController\.musicQuarantined\)/);
   assert.match(routes, /router\.get\('\/musics\/:id\/stream', requireAdmin, MediaController\.musicQuarantined\)/);
@@ -803,9 +858,14 @@ test('legacy music is quarantined while free soundscape updates remain available
 
     const updated = await GalaxyService.updateGalaxy({
       galaxyId: 'galaxy-a', userId: 'user-a', user: { role: 'user' },
-      data: { soundscape: { preset: 'memory_glow', intensity: 44, warmth: 76, motion: 28 } },
+      data: { soundscape: {
+        preset: 'memory_glow', intensity: 44, warmth: 76, motion: 28,
+        instrument: 'nylon', tempo: 72, space: 56, variation: 62,
+      } },
     });
     assert.equal(updated.soundscape.preset, 'memory_glow');
+    assert.equal(updated.soundscape.instrument, 'nylon');
+    assert.equal(updated.soundscape.tempo, 72);
 
     const view = await GalaxyService.getGalaxyView('galaxy-a');
     assert.equal(view.music, null);

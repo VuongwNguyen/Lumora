@@ -56,6 +56,7 @@
       [/^POST \/gallary\/upload$/, 'Galaxy Photo Upload'],
       [/^DELETE \/gallary\/items\/:id$/, 'Galaxy Photo Delete'],
       [/^GET \/media\/soundscapes$/, 'Soundscape Catalog Load'],
+      [/^GET \/media\/soundscape-instruments$/, 'Soundscape Instrument Catalog Load'],
       [/^POST \/payment\/create$/, 'Payment Checkout'],
       [/^GET \/payment\/status$/, 'Subscription Status'],
       [/^GET \/payment\/history$/, 'Payment History'],

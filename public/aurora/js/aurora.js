@@ -296,12 +296,12 @@ renderer.domElement.addEventListener('touchmove', e=>pointerMove(e.touches[0].cl
 renderer.domElement.addEventListener('touchend',  e=>pointerUp(e.changedTouches[0].clientX,e.changedTouches[0].clientY));
 window.addEventListener('wheel',e=>{ if(started&&e.deltaY>0) boost=Math.min(boost+0.22,0.9); });
 
-document.getElementById('intro').addEventListener('click',()=>{
+function startExperience(){
   started=true;
   document.getElementById('intro').classList.add('hidden');
   window.musicManager.play?.().catch?.(()=>{});
   document.documentElement.requestFullscreen?.().catch?.(()=>{});
-});
+}
 
 // ── Animate ───────────────────────────────────────────────────────────────────
 function animate(){
@@ -358,6 +358,7 @@ async function init(){
     domeMat.uniforms.uC2.value.set(c2);
   }
   window.musicManager.init(data.soundscape);
+  document.getElementById('intro').addEventListener('click',startExperience,{once:true});
   if(data.images.length){
     const loader=new THREE.TextureLoader();
     textures=await Promise.all(data.images.map(url=>new Promise(res=>{

@@ -1,9 +1,11 @@
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const { getDatabaseConfig } = require('../config/database');
 
 async function migrate() {
-  await mongoose.connect(process.env.DATABASE_URL);
+  const { databaseUrl, databaseName } = getDatabaseConfig();
+  await mongoose.connect(databaseUrl, { dbName: databaseName });
   console.log("Connected to database");
 
   try {

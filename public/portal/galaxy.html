@@ -673,6 +673,7 @@
           <select id="soundscapeSelect" style="width: 100%; padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Jost', sans-serif; font-size: 13px;">
             <option value="none">No sound</option>
           </select>
+          <a id="soundscapeCustomizeLink" href="#" data-track-action="Soundscape Customize Open" data-track-id="soundscape_customize_open" style="display:inline-block;margin-top:7px;color:var(--accent-light);font-size:11px;text-decoration:none;">Tinh chỉnh bản phối →</a>
         </div>
       </div>
       <div id="captionSection" style="margin-bottom: 16px;">
@@ -737,6 +738,7 @@
       document.querySelector('#themeSelect option[value=""]').textContent = t.noTheme;
       document.querySelector('[data-i18n="soundscape-label"]').textContent = t.soundscape;
       document.querySelector('#soundscapeSelect option[value="none"]').textContent = t.noSoundscape;
+      document.getElementById('soundscapeCustomizeLink').textContent = t.soundscapeCustomize;
       document.querySelector('[data-i18n="captions-label"]').textContent = t.captions;
       document.getElementById('captionInput').placeholder = t.captionPlaceholder;
       document.getElementById('addCaptionBtn').textContent = t.addCaption;

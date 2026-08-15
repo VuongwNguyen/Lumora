@@ -23,6 +23,7 @@ let currentAudio = null;
 let previewTake  = 0;
 let userPlan     = 'free'; // 'free' | 'plus' | 'pro'
 let userFeatures = new Set();
+let soundscapeInstruments = [];
 
 function canUseFeature(feature) { return userFeatures.has(feature); }
 
@@ -58,10 +59,47 @@ function applySubLocks() {
 }
 
 const frame = document.getElementById('galaxy-frame');
+const previewController = (() => {
+  const refreshDelay = 160;
+  let refreshTimer = null;
+  let revision = 0;
 
-function refreshPreview() {
-  frame.src = `/view/?galaxyId=${galaxyId}&skip_se=true&autostart=true&_t=${Date.now()}`;
-}
+  function setLoading(loading) {
+    frame.classList.toggle('is-refreshing', loading);
+    frame.setAttribute('aria-busy', String(loading));
+  }
+
+  function buildUrl() {
+    const previewUrl = new URL('/view/', window.location.origin);
+    previewUrl.searchParams.set('galaxyId', galaxyId);
+    previewUrl.searchParams.set('skip_se', 'true');
+    previewUrl.searchParams.set('autostart', 'true');
+    previewUrl.searchParams.set('preview_rev', String(++revision));
+    return previewUrl.href;
+  }
+
+  function navigate() {
+    refreshTimer = null;
+    setLoading(true);
+    // Iframe navigations join the browser session history. replace() refreshes
+    // the live preview without trapping Back inside previous iframe documents.
+    frame.contentWindow.location.replace(buildUrl());
+  }
+
+  function refresh({ immediate = false } = {}) {
+    clearTimeout(refreshTimer);
+    if (immediate) navigate();
+    else refreshTimer = setTimeout(navigate, refreshDelay);
+  }
+
+  function cancel() {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+
+  frame.addEventListener('load', () => setLoading(false));
+  return Object.freeze({ cancel, refresh });
+})();
 
 const toast = document.getElementById('toast');
 
@@ -168,6 +206,7 @@ function setupNameEditor(initialName) {
       closeEditor();
       showToast(tr('setupRenamed'));
       trackResult('Galaxy Rename Result', true);
+      previewController.refresh();
     } catch (err) {
       trackResult('Galaxy Rename Result', false, { errorType: 'galaxy_update_fail' }, err);
       input.disabled = false;
@@ -244,14 +283,15 @@ function renderGallery() {
 
 async function deletePhoto(imageId) {
   try {
-    await fetch(`/gallary/items/${imageId}`, {
+    const response = await fetch(`/gallary/items/${imageId}`, {
       method: 'DELETE',
       headers: { Authorization: 'Bearer ' + token },
     });
+    if (!response.ok) throw new Error('photo delete failed');
     galleryItems = galleryItems.filter(i => i._id !== imageId);
     renderGallery();
     updateChecklist();
-    refreshPreview();
+    previewController.refresh();
   } catch { showToast(tr('setupDeletePhotoFail')); }
 }
 
@@ -281,7 +321,7 @@ function handleUpload(files) {
       if (res.ok) galleryItems = (await res.json()).meta || [];
       renderGallery();
       updateChecklist();
-      refreshPreview();
+      previewController.refresh();
       showToast(tr('setupUploadSuccess'));
     } else {
       showToast(tr('setupUploadFail'));
@@ -339,21 +379,28 @@ function renderThemes() {
 }
 
 async function applyTheme(themeId, name) {
+  const previous = galaxy.themeId || null;
   galaxy.themeId = themeId;
   renderThemes();
   updateChecklist();
   // Instant live update
-  const th = themes.find(t => t._id === themeId);
   try {
-    await fetch(`/galaxies/${galaxyId}`, {
+    const response = await fetch(`/galaxies/${galaxyId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ themeId }),
     });
+    if (!response.ok) throw new Error('theme save failed');
     showToast(themeId ? tr('setupSelected', name) : tr('setupThemeRemoved'));
     trackResult('Galaxy Theme Result', true, { selected: Boolean(themeId) });
-    refreshPreview();
-  } catch (error) { trackResult('Galaxy Theme Result', false, { errorType: 'theme_save_fail' }, error); showToast(tr('setupSaveFail')); galaxy.themeId = null; renderThemes(); }
+    previewController.refresh();
+  } catch (error) {
+    galaxy.themeId = previous;
+    renderThemes();
+    updateChecklist();
+    trackResult('Galaxy Theme Result', false, { errorType: 'theme_save_fail' }, error);
+    showToast(tr('setupSaveFail'));
+  }
 }
 
 // ── Original Lumora soundscapes ────────────────────────────
@@ -382,6 +429,9 @@ function renderSoundscapes() {
       const playBtn = el('button', 'music-play', '▶');
       playBtn.type = 'button';
       playBtn.setAttribute('aria-label', tr('setupSoundscapePreview', soundscape.label));
+      playBtn.dataset.idleLabel = '▶';
+      playBtn.dataset.playingLabel = '■';
+      playBtn.dataset.soundscapePreview = soundscape.id;
       playBtn.dataset.trackAction = 'Soundscape Preview Started';
       playBtn.dataset.trackId = `soundscape_preview_${soundscape.id}`;
       playBtn.onclick = (event) => {
@@ -398,11 +448,13 @@ function renderSoundscapes() {
     info.appendChild(el('div', 'soundscape-description', userLang === 'en' ? soundscape.descriptionEn : soundscape.description));
 
     item.appendChild(info);
-    item.onclick = () => applySoundscape(soundscape);
+    item.onclick = () => {
+      if (selectedPreset !== soundscape.id) applySoundscape(soundscape);
+    };
     item.onkeydown = event => {
       if ((event.key === 'Enter' || event.key === ' ') && event.target === item) {
         event.preventDefault();
-        applySoundscape(soundscape);
+        if (selectedPreset !== soundscape.id) applySoundscape(soundscape);
       }
     };
     wrap.appendChild(item);
@@ -412,20 +464,42 @@ function renderSoundscapes() {
 }
 
 function soundscapeConfig(entry, overrides = {}) {
-  const defaults = entry?.defaults || { intensity: 50, warmth: 50, motion: 40 };
+  const defaults = entry?.defaults || {
+    intensity: 50, warmth: 50, motion: 40, instrument: 'auto', tempo: 76, space: 50, variation: 50,
+  };
   return {
     preset: entry?.id || 'none',
     intensity: overrides.intensity ?? defaults.intensity,
     warmth: overrides.warmth ?? defaults.warmth,
     motion: overrides.motion ?? defaults.motion,
+    instrument: overrides.instrument ?? defaults.instrument,
+    tempo: overrides.tempo ?? defaults.tempo,
+    space: overrides.space ?? defaults.space,
+    variation: overrides.variation ?? defaults.variation,
     seed: `preview:${galaxyId}:${entry?.id || 'none'}`,
   };
 }
 
+function resetPreviewButtons() {
+  document.querySelectorAll('[data-soundscape-preview]').forEach(button => {
+    button.textContent = button.dataset.idleLabel || '▶';
+  });
+}
+
+function stopSoundscapePreview() {
+  currentAudio?.destroy();
+  currentAudio = null;
+  resetPreviewButtons();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopSoundscapePreview();
+});
+
 function togglePreviewSoundscape(entry, btn) {
   if (currentAudio && !currentAudio.paused) {
     currentAudio.pause();
-    document.querySelectorAll('.music-play').forEach(b => b.textContent = '▶');
+    resetPreviewButtons();
     if (currentAudio.previewPreset === entry.id) { currentAudio.destroy(); currentAudio = null; return; }
   }
   currentAudio?.destroy();
@@ -433,36 +507,100 @@ function togglePreviewSoundscape(entry, btn) {
   const previewConfig = soundscapeConfig(entry, current);
   previewConfig.seed += `:take:${++previewTake}`;
   currentAudio = window.LumoraSoundscape.create(previewConfig);
-  currentAudio.previewPreset = entry.id;
-  currentAudio.play().catch(() => showToast(tr('setupSoundscapePreviewFail')));
-  btn.textContent = '■';
-  currentAudio.onpause = () => { btn.textContent = '▶'; };
+  const previewAudio = currentAudio;
+  previewAudio.previewPreset = entry.id;
+  previewAudio.onplay = () => {
+    if (currentAudio !== previewAudio) return;
+    resetPreviewButtons();
+    btn.textContent = btn.dataset.playingLabel || '■';
+  };
+  previewAudio.onpause = resetPreviewButtons;
+  btn.textContent = '…';
+  previewAudio.play().catch(() => {
+    if (currentAudio === previewAudio) {
+      previewAudio.destroy();
+      currentAudio = null;
+    }
+    resetPreviewButtons();
+    showToast(tr('setupSoundscapePreviewFail'));
+  });
 }
 
 function renderSoundscapeControls(wrap) {
+  const entry = soundscapes.find(item => item.id === galaxy.soundscape?.preset);
+  if (!entry) return;
   const controls = el('div', 'soundscape-controls');
+  const heading = el('div', 'soundscape-controls-heading');
+  const headingCopy = el('div');
+  headingCopy.appendChild(el('div', 'soundscape-controls-title', tr('setupSoundscapeCustomTitle')));
+  headingCopy.appendChild(el('div', 'soundscape-controls-copy', tr('setupSoundscapeCustomDescription')));
+  const currentConfig = soundscapeConfig(entry, galaxy.soundscape || {});
+  const customized = Object.entries(entry.defaults || {}).some(([field, value]) => currentConfig[field] !== value);
+  if (customized) heading.appendChild(el('span', 'soundscape-custom-badge', tr('setupSoundscapeCustomized')));
+  heading.prepend(headingCopy);
+  controls.appendChild(heading);
+
+  const instrumentRow = el('label', 'soundscape-control soundscape-control-select');
+  instrumentRow.appendChild(el('span', null, tr('setupSoundscapeInstrument')));
+  const instrumentSelect = document.createElement('select');
+  instrumentSelect.setAttribute('aria-label', tr('setupSoundscapeInstrument'));
+  instrumentSelect.dataset.trackAction = 'Soundscape Instrument Change';
+  instrumentSelect.dataset.trackId = 'soundscape_instrument';
+  soundscapeInstruments.forEach(instrument => {
+    const option = document.createElement('option');
+    option.value = instrument.id;
+    option.textContent = userLang === 'en' ? instrument.labelEn : instrument.label;
+    instrumentSelect.appendChild(option);
+  });
+  instrumentSelect.value = currentConfig.instrument;
+  instrumentSelect.onchange = () => applySoundscapeControls('instrument', instrumentSelect.value);
+  instrumentRow.appendChild(instrumentSelect);
+  controls.appendChild(instrumentRow);
+
   const fields = [
-    ['intensity', tr('setupSoundscapeIntensity')],
-    ['warmth', tr('setupSoundscapeWarmth')],
-    ['motion', tr('setupSoundscapeMotion')],
+    ['intensity', tr('setupSoundscapeIntensity'), 0, 100, ''],
+    ['warmth', tr('setupSoundscapeWarmth'), 0, 100, ''],
+    ['motion', tr('setupSoundscapeMotion'), 0, 100, ''],
+    ['tempo', tr('setupSoundscapeTempo'), 40, 140, ' BPM'],
+    ['space', tr('setupSoundscapeSpace'), 0, 100, ''],
+    ['variation', tr('setupSoundscapeVariation'), 0, 100, ''],
   ];
-  fields.forEach(([field, label]) => {
+  fields.forEach(([field, label, min, max, suffix]) => {
     const row = el('label', 'soundscape-control');
     const name = el('span', null, label);
-    const value = el('output', null, String(galaxy.soundscape?.[field] ?? 50));
+    const currentValue = currentConfig[field];
+    const value = el('output', null, `${currentValue}${suffix}`);
     const input = document.createElement('input');
-    input.type = 'range'; input.min = '0'; input.max = '100'; input.value = value.textContent;
+    input.type = 'range'; input.min = String(min); input.max = String(max); input.value = String(currentValue);
     input.dataset.trackAction = 'Soundscape Control Change';
     input.dataset.trackId = `soundscape_${field}`;
-    input.oninput = () => { value.textContent = input.value; };
+    input.oninput = () => { value.textContent = `${input.value}${suffix}`; };
     input.onchange = () => applySoundscapeControls(field, Number(input.value));
     row.append(name, value, input);
     controls.appendChild(row);
   });
+
+  const actions = el('div', 'soundscape-controls-actions');
+  const preview = el('button', 'soundscape-action primary', tr('setupSoundscapePreviewCustom'));
+  preview.type = 'button';
+  preview.dataset.idleLabel = tr('setupSoundscapePreviewCustom');
+  preview.dataset.playingLabel = tr('setupSoundscapeStopPreview');
+  preview.dataset.soundscapePreview = 'custom';
+  preview.dataset.trackAction = 'Soundscape Custom Preview Started';
+  preview.dataset.trackId = 'soundscape_custom_preview';
+  preview.onclick = () => togglePreviewSoundscape(entry, preview);
+  const reset = el('button', 'soundscape-action', tr('setupSoundscapeReset'));
+  reset.type = 'button';
+  reset.dataset.trackAction = 'Soundscape Custom Reset';
+  reset.dataset.trackId = 'soundscape_custom_reset';
+  reset.onclick = () => resetSoundscapeControls(entry);
+  actions.append(preview, reset);
+  controls.appendChild(actions);
   wrap.appendChild(controls);
 }
 
 async function applySoundscape(entry) {
+  stopSoundscapePreview();
   const previous = galaxy.soundscape;
   galaxy.soundscape = soundscapeConfig(entry);
   delete galaxy.soundscape.seed;
@@ -478,16 +616,18 @@ async function applySoundscape(entry) {
     const name = userLang === 'en' ? entry.labelEn : entry.label;
     showToast(tr('setupSelected', name));
     trackResult('Soundscape Saved', true, { preset: entry.id });
-    refreshPreview();
+    previewController.refresh();
   } catch (error) {
     galaxy.soundscape = previous;
     renderSoundscapes();
+    updateChecklist();
     trackResult('Soundscape Saved', false, { errorType: 'soundscape_save_fail' }, error);
     showToast(tr('setupSaveFail'));
   }
 }
 
 async function applySoundscapeControls(field, value) {
+  stopSoundscapePreview();
   const previous = { ...galaxy.soundscape };
   galaxy.soundscape = { ...galaxy.soundscape, [field]: value };
   try {
@@ -498,11 +638,36 @@ async function applySoundscapeControls(field, value) {
     });
     if (!response.ok) throw new Error('soundscape controls save failed');
     trackResult('Soundscape Control Saved', true, { preset: galaxy.soundscape.preset, control: field });
-    refreshPreview();
+    renderSoundscapes();
+    previewController.refresh();
   } catch (error) {
     galaxy.soundscape = previous;
     renderSoundscapes();
     trackResult('Soundscape Control Saved', false, { errorType: 'soundscape_save_fail', control: field }, error);
+    showToast(tr('setupSaveFail'));
+  }
+}
+
+async function resetSoundscapeControls(entry) {
+  stopSoundscapePreview();
+  const previous = { ...galaxy.soundscape };
+  galaxy.soundscape = soundscapeConfig(entry);
+  delete galaxy.soundscape.seed;
+  renderSoundscapes();
+  try {
+    const response = await fetch(`/galaxies/${galaxyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ soundscape: galaxy.soundscape }),
+    });
+    if (!response.ok) throw new Error('soundscape reset failed');
+    showToast(tr('setupSoundscapeResetDone'));
+    trackResult('Soundscape Custom Reset', true, { preset: entry.id });
+    previewController.refresh();
+  } catch (error) {
+    galaxy.soundscape = previous;
+    renderSoundscapes();
+    trackResult('Soundscape Custom Reset', false, { errorType: 'soundscape_save_fail' }, error);
     showToast(tr('setupSaveFail'));
   }
 }
@@ -608,7 +773,7 @@ async function applyUniverse(template) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.message || tr('setupUniverseChangeFail'));
     galaxy = body.meta || galaxy;
-    refreshPreview();
+    previewController.refresh();
     trackResult('Galaxy Universe Change Result', true, { template });
     showToast(tr('setupUniverseChanged'));
   } catch (error) {
@@ -619,30 +784,44 @@ async function applyUniverse(template) {
 }
 
 async function saveCaption(captions) {
-  await fetch(`/galaxies/${galaxyId}`, {
+  const response = await fetch(`/galaxies/${galaxyId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     body: JSON.stringify({ caption: captions }),
   });
-  refreshPreview();
+  if (!response.ok) throw new Error('caption save failed');
+  previewController.refresh();
 }
 
 async function addCaption() {
   const input = document.getElementById('caption-input');
   const text = input.value.trim();
   if (!text) { activity?.logBlocked('Galaxy Caption Add Blocked', 'missing_input', {}, { galaxyId }); return; }
-  galaxy.caption = [...(galaxy.caption || []), text];
+  const previous = [...(galaxy.caption || [])];
+  galaxy.caption = [...previous, text];
   input.value = '';
   renderCaptions();
   try { await saveCaption(galaxy.caption); trackResult('Galaxy Caption Add Result', true, { count: galaxy.caption.length }); showToast(tr('setupCaptionAdded')); }
-  catch (error) { trackResult('Galaxy Caption Add Result', false, { errorType: 'caption_save_fail' }, error); showToast(tr('setupSaveFail')); }
+  catch (error) {
+    galaxy.caption = previous;
+    input.value = text;
+    renderCaptions();
+    trackResult('Galaxy Caption Add Result', false, { errorType: 'caption_save_fail' }, error);
+    showToast(tr('setupSaveFail'));
+  }
 }
 
 async function deleteCaption(idx) {
+  const previous = [...(galaxy.caption || [])];
   galaxy.caption = (galaxy.caption || []).filter((_, i) => i !== idx);
   renderCaptions();
   try { await saveCaption(galaxy.caption); trackResult('Galaxy Caption Delete Result', true, { count: galaxy.caption.length }); }
-  catch (error) { trackResult('Galaxy Caption Delete Result', false, { errorType: 'caption_save_fail' }, error); showToast(tr('setupSaveFail')); }
+  catch (error) {
+    galaxy.caption = previous;
+    renderCaptions();
+    trackResult('Galaxy Caption Delete Result', false, { errorType: 'caption_save_fail' }, error);
+    showToast(tr('setupSaveFail'));
+  }
 }
 
 // ── Story ──────────────────────────────────────────────────
@@ -715,11 +894,12 @@ function switchTab(tabId) {
 
 async function init() {
   try {
-    const [galaxyRes, galleryRes, themesRes, soundscapesRes, subRes] = await Promise.all([
+    const [galaxyRes, galleryRes, themesRes, soundscapesRes, instrumentsRes, subRes] = await Promise.all([
       fetch(`/galaxies/${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch(`/gallary/my-items?galaxyId=${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch('/media/themes'),
       fetch('/media/soundscapes'),
+      fetch('/media/soundscape-instruments'),
       fetch('/payment/status', { headers: { Authorization: 'Bearer ' + token } }),
     ]);
 
@@ -729,12 +909,14 @@ async function init() {
     const galleryData  = galleryRes.ok  ? await galleryRes.json()  : {};
     const themesData   = themesRes.ok   ? await themesRes.json()   : {};
     const soundscapesData = soundscapesRes.ok ? await soundscapesRes.json() : {};
+    const instrumentsData = instrumentsRes.ok ? await instrumentsRes.json() : {};
     const subData      = subRes.ok      ? await subRes.json()      : {};
 
     galaxy       = galaxyData.meta;
     galleryItems = galleryData.meta  || [];
     themes       = themesData.meta   || [];
     soundscapes  = soundscapesData.meta || [];
+    soundscapeInstruments = instrumentsData.meta || [];
     userPlan     = subData.meta?.plan || 'free';
     userFeatures = new Set(subData.meta?.features || []);
 
@@ -743,7 +925,7 @@ async function init() {
     document.title = `${galaxy.name || 'Galaxy'} — Lumora`;
     setupNameEditor(galaxy.name || 'Galaxy');
 
-    refreshPreview();
+    previewController.refresh({ immediate: true });
 
     renderGallery();
     renderUniverses();
@@ -836,6 +1018,11 @@ document.getElementById('delete-galaxy-btn').onclick = async () => {
 document.getElementById('caption-add-btn').onclick = addCaption;
 document.getElementById('caption-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') addCaption();
+});
+
+window.addEventListener('pagehide', () => {
+  previewController.cancel();
+  stopSoundscapePreview();
 });
 
 init();

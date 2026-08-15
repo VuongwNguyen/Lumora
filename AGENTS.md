@@ -2,6 +2,45 @@
 
 Tài liệu này áp dụng cho mọi AI agent, coding assistant và automation làm việc trong repository này. Mục tiêu là giữ Lumora nhất quán, an toàn và không làm lệch các quyết định sản phẩm đã được chốt.
 
+## Kim chỉ nam sản phẩm — Sứ mệnh và tầm nhìn
+
+### Product Philosophy
+
+> **Lumora không bán feature. Lumora bán cảm xúc. Feature chỉ tồn tại để tạo ra, truyền tải, dẫn dắt hoặc khuếch đại cảm xúc.**
+
+User nói họ muốn người xem cảm thấy gì. Lumora quyết định cách kể, sắp nhịp và trình bày câu chuyện đó. Người dùng không cần hiểu particle, camera, transition hay renderer để tạo nên một trải nghiệm có cảm xúc.
+
+### Sứ mệnh
+
+Giúp con người biến những ký ức và điều khó nói thành một trải nghiệm có thể được cảm nhận, không chỉ thành một tập hợp ảnh, chữ hoặc hiệu ứng.
+
+```text
+User cung cấp ký ức và ý định cảm xúc.
+Story Engine hiểu câu chuyện nên được kể như thế nào.
+Story Emotion Engine hiểu câu chuyện nên được cảm nhận như thế nào.
+Universe quyết định nơi câu chuyện trở nên sống động.
+```
+
+### Tầm nhìn
+
+Lumora trở thành người đạo diễn trải nghiệm ký ức: phối hợp narrative, emotion, timing, soundscape, visual identity và không gian để người nhận thực sự đi qua câu chuyện thay vì chỉ xem nội dung.
+
+### North Star
+
+> **Lumora không render ký ức. Lumora đạo diễn cách ký ức được cảm nhận.**
+
+Mọi quyết định sản phẩm và kỹ thuật phải trả lời được:
+
+> **Điều này khiến người xem cảm thấy gì?**
+
+- Nếu câu trả lời chỉ là “trông đẹp hơn”, thay đổi đó chưa đủ để trở thành một Lumora capability có ý nghĩa.
+- Primary UX phải emotion-first: user chọn ý định và cảm xúc; hệ thống chịu trách nhiệm chuyển chúng thành hành vi kỹ thuật phù hợp.
+- Universe, Story, Emotion, Theme và Soundscape phải giữ đúng ranh giới trách nhiệm; không nhập nhằng layer chỉ để triển khai nhanh.
+- Functional correctness là điều kiện cần, không phải đích cuối. Trải nghiệm còn phải có nhịp điệu, contrast, khoảng lặng, climax, release và sự nhất quán cảm xúc khi phù hợp.
+- Kim chỉ nam này không cho phép bỏ qua auth, ownership, validation, accessibility, performance, bản quyền, pháp lý, payment safety hoặc quyền riêng tư. Niềm tin của người dùng là một phần của trải nghiệm cảm xúc.
+
+Nguồn định hướng chi tiết: [`docs/Lumora — Story Emotion Engine (SE v2) Specification.md`](./docs/Lumora%20%E2%80%94%20Story%20Emotion%20Engine%20%28SE%20v2%29%20Specification.md).
+
 ## 1. Nguyên tắc cao nhất
 
 1. Đọc file này trước khi sửa code.

@@ -1,10 +1,12 @@
 const mongoose = require("mongoose");
 mongoose.set("strictQuery", true);
 require("dotenv").config();
+const { getDatabaseConfig } = require('./config/database');
 
-const uri = process.env.DATABASE_URL;
+const { databaseUrl, databaseName } = getDatabaseConfig();
 const options = {
   useUnifiedTopology: true,
+  dbName: databaseName,
 };
 
 class Database {
@@ -21,8 +23,8 @@ class Database {
   async connect() {
     if (!this._connection) {
       try {
-        this._connection = await mongoose.connect(uri);
-        console.log(`Connected to database`);
+        this._connection = await mongoose.connect(databaseUrl, options);
+        console.log(`Connected to database: ${databaseName}`);
       } catch (error) {
         console.error("Error connecting to database: ", error);
       }

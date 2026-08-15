@@ -1,5 +1,5 @@
 const { model, Schema } = require("mongoose");
-const { SOUNDSCAPE_KEYS } = require('../config/soundscapes');
+const { SOUNDSCAPE_INSTRUMENT_KEYS, SOUNDSCAPE_KEYS } = require('../config/soundscapes');
 
 const soundscapeSchema = new Schema({
   preset: {
@@ -10,6 +10,10 @@ const soundscapeSchema = new Schema({
   intensity: { type: Number, min: 0, max: 100, default: 0 },
   warmth: { type: Number, min: 0, max: 100, default: 50 },
   motion: { type: Number, min: 0, max: 100, default: 0 },
+  instrument: { type: String, enum: [...SOUNDSCAPE_INSTRUMENT_KEYS], default: 'auto' },
+  tempo: { type: Number, min: 40, max: 140, default: 76 },
+  space: { type: Number, min: 0, max: 100, default: 50 },
+  variation: { type: Number, min: 0, max: 100, default: 50 },
 }, { _id: false });
 
 const galaxySchema = new Schema({
@@ -34,7 +38,10 @@ const galaxySchema = new Schema({
   },
   soundscape: {
     type: soundscapeSchema,
-    default: () => ({ preset: 'none', intensity: 0, warmth: 50, motion: 0 }),
+    default: () => ({
+      preset: 'none', intensity: 0, warmth: 50, motion: 0,
+      instrument: 'auto', tempo: 76, space: 50, variation: 50,
+    }),
   },
   caption: {
     type: [String],

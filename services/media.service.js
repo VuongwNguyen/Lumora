@@ -1,7 +1,7 @@
 const ThemeModel = require('../models/theme');
 const BackgroundMusicModel = require('../models/backgroundMusic');
 const { errorResponse } = require('../context/responseHandle');
-const { publicSoundscapes } = require('../config/soundscapes');
+const { publicSoundscapeInstruments, publicSoundscapes } = require('../config/soundscapes');
 
 class MediaService {
   async createTheme(data) {
@@ -30,6 +30,10 @@ class MediaService {
 
   getSoundscapes() {
     return publicSoundscapes();
+  }
+
+  getSoundscapeInstruments() {
+    return publicSoundscapeInstruments();
   }
 
   async updateMusic(id, data) {

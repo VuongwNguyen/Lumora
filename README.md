@@ -4,6 +4,20 @@
 
 [Website](https://lumora.nguyenvuongw.id.vn/) · [Quy tắc cho AI agent](./AGENTS.md) · [Release checklist](./docs/tmdt-release-checklist.md)
 
+## Sứ mệnh, tầm nhìn và kim chỉ nam
+
+> **Lumora không bán feature. Lumora bán cảm xúc. Feature chỉ tồn tại để tạo ra, truyền tải, dẫn dắt hoặc khuếch đại cảm xúc.**
+
+**Sứ mệnh:** Giúp con người biến những ký ức và điều khó nói thành một trải nghiệm có thể được cảm nhận, không chỉ thành một tập hợp ảnh, chữ hoặc hiệu ứng.
+
+**Tầm nhìn:** Lumora trở thành người đạo diễn trải nghiệm ký ức—phối hợp câu chuyện, cảm xúc, nhịp điệu, soundscape, hình ảnh và không gian để người nhận thực sự đi qua câu chuyện.
+
+User cung cấp ký ức và ý định cảm xúc. Story Engine hiểu câu chuyện nên được kể như thế nào; Story Emotion Engine hiểu câu chuyện nên được cảm nhận như thế nào; Universe quyết định nơi câu chuyện trở nên sống động.
+
+> **North Star: Lumora không render ký ức. Lumora đạo diễn cách ký ức được cảm nhận.**
+
+Mỗi quyết định sản phẩm phải trả lời được: **“Điều này khiến người xem cảm thấy gì?”** Nếu câu trả lời chỉ là “trông đẹp hơn”, điều đó chưa đủ để trở thành một Lumora capability có ý nghĩa.
+
 ## Lumora là gì?
 
 Lumora là nền tảng tạo trải nghiệm kỷ niệm tương tác dành cho những điều khó nói thành lời. Người dùng có thể gom ảnh, câu chuyện, caption và soundscape nguyên bản vào một “galaxy” riêng, sau đó gửi cho người nhận bằng một liên kết duy nhất.
@@ -46,7 +60,7 @@ Mọi link public đi qua `/view/?galaxyId=...`. Server tự chọn Story, Galax
 ### Cá nhân hóa
 
 - Themes màu sắc.
-- Soundscape nguyên bản được tổng hợp bằng Web Audio trong trình duyệt.
+- Soundscape nguyên bản được tổng hợp bằng Web Audio trong trình duyệt; từng Galaxy có thể tùy chỉnh nhạc cụ chính, nhịp độ, không gian, biến tấu, cường độ, độ ấm và chuyển động.
 - Caption và lời nhắn nổi trong không gian.
 - Story theo dịp và nhiều chương.
 - Preview trực tiếp trước khi chia sẻ.
@@ -205,6 +219,12 @@ npm run dev
 - Activity tracking và retention.
 
 Không commit file `.env` hoặc credential thật.
+
+Development, test và lệnh chạy không khai báo `NODE_ENV=production` luôn bị
+khóa vào database `test`, kể cả khi URI có tên database khác. Trên VPS
+production phải đặt `DATABASE_NAME=lumora_prod`; production sẽ từ chối khởi
+động nếu thiếu biến này hoặc tên vẫn là `test`/`*_dev`. Việc đổi tên database
+không tự di chuyển dữ liệu từ database cũ.
 
 ## Scripts
 

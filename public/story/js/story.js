@@ -138,13 +138,15 @@ async function main() {
   window.musicManager.init(view.soundscape || null);
 
   await new Promise(resolve => {
-    const start = () => { elIntro.classList.add('hidden'); resolve(); };
-    elIntro.addEventListener('click',    start, { once: true });
-    elIntro.addEventListener('touchend', start, { once: true });
+    const start = () => {
+      elIntro.classList.add('hidden');
+      window.musicManager.play?.().catch?.(() => {});
+      document.documentElement.requestFullscreen?.().catch?.(() => {});
+      resolve();
+    };
+    elIntro.addEventListener('click', start, { once: true });
   });
 
-  window.musicManager.play?.().catch?.(() => {});
-  document.documentElement.requestFullscreen?.().catch?.(() => {});
   await wait(900);
 
   for (let i = 0; i < chaptersWithPhotos.length; i++) {

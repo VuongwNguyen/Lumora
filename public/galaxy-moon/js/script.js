@@ -1445,30 +1445,11 @@ async function main() {
       document.body.classList.add("intro-started");
       startCameraAnimation();
 
-      // --- LOGIC SỬA LỖI AUTOPLAY ---
       if (window.musicManager) {
-        // Cố gắng phát nhạc ngay lập tức
-        window.musicManager.play().catch((error) => {
-          // Nếu trình duyệt chặn (lỗi NotAllowedError), không cần làm gì ở đây.
-          // Nút togglePlayback sẽ xử lý việc này sau.
-          console.warn(
-            "Autoplay bị chặn, người dùng cần tương tác với nút âm thanh.",
-            error
-          );
-
-          // Quan trọng: Đánh dấu rằng người dùng đã có ý định bật nhạc.
-          // Điều này giúp nút toggle hoạt động đúng ngay lần nhấn đầu tiên.
-          if (window.musicManager.audio) {
-            // Chúng ta không thực sự tắt, chỉ cập nhật UI để nó trông như bị tắt
-            // và chờ người dùng nhấn nút.
-            window.musicManager.audio.muted = true; // Tạm thời tắt tiếng
-            window.musicManager.updateUI(); // Cập nhật icon
-          }
-        });
+        window.musicManager.play().catch(() => {});
       } else {
         console.error("musicManager chưa được khởi tạo!");
       }
-      // --- KẾT THÚC LOGIC SỬA LỖI ---
 
       if (starField && starField.geometry) {
         starField.geometry.setDrawRange(0, originalStarCount);

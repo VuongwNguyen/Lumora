@@ -2,6 +2,7 @@
   'use strict';
 
   const AudioContextClass = root.AudioContext || root.webkitAudioContext;
+  const AUDIO_RESUME_TIMEOUT_MS = 1600;
   const RECIPES = Object.freeze({
     deep_focus: {
       root: 220, ratios: [1, 1.2599, 1.4983], wave: 'sine', filter: 5200, highpass: 220, noise: 0,
@@ -144,14 +145,37 @@
     };
   }
 
+  function createPanNode(context) {
+    if (typeof context.createStereoPanner === 'function') return context.createStereoPanner();
+    return context.createGain();
+  }
+
+  function setPan(node, value) {
+    if (node.pan) node.pan.value = value;
+  }
+
+  function configurePlaybackAudioSession() {
+    try {
+      if (root.navigator?.audioSession) root.navigator.audioSession.type = 'playback';
+    } catch {}
+  }
+
   function normalizedConfig(value) {
     const input = value && typeof value === 'object' ? value : {};
     const preset = RECIPES[input.preset] ? input.preset : 'none';
+    const recipe = RECIPES[preset];
+    const instrument = input.instrument === 'auto' || INSTRUMENTS[input.instrument]
+      ? input.instrument
+      : 'auto';
     return {
       preset,
       intensity: preset === 'none' ? 0 : clamp(input.intensity, 0, 100, 50),
       warmth: clamp(input.warmth, 0, 100, 50),
       motion: preset === 'none' ? 0 : clamp(input.motion, 0, 100, 40),
+      instrument,
+      tempo: clamp(input.tempo, 40, 140, recipe?.tempo ?? 76),
+      space: clamp(input.space, 0, 100, 50),
+      variation: clamp(input.variation, 0, 100, 50),
       seed: String(input.seed || preset || 'lumora'),
     };
   }
@@ -185,6 +209,7 @@
       this._phraseNumber = 0;
       this._lastVariation = -1;
       this._lastInversion = -1;
+      this._destroyed = false;
     }
 
     get volume() { return this._volume; }
@@ -238,12 +263,48 @@
       return buffer;
     }
 
-    _buildGraph() {
+    _ensureContext() {
       if (this._context || this.config.preset === 'none') return;
       if (!AudioContextClass) throw new Error('Web Audio API is not supported');
+      this._context = new AudioContextClass();
+    }
+
+    _resumeContextFromGesture() {
+      configurePlaybackAudioSession();
+      this._ensureContext();
+      const context = this._context;
+      if (!context || context.state === 'running') return Promise.resolve();
+
+      // Older iOS Safari may require a source to start inside the same user
+      // gesture that resumes AudioContext. A one-frame silent buffer unlocks
+      // the context without producing audible output.
+      try {
+        const source = context.createBufferSource();
+        source.buffer = context.createBuffer(1, 1, context.sampleRate);
+        source.connect(context.destination);
+        source.onended = () => { try { source.disconnect(); } catch {} };
+        source.start(0);
+      } catch {}
+
+      let timeoutId;
+      const timeout = new Promise((resolve, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('AudioContext resume timed out')), AUDIO_RESUME_TIMEOUT_MS);
+      });
+      return Promise.race([Promise.resolve(context.resume()), timeout])
+        .then(() => {
+          if (context.state && context.state !== 'running') {
+            throw new Error(`AudioContext could not start (${context.state})`);
+          }
+        })
+        .finally(() => clearTimeout(timeoutId));
+    }
+
+    _buildGraph() {
+      if (this._master || this.config.preset === 'none') return;
+      this._ensureContext();
 
       const recipe = RECIPES[this.config.preset];
-      const context = new AudioContextClass();
+      const context = this._context;
       const master = context.createGain();
       const lowCut = context.createBiquadFilter();
       const clarity = context.createBiquadFilter();
@@ -268,12 +329,12 @@
       compressor.connect(outputGain);
       outputGain.connect(context.destination);
 
-      this._context = context;
       this._master = master;
       this._nodes.push(master, lowCut, clarity, compressor, outputGain);
 
       const warmth = this.config.warmth / 100;
       const motion = this.config.motion / 100;
+      const space = this.config.space / 100;
       const detuneBase = (this._random() - 0.5) * 7;
 
       const padOffsets = recipe.chords?.[0]
@@ -281,7 +342,7 @@
       padOffsets.forEach((semitone, index) => {
         const oscillator = context.createOscillator();
         const gain = context.createGain();
-        const panner = context.createStereoPanner();
+        const panner = createPanNode(context);
         const lfo = context.createOscillator();
         const lfoDepth = context.createGain();
 
@@ -289,9 +350,9 @@
         oscillator.frequency.value = recipe.root * (2 ** (semitone / 12));
         oscillator.detune.value = detuneBase + (index - 1) * 2.5;
         gain.gain.value = recipe.padGain / (1 + index * 0.45);
-        panner.pan.value = padOffsets.length === 1
+        setPan(panner, padOffsets.length === 1
           ? 0
-          : ((index / (padOffsets.length - 1)) - 0.5) * 0.72;
+          : ((index / (padOffsets.length - 1)) - 0.5) * 0.72);
         lfo.type = 'sine';
         lfo.frequency.value = 0.025 + motion * 0.075 + index * 0.011;
         lfoDepth.gain.value = 0.018 + motion * 0.025;
@@ -311,11 +372,14 @@
       const delayFilter = context.createBiquadFilter();
       const delayWetGain = context.createGain();
       const delayFeedback = context.createGain();
-      melodyDelay.delayTime.value = (recipe.delayTime ?? 0.24) + motion * 0.08;
+      melodyDelay.delayTime.value = ((recipe.delayTime ?? 0.24) + motion * 0.08) * (0.72 + space * 0.56);
       delayFilter.type = 'lowpass';
       delayFilter.frequency.value = 2800 + warmth * 2500;
-      delayWetGain.gain.value = recipe.delayWet ?? 0.12;
-      delayFeedback.gain.value = recipe.delayFeedback ?? (0.08 + motion * 0.05);
+      delayWetGain.gain.value = (recipe.delayWet ?? 0.12) * (0.55 + space * 0.9);
+      delayFeedback.gain.value = Math.min(
+        0.34,
+        (recipe.delayFeedback ?? (0.08 + motion * 0.05)) + space * 0.06,
+      );
       melodyDelay.connect(delayFilter);
       delayFilter.connect(delayWetGain);
       delayWetGain.connect(master);
@@ -328,12 +392,12 @@
       const reverbFilter = context.createBiquadFilter();
       const reverbGain = context.createGain();
       melodyReverb.buffer = this._createImpulseBuffer(
-        recipe.reverbSeconds ?? 2.8,
+        (recipe.reverbSeconds ?? 2.8) * (0.58 + space * 0.84),
         recipe.reverbDecay ?? 2.6,
       );
       reverbFilter.type = 'highpass';
       reverbFilter.frequency.value = 260;
-      reverbGain.gain.value = recipe.reverbGain ?? (0.13 + motion * 0.05);
+      reverbGain.gain.value = (recipe.reverbGain ?? (0.13 + motion * 0.05)) * (0.42 + space * 1.16);
       melodyReverb.connect(reverbFilter);
       reverbFilter.connect(reverbGain);
       reverbGain.connect(master);
@@ -344,14 +408,14 @@
         const noise = context.createBufferSource();
         const noiseFilter = context.createBiquadFilter();
         const noiseGain = context.createGain();
-        const noisePanner = context.createStereoPanner();
+        const noisePanner = createPanNode(context);
         noise.buffer = this._createNoiseBuffer(5);
         noise.loop = true;
         noiseFilter.type = 'lowpass';
         noiseFilter.frequency.value = recipe.filter * (0.65 + warmth * 0.75);
         noiseFilter.Q.value = 0.7;
         noiseGain.gain.value = recipe.noise;
-        noisePanner.pan.value = (this._random() - 0.5) * 0.4;
+        setPan(noisePanner, (this._random() - 0.5) * 0.4);
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(noisePanner);
@@ -366,7 +430,7 @@
       if (this.paused || !this._context) return;
       const recipe = RECIPES[this.config.preset];
       const motion = this.config.motion / 100;
-      const beatMs = 60000 / recipe.tempo;
+      const beatMs = 60000 / this.config.tempo;
       const baseDelay = beatMs * (
         (recipe.noteSpacing ?? 2.25) - motion * (recipe.motionSpacing ?? 0.75)
       );
@@ -471,21 +535,46 @@
 
     _preparePhrase(recipe, phraseSteps) {
       const motion = this.config.motion / 100;
-      let variation = this._phraseNumber === 0 ? 0 : Math.floor(this._random() * 4);
-      if (variation === this._lastVariation) variation = (variation + 1 + Math.floor(this._random() * 3)) % 4;
+      const variationAmount = this.config.variation / 100;
+      let variation = this._phraseNumber === 0 || this._random() > variationAmount
+        ? 0
+        : 1 + Math.floor(this._random() * 3);
+      if (variation !== 0 && variation === this._lastVariation) {
+        variation = 1 + (variation + Math.floor(this._random() * 2)) % 3;
+      }
 
-      let inversion = this._phraseNumber === 0 ? 0 : Math.floor(this._random() * 3);
-      if (inversion === this._lastInversion) inversion = (inversion + 1 + Math.floor(this._random() * 2)) % 3;
-      const octaveShift = this._phraseNumber > 0 && this._random() < 0.2 ? -1 : 0;
-      const octaveLiftEvery = 3 + Math.floor(this._random() * 3);
-      const octaveLiftOffset = 1 + Math.floor(this._random() * (octaveLiftEvery - 1));
+      let inversion = this._phraseNumber === 0 || this._random() > variationAmount
+        ? 0
+        : Math.floor(this._random() * 3);
+      if (inversion !== 0 && inversion === this._lastInversion) {
+        inversion = 1 + (inversion % 2);
+      }
+      const octaveShift = this._phraseNumber > 0 && this._random() < variationAmount * 0.28 ? -1 : 0;
+      const hasOctaveLift = this._random() < variationAmount;
+      const octaveLiftEvery = hasOctaveLift
+        ? 3 + Math.floor(this._random() * 3)
+        : phraseSteps + 1;
+      const octaveLiftOffset = hasOctaveLift
+        ? 1 + Math.floor(this._random() * (octaveLiftEvery - 1))
+        : phraseSteps;
       const restSteps = new Set();
-      const restCount = this._phraseNumber === 0 ? 0 : 1 + (this._random() > motion ? 1 : 0);
+      const restCount = this._phraseNumber === 0 || this._random() > variationAmount
+        ? 0
+        : 1 + (this._random() > motion ? 1 : 0);
       let attempts = 0;
       while (restSteps.size < restCount && attempts < phraseSteps * 3) {
         attempts += 1;
         const candidate = 1 + Math.floor(this._random() * (phraseSteps - 1));
         if (candidate % recipe.chordEvery !== 0) restSteps.add(candidate);
+      }
+      let phraseInstrument = this.config.instrument;
+      if (phraseInstrument === 'auto') {
+        phraseInstrument = recipe.instrument;
+        if (recipe.instrumentVariants && this._random() < variationAmount) {
+          phraseInstrument = recipe.instrumentVariants[
+            Math.floor(this._random() * recipe.instrumentVariants.length)
+          ];
+        }
       }
 
       this._phraseState = {
@@ -495,12 +584,11 @@
         octaveLiftEvery,
         octaveLiftOffset,
         restSteps,
-        instrument: recipe.instrumentVariants?.[this._phraseNumber % recipe.instrumentVariants.length]
-          || recipe.instrument,
+        instrument: phraseInstrument,
         velocity: 0.92 + this._random() * 0.16,
-        counterChance: 0.55 + motion * 0.3,
-        accentChance: 0.48 + motion * 0.34,
-        timingHumanize: 0.025 + (1 - motion) * 0.025,
+        counterChance: 0.42 + motion * 0.24 + variationAmount * 0.18,
+        accentChance: 0.36 + motion * 0.27 + variationAmount * 0.2,
+        timingHumanize: 0.015 + variationAmount * 0.045,
       };
       this._lastVariation = variation;
       this._lastInversion = inversion;
@@ -529,7 +617,7 @@
       const gain = context.createGain();
       const harmonicGain = context.createGain();
       const filter = context.createBiquadFilter();
-      const panner = context.createStereoPanner();
+      const panner = createPanNode(context);
       const now = context.currentTime + (options.startDelay || 0);
       const attack = options.attack ?? profile.attack;
       const stopAt = now + options.duration;
@@ -544,7 +632,7 @@
       filter.type = 'lowpass';
       filter.frequency.value = profile.cutoff * (0.78 + warmth * 0.32);
       filter.Q.value = 0.4;
-      panner.pan.value = options.pan || 0;
+      setPan(panner, options.pan || 0);
       gain.gain.setValueAtTime(0.0001, now);
       gain.gain.exponentialRampToValueAtTime(options.gain, now + attack);
       gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
@@ -593,16 +681,27 @@
 
     async play() {
       if (this.config.preset === 'none') return;
+      if (this._destroyed) throw new Error('Soundscape has been destroyed');
       try {
-        this._buildGraph();
         clearTimeout(this._pauseTimer);
-        await this._context.resume();
+        // resume() is invoked before the first await so mobile browsers still
+        // recognize the originating tap as an active user gesture.
+        await this._resumeContextFromGesture();
+        if (this._destroyed) return;
+        this._buildGraph();
         this.paused = false;
         this._applyMasterGain();
         this._scheduleChime();
         if (typeof this.onplay === 'function') this.onplay();
       } catch (error) {
         this.paused = true;
+        if (!this._master && this._context) {
+          const failedContext = this._context;
+          this._context = null;
+          if (failedContext.state !== 'closed') {
+            try { Promise.resolve(failedContext.close()).catch(() => {}); } catch {}
+          }
+        }
         if (typeof this.onerror === 'function') this.onerror(error);
         throw error;
       }
@@ -624,6 +723,7 @@
       clearTimeout(this._chimeTimer);
       clearTimeout(this._pauseTimer);
       this.paused = true;
+      this._destroyed = true;
       this._nodes.forEach((node) => {
         try { if (typeof node.stop === 'function') node.stop(); } catch {}
         try { if (typeof node.disconnect === 'function') node.disconnect(); } catch {}
@@ -718,6 +818,13 @@
         this.isPlaying = false;
       },
     };
+    root.addEventListener('pagehide', (event) => {
+      if (event.persisted) manager.pause();
+      else manager.destroy();
+    });
+    root.document?.addEventListener('visibilitychange', () => {
+      if (root.document.hidden) manager.pause();
+    });
     return manager;
   }
 

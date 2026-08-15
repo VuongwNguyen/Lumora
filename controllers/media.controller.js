@@ -38,6 +38,11 @@ class MediaController {
     return new successfullyResponse({ message: 'Soundscapes fetched', meta: soundscapes }).json(res);
   }
 
+  async getSoundscapeInstruments(req, res, next) {
+    const instruments = MediaService.getSoundscapeInstruments();
+    return new successfullyResponse({ message: 'Soundscape instruments fetched', meta: instruments }).json(res);
+  }
+
   musicQuarantined(req, res, next) {
     return next(new errorResponse({
       message: 'Background music is temporarily unavailable while licensing is reviewed',

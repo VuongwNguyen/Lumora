@@ -613,15 +613,14 @@ renderer.domElement.addEventListener('touchmove', e => {
   _lastPX = t.clientX; _lastPY = t.clientY;
 }, { passive: true });
 
-// ── Intro click ────────────────────────────────────────────────────────────
 const intro = document.getElementById('intro');
-intro.addEventListener('click', () => {
+function startExperience() {
   started = true;
   intro.classList.add('hidden');
-  window.musicManager?.play();
+  window.musicManager?.play().catch(() => {});
   const el = document.documentElement;
   (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen)?.call(el);
-});
+}
 
 // Hide intro immediately in preview mode
 if (_autostart) {
@@ -642,6 +641,7 @@ async function init() {
 
   // Original Lumora soundscape
   window.musicManager?.init(data.soundscape);
+  if (!_autostart) intro.addEventListener('click', startExperience, { once: true });
 
   // document.title
   if (data.name) document.title = `${data.name} — Lumora`;

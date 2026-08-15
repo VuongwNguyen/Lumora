@@ -2,6 +2,7 @@
 const API_BASE = window.location.origin;
 const token = localStorage.getItem('token');
 const galaxyId = new URLSearchParams(window.location.search).get('galaxyId');
+document.getElementById('soundscapeCustomizeLink').href = `/portal/galaxy-setup.html?galaxyId=${encodeURIComponent(galaxyId || '')}`;
 
 let currentCaptions = [];
 let themes = [];
