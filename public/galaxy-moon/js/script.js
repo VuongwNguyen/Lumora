@@ -30,9 +30,9 @@ async function main() {
     window.dataLove2Loveloom.data.ringTexts = galaxyView.caption;
   }
 
-  // Init music with dynamic URL (null = no music → button hidden)
+  // Init the original Lumora soundscape (no external audio URL).
   if (window.musicManager) {
-    window.musicManager.init(galaxyView?.music?.url || null);
+    window.musicManager.init(galaxyView?.soundscape || null);
   }
 
   const camera = new THREE.PerspectiveCamera(

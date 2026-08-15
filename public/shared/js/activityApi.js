@@ -27,6 +27,9 @@
 
   async function send(body, options) {
     options = options || {};
+    if (root.__LUMORA_ACTIVITY_ENABLED__ === false) {
+      return { ok: true, disabled: true, id: null };
+    }
     if (!nativeFetch) throw new Error('Fetch API is unavailable');
 
     const headers = { 'Content-Type': 'application/json' };

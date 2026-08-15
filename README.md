@@ -1,25 +1,25 @@
 # Lumora
 
-> **Ánh sáng của ký ức** — biến ảnh, lời nhắn và âm nhạc thành một không gian cảm xúc có thể gửi bằng một đường link.
+> **Ánh sáng của ký ức** — biến ảnh, lời nhắn và âm thanh không gian thành một trải nghiệm có thể gửi bằng một đường link.
 
 [Website](https://lumora.nguyenvuongw.id.vn/) · [Quy tắc cho AI agent](./AGENTS.md) · [Release checklist](./docs/tmdt-release-checklist.md)
 
 ## Lumora là gì?
 
-Lumora là nền tảng tạo trải nghiệm kỷ niệm tương tác dành cho những điều khó nói thành lời. Người dùng có thể gom ảnh, câu chuyện, caption và âm nhạc vào một “galaxy” riêng, sau đó gửi cho người nhận bằng một liên kết duy nhất.
+Lumora là nền tảng tạo trải nghiệm kỷ niệm tương tác dành cho những điều khó nói thành lời. Người dùng có thể gom ảnh, câu chuyện, caption và soundscape nguyên bản vào một “galaxy” riêng, sau đó gửi cho người nhận bằng một liên kết duy nhất.
 
 Thay vì chỉ mở một album ảnh, người nhận đi qua một hành trình:
 
 1. Đọc **Story Experience** như một cuộc trò chuyện có chủ đích.
 2. Bước vào không gian ký ức do người gửi thiết kế.
-3. Khám phá ảnh, nhạc và những lời nhắn trong trải nghiệm 3D.
+3. Khám phá ảnh, soundscape và những lời nhắn trong trải nghiệm 3D.
 
 Lumora hướng tới các dịp như sinh nhật, kỷ niệm, lời cảm ơn, lời xin lỗi, tỏ tình hoặc đơn giản là lưu lại câu chuyện của hai người theo một cách đáng nhớ hơn album truyền thống.
 
 ```mermaid
 flowchart LR
     A[Viết câu chuyện] --> B[Thêm ảnh và lời nhắn]
-    B --> C[Chọn giao diện và âm nhạc]
+    B --> C[Chọn giao diện và soundscape]
     C --> D[Chọn vũ trụ trải nghiệm]
     D --> E[Chia sẻ một đường link]
     E --> F[Người nhận đọc Story]
@@ -46,7 +46,7 @@ Mọi link public đi qua `/view/?galaxyId=...`. Server tự chọn Story, Galax
 ### Cá nhân hóa
 
 - Themes màu sắc.
-- Nhạc nền.
+- Soundscape nguyên bản được tổng hợp bằng Web Audio trong trình duyệt.
 - Caption và lời nhắn nổi trong không gian.
 - Story theo dịp và nhiều chương.
 - Preview trực tiếp trước khi chia sẻ.
@@ -65,7 +65,8 @@ Lumora hỗ trợ các cấp Free, Plus và Pro. Giá, giới hạn và quyền 
 
 - **Free:** trải nghiệm galaxy cơ bản.
 - **Plus:** mở thêm theme và tăng giới hạn galaxy.
-- **Pro:** mở toàn bộ theme, nhạc, caption và Fall Through Memories.
+- **Pro:** mở toàn bộ theme, caption và Fall Through Memories.
+- Catalog nhạc upload/SoundCloud cũ đang bị quarantine để rà soát giấy phép; public viewer không phát các track này.
 - Hỗ trợ chu kỳ tháng/năm, rà soát đơn trước khi thanh toán và lịch sử giao dịch có phân trang.
 - Luồng PayOS dùng idempotency key và webhook có xác minh chữ ký.
 - Admin có thể mở checkout PayOS thật để test end-to-end hoặc dùng luồng mô phỏng riêng không gọi PayOS, không thu tiền thật và không tính vào doanh thu.
@@ -126,7 +127,7 @@ Thông tin định danh và cam kết vận hành được lấy từ environmen
 | Frontend | HTML, CSS, Vanilla JavaScript |
 | Trải nghiệm 3D | Three.js và WebGL |
 | Authentication | JWT, session ID, bcrypt, email OTP |
-| Media | ImageKit, SoundCloud integration |
+| Media | ImageKit, Web Audio soundscape engine |
 | Payment | PayOS |
 | Email | Nodemailer/Gmail |
 | Security | Helmet, CSP, CORS, rate limiting, input validation |
@@ -198,7 +199,7 @@ npm run dev
 - Server/CORS/HTTPS.
 - MongoDB và JWT.
 - Runtime mode và quyền admin.
-- Gmail, ImageKit và SoundCloud.
+- Gmail, ImageKit và cấu hình SoundCloud legacy (không dùng cho public playback khi catalog đang quarantine).
 - PayOS.
 - Thông tin chủ sở hữu và nội dung compliance.
 - Activity tracking và retention.

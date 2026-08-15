@@ -9,16 +9,37 @@ process.env.ACTIVITY_TRACKING_ENABLED = 'false';
 const { deriveFeature, deriveLevel } = require('../config/activityFeatures');
 const { redactString, sanitizeMetadata } = require('../config/activityErrors');
 const ActivityModel = require('../models/activity');
+const ActivityService = require('../services/activity.service');
 const {
   ActivityValidationError,
   normalizeActivityPayload,
-} = require('../services/activity.service');
+} = ActivityService;
 const clientLogger = require('../public/shared/js/activityLogger');
 const jwt = require('jsonwebtoken');
 const { optionalAuth } = require('../middlewares/auth');
 
 const DEVICE_ID = '550e8400-e29b-41d4-a716-446655440000';
 const SESSION_ID = '6ba7b810-9dad-41d1-80b4-00c04fd430c8';
+
+test('development mode never enables activity persistence', () => {
+  const originalEnv = process.env.NODE_ENV;
+  const originalToggle = process.env.ACTIVITY_TRACKING_ENABLED;
+  try {
+    process.env.NODE_ENV = 'development';
+    process.env.ACTIVITY_TRACKING_ENABLED = 'true';
+    assert.equal(ActivityService.isEnabled(), false);
+
+    process.env.NODE_ENV = 'production';
+    assert.equal(ActivityService.isEnabled(), true);
+    process.env.ACTIVITY_TRACKING_ENABLED = 'false';
+    assert.equal(ActivityService.isEnabled(), false);
+  } finally {
+    if (originalEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalEnv;
+    if (originalToggle === undefined) delete process.env.ACTIVITY_TRACKING_ENABLED;
+    else process.env.ACTIVITY_TRACKING_ENABLED = originalToggle;
+  }
+});
 
 test('feature and level are derived with Arena-compatible semantics', () => {
   assert.equal(deriveFeature('Galaxy Photo Upload Result'), 'galaxy');

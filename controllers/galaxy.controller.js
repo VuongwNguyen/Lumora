@@ -1,5 +1,6 @@
 const GalaxyService = require("../services/galaxy.service");
 const { successfullyResponse, errorResponse } = require("../context/responseHandle");
+const { safeLog } = require('../middlewares/activityTracking');
 
 class GalaxyController {
   async createGalaxy(req, res, next) {
@@ -39,13 +40,30 @@ class GalaxyController {
   }
 
   async updateGalaxy(req, res, next) {
-    const galaxy = await GalaxyService.updateGalaxy({
-      galaxyId: req.params.id,
-      userId: req.user._id,
-      user: req.user,
-      data: req.body
-    });
-    return new successfullyResponse({ message: "Galaxy updated", meta: galaxy }).json(res);
+    const updatesSoundscape = Object.hasOwn(req.body || {}, 'soundscape');
+    try {
+      const galaxy = await GalaxyService.updateGalaxy({
+        galaxyId: req.params.id,
+        userId: req.user._id,
+        user: req.user,
+        data: req.body
+      });
+      if (updatesSoundscape) {
+        safeLog({
+          action: 'Soundscape Saved', feature: 'galaxy', status: 1, galaxyId: req.params.id,
+          metadata: { preset: galaxy.soundscape?.preset || 'none' },
+        }, req);
+      }
+      return new successfullyResponse({ message: "Galaxy updated", meta: galaxy }).json(res);
+    } catch (error) {
+      if (updatesSoundscape) {
+        safeLog({
+          action: 'Soundscape Save Failed', feature: 'galaxy', status: 0, galaxyId: req.params.id,
+          metadata: { errorType: 'soundscape_save_fail', errorMsg: error.message },
+        }, req);
+      }
+      throw error;
+    }
   }
 }
 

@@ -137,7 +137,7 @@ Sửa `/privacy/` để công khai tối thiểu:
 - Biện pháp bảo mật.
 - Cách xem, sửa, xóa, hạn chế xử lý và khiếu nại.
 - Kênh thực hiện quyền dữ liệu hoạt động thật.
-- Việc xử lý ảnh, âm nhạc và nội dung do user tải lên.
+- Việc xử lý ảnh và nội dung do user tải lên; catalog nhạc upload legacy đang bị quarantine và không được phát public.
 - Việc xử lý dữ liệu thanh toán bởi PayOS; Lumora không tuyên bố lưu dữ liệu thẻ/tài khoản nếu thực tế không lưu.
 - Cookie/analytics đang dùng trên thực tế.
 

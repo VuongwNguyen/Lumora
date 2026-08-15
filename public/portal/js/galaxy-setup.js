@@ -18,8 +18,9 @@ if (!galaxyId) window.location.href = '/portal/';
 let galaxy       = null;
 let galleryItems = [];
 let themes       = [];
-let musics       = [];
+let soundscapes  = [];
 let currentAudio = null;
+let previewTake  = 0;
 let userPlan     = 'free'; // 'free' | 'plus' | 'pro'
 let userFeatures = new Set();
 
@@ -28,7 +29,6 @@ function canUseFeature(feature) { return userFeatures.has(feature); }
 function applySubLocks() {
   const locks = [
     { tabId: 'tab-theme', paneId: 'tab-theme', feature: 'themes', label: 'Plus', descKey: 'setupFeatureTheme' },
-    { tabId: 'tab-music', paneId: 'tab-music', feature: 'music', label: 'Pro', descKey: 'setupFeatureMusic' },
     { tabId: 'tab-caption', paneId: 'tab-caption', feature: 'text', label: 'Pro', descKey: 'setupFeatureCaption' },
   ];
   locks.forEach(({ tabId, paneId, feature, label, descKey }) => {
@@ -203,7 +203,7 @@ function updateChecklist() {
   const checks = [
     { id: 'check-photos', done: hasPhotos },
     { id: 'check-theme',  done: !!galaxy.themeId },
-    { id: 'check-music',  done: !!galaxy.backgroundMusicId },
+    { id: 'check-music',  done: galaxy.soundscape?.preset && galaxy.soundscape.preset !== 'none' },
     { id: 'check-story',  done: !!galaxy.storyType },
   ];
   let done = 0;
@@ -356,83 +356,155 @@ async function applyTheme(themeId, name) {
   } catch (error) { trackResult('Galaxy Theme Result', false, { errorType: 'theme_save_fail' }, error); showToast(tr('setupSaveFail')); galaxy.themeId = null; renderThemes(); }
 }
 
-// ── Music ──────────────────────────────────────────────────
+// ── Original Lumora soundscapes ────────────────────────────
 
-function renderMusics() {
+function renderSoundscapes() {
   const wrap = document.getElementById('music-content');
   clear(wrap);
 
-  if (!musics.length) {
+  if (!soundscapes.length) {
     const empty = el('div', 'empty-state');
-    empty.appendChild(el('div', 'empty-state-icon', '🎵'));
-    empty.appendChild(el('div', null, tr('setupNoMusicAvailable')));
+    empty.appendChild(el('div', 'empty-state-icon', '〰'));
+    empty.appendChild(el('div', null, tr('setupNoSoundscapesAvailable')));
     wrap.appendChild(empty);
     return;
   }
 
-  const noMusic = el('button', 'music-no' + (!galaxy.backgroundMusicId ? ' selected' : ''), tr('setupNoMusic'));
-  noMusic.type = 'button';
-  noMusic.dataset.trackAction = 'Galaxy Music Select';
-  noMusic.dataset.trackId = 'music_none';
-  noMusic.onclick = () => applyMusic(null);
-  wrap.appendChild(noMusic);
-
-  musics.forEach(m => {
-    const item = el('div', 'music-item' + (galaxy.backgroundMusicId === m._id ? ' selected' : ''));
+  const selectedPreset = galaxy.soundscape?.preset || 'none';
+  soundscapes.forEach(soundscape => {
+    const item = el('div', 'music-item' + (selectedPreset === soundscape.id ? ' selected' : ''));
     item.tabIndex = 0;
     item.setAttribute('role', 'button');
-    item.dataset.trackAction = 'Galaxy Music Select';
-    item.dataset.trackId = 'music_option';
+    item.dataset.trackAction = 'Soundscape Select';
+    item.dataset.trackId = `soundscape_${soundscape.id}`;
 
-    const playBtn = el('button', 'music-play', '▶');
-    playBtn.type = 'button';
-    playBtn.setAttribute('aria-label', tr('setupMusicPreview', m.name));
-    const previewSrc = m.source === 'soundcloud' ? m.permalink : `/media/musics/${m._id}/stream`;
-    playBtn.onclick = (e) => { e.stopPropagation(); togglePreviewMusic(previewSrc, playBtn); };
+    if (soundscape.id !== 'none') {
+      const playBtn = el('button', 'music-play', '▶');
+      playBtn.type = 'button';
+      playBtn.setAttribute('aria-label', tr('setupSoundscapePreview', soundscape.label));
+      playBtn.dataset.trackAction = 'Soundscape Preview Started';
+      playBtn.dataset.trackId = `soundscape_preview_${soundscape.id}`;
+      playBtn.onclick = (event) => {
+        event.stopPropagation();
+        togglePreviewSoundscape(soundscape, playBtn);
+      };
+      item.appendChild(playBtn);
+    } else {
+      item.appendChild(el('span', 'music-play', '—'));
+    }
 
     const info = el('div', 'music-info');
-    info.appendChild(el('div', 'music-name', m.name));
+    info.appendChild(el('div', 'music-name', userLang === 'en' ? soundscape.labelEn : soundscape.label));
+    info.appendChild(el('div', 'soundscape-description', userLang === 'en' ? soundscape.descriptionEn : soundscape.description));
 
-    item.appendChild(playBtn);
     item.appendChild(info);
-    item.onclick = () => applyMusic(m._id, m.name);
+    item.onclick = () => applySoundscape(soundscape);
     item.onkeydown = event => {
       if ((event.key === 'Enter' || event.key === ' ') && event.target === item) {
         event.preventDefault();
-        applyMusic(m._id, m.name);
+        applySoundscape(soundscape);
       }
     };
     wrap.appendChild(item);
   });
+
+  if (selectedPreset !== 'none') renderSoundscapeControls(wrap);
 }
 
-function togglePreviewMusic(url, btn) {
+function soundscapeConfig(entry, overrides = {}) {
+  const defaults = entry?.defaults || { intensity: 50, warmth: 50, motion: 40 };
+  return {
+    preset: entry?.id || 'none',
+    intensity: overrides.intensity ?? defaults.intensity,
+    warmth: overrides.warmth ?? defaults.warmth,
+    motion: overrides.motion ?? defaults.motion,
+    seed: `preview:${galaxyId}:${entry?.id || 'none'}`,
+  };
+}
+
+function togglePreviewSoundscape(entry, btn) {
   if (currentAudio && !currentAudio.paused) {
     currentAudio.pause();
     document.querySelectorAll('.music-play').forEach(b => b.textContent = '▶');
-    if (currentAudio.src.includes(url)) { currentAudio.destroy?.(); currentAudio = null; return; }
+    if (currentAudio.previewPreset === entry.id) { currentAudio.destroy(); currentAudio = null; return; }
   }
-  currentAudio?.destroy?.(); // gỡ iframe/widget cũ trước khi tạo bài mới
-  currentAudio = window.createGalaxyAudio(url);
-  currentAudio.play();
+  currentAudio?.destroy();
+  const current = galaxy.soundscape?.preset === entry.id ? galaxy.soundscape : {};
+  const previewConfig = soundscapeConfig(entry, current);
+  previewConfig.seed += `:take:${++previewTake}`;
+  currentAudio = window.LumoraSoundscape.create(previewConfig);
+  currentAudio.previewPreset = entry.id;
+  currentAudio.play().catch(() => showToast(tr('setupSoundscapePreviewFail')));
   btn.textContent = '■';
-  currentAudio.onended = () => { btn.textContent = '▶'; };
+  currentAudio.onpause = () => { btn.textContent = '▶'; };
 }
 
-async function applyMusic(musicId, name) {
-  galaxy.backgroundMusicId = musicId;
-  renderMusics();
+function renderSoundscapeControls(wrap) {
+  const controls = el('div', 'soundscape-controls');
+  const fields = [
+    ['intensity', tr('setupSoundscapeIntensity')],
+    ['warmth', tr('setupSoundscapeWarmth')],
+    ['motion', tr('setupSoundscapeMotion')],
+  ];
+  fields.forEach(([field, label]) => {
+    const row = el('label', 'soundscape-control');
+    const name = el('span', null, label);
+    const value = el('output', null, String(galaxy.soundscape?.[field] ?? 50));
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = '0'; input.max = '100'; input.value = value.textContent;
+    input.dataset.trackAction = 'Soundscape Control Change';
+    input.dataset.trackId = `soundscape_${field}`;
+    input.oninput = () => { value.textContent = input.value; };
+    input.onchange = () => applySoundscapeControls(field, Number(input.value));
+    row.append(name, value, input);
+    controls.appendChild(row);
+  });
+  wrap.appendChild(controls);
+}
+
+async function applySoundscape(entry) {
+  const previous = galaxy.soundscape;
+  galaxy.soundscape = soundscapeConfig(entry);
+  delete galaxy.soundscape.seed;
+  renderSoundscapes();
   updateChecklist();
   try {
-    await fetch(`/galaxies/${galaxyId}`, {
+    const response = await fetch(`/galaxies/${galaxyId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ backgroundMusicId: musicId }),
+      body: JSON.stringify({ soundscape: galaxy.soundscape }),
     });
-    showToast(musicId ? tr('setupSelected', name) : tr('setupMusicRemoved'));
-    trackResult('Galaxy Music Result', true, { selected: Boolean(musicId) });
+    if (!response.ok) throw new Error('soundscape save failed');
+    const name = userLang === 'en' ? entry.labelEn : entry.label;
+    showToast(tr('setupSelected', name));
+    trackResult('Soundscape Saved', true, { preset: entry.id });
     refreshPreview();
-  } catch (error) { trackResult('Galaxy Music Result', false, { errorType: 'music_save_fail' }, error); showToast(tr('setupSaveFail')); }
+  } catch (error) {
+    galaxy.soundscape = previous;
+    renderSoundscapes();
+    trackResult('Soundscape Saved', false, { errorType: 'soundscape_save_fail' }, error);
+    showToast(tr('setupSaveFail'));
+  }
+}
+
+async function applySoundscapeControls(field, value) {
+  const previous = { ...galaxy.soundscape };
+  galaxy.soundscape = { ...galaxy.soundscape, [field]: value };
+  try {
+    const response = await fetch(`/galaxies/${galaxyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ soundscape: galaxy.soundscape }),
+    });
+    if (!response.ok) throw new Error('soundscape controls save failed');
+    trackResult('Soundscape Control Saved', true, { preset: galaxy.soundscape.preset, control: field });
+    refreshPreview();
+  } catch (error) {
+    galaxy.soundscape = previous;
+    renderSoundscapes();
+    trackResult('Soundscape Control Saved', false, { errorType: 'soundscape_save_fail', control: field }, error);
+    showToast(tr('setupSaveFail'));
+  }
 }
 
 // ── Caption ────────────────────────────────────────────────
@@ -643,11 +715,11 @@ function switchTab(tabId) {
 
 async function init() {
   try {
-    const [galaxyRes, galleryRes, themesRes, musicsRes, subRes] = await Promise.all([
+    const [galaxyRes, galleryRes, themesRes, soundscapesRes, subRes] = await Promise.all([
       fetch(`/galaxies/${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch(`/gallary/my-items?galaxyId=${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
       fetch('/media/themes'),
-      fetch('/media/musics'),
+      fetch('/media/soundscapes'),
       fetch('/payment/status', { headers: { Authorization: 'Bearer ' + token } }),
     ]);
 
@@ -656,13 +728,13 @@ async function init() {
     const galaxyData   = await galaxyRes.json();
     const galleryData  = galleryRes.ok  ? await galleryRes.json()  : {};
     const themesData   = themesRes.ok   ? await themesRes.json()   : {};
-    const musicsData   = musicsRes.ok   ? await musicsRes.json()   : {};
+    const soundscapesData = soundscapesRes.ok ? await soundscapesRes.json() : {};
     const subData      = subRes.ok      ? await subRes.json()      : {};
 
     galaxy       = galaxyData.meta;
     galleryItems = galleryData.meta  || [];
     themes       = themesData.meta   || [];
-    musics       = musicsData.meta   || [];
+    soundscapes  = soundscapesData.meta || [];
     userPlan     = subData.meta?.plan || 'free';
     userFeatures = new Set(subData.meta?.features || []);
 
@@ -676,7 +748,7 @@ async function init() {
     renderGallery();
     renderUniverses();
     renderThemes();
-    renderMusics();
+    renderSoundscapes();
     renderStory();
     renderCaptions();
     updateChecklist();

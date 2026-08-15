@@ -4,7 +4,7 @@ import * as THREE from 'three';
 const galaxyId = new URLSearchParams(location.search).get('galaxyId');
 const activity = window.LumoraActivity;
 async function fetchData() {
-  if (!galaxyId) return { images:[], captions:[], music:null, theme:null, name:'' };
+  if (!galaxyId) return { images:[], captions:[], soundscape:null, theme:null, name:'' };
   try {
     const [vr,ir] = await Promise.all([
       fetch(`/galaxies/${galaxyId}/view`),
@@ -13,8 +13,8 @@ async function fetchData() {
     const view = vr.ok ? (await vr.json()).meta : {};
     const imgs = ir.ok ? (await ir.json()).meta : [];
     return { images:imgs.map(i=>i.imageUrl), captions:view.caption||[],
-             music:view.music?.url||null, theme:view.theme?.colors||null, name:view.name||'' };
-  } catch { return { images:[], captions:[], music:null, theme:null, name:'' }; }
+             soundscape:view.soundscape||null, theme:view.theme?.colors||null, name:view.name||'' };
+  } catch { return { images:[], captions:[], soundscape:null, theme:null, name:'' }; }
 }
 
 // ── Renderer ──────────────────────────────────────────────────────────────────
@@ -357,7 +357,7 @@ async function init(){
     domeMat.uniforms.uC1.value.set(c1);
     domeMat.uniforms.uC2.value.set(c2);
   }
-  window.musicManager.init(data.music);
+  window.musicManager.init(data.soundscape);
   if(data.images.length){
     const loader=new THREE.TextureLoader();
     textures=await Promise.all(data.images.map(url=>new Promise(res=>{

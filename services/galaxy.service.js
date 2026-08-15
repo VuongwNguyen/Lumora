@@ -3,6 +3,7 @@ const SubscriptionModel = require("../models/subscription");
 const { PLANS, FREE_MAX_GALAXIES, planHasFeature } = require("../config/plans");
 const { errorResponse } = require("../context/responseHandle");
 const { getEntitlementBypassMode, getRoleEntitlementPlan } = require('../config/runtime');
+const { normalizeSoundscape, validateSoundscape } = require('../config/soundscapes');
 
 class GalaxyService {
   async createGalaxy({ userId, name, userRole }) {
@@ -82,8 +83,7 @@ class GalaxyService {
 
   async getGalaxyView(galaxyId) {
     const galaxy = await GalaxyModel.findById(galaxyId)
-      .populate("themeId", "name colors")
-      .populate("backgroundMusicId", "name url source permalink");
+      .populate("themeId", "name colors");
     if (!galaxy || galaxy.status !== "active") {
       throw new errorResponse({ message: "Galaxy not found", statusCode: 404 });
     }
@@ -92,14 +92,13 @@ class GalaxyService {
       name: galaxy.name,
       caption: galaxy.caption,
       theme: galaxy.themeId || null,
-      music: galaxy.backgroundMusicId
-        ? {
-            name: galaxy.backgroundMusicId.name,
-            url: galaxy.backgroundMusicId.source === "soundcloud"
-              ? galaxy.backgroundMusicId.permalink
-              : galaxy.backgroundMusicId.url,
-          }
-        : null,
+      // The legacy catalog is intentionally quarantined: public viewers never
+      // receive a stored or provider URL until every track has a valid license.
+      music: null,
+      soundscape: {
+        ...normalizeSoundscape(galaxy.soundscape),
+        seed: String(galaxy._id),
+      },
       template: galaxy.template || 'galaxy',
       storyType: galaxy.storyType || null,
       occasion: galaxy.occasion || null,
@@ -111,7 +110,7 @@ class GalaxyService {
   async updateGalaxy({ galaxyId, userId, user, data }) {
     const allowedFields = new Set([
       'name', 'themeId', 'backgroundMusicId', 'caption', 'template',
-      'seEffect', 'storyType', 'occasion', 'chapters',
+      'soundscape', 'seEffect', 'storyType', 'occasion', 'chapters',
     ]);
     data = Object.fromEntries(Object.entries(data || {}).filter(([key]) => allowedFields.has(key)));
     const galaxy = await GalaxyModel.findOne({ _id: galaxyId, userId });
@@ -138,14 +137,27 @@ class GalaxyService {
       throw new errorResponse({ message: 'Invalid galaxy template', statusCode: 400 });
     }
 
+    if (data.soundscape !== undefined) {
+      if (!validateSoundscape(data.soundscape)) {
+        throw new errorResponse({ message: 'Invalid soundscape configuration', statusCode: 400 });
+      }
+      data.soundscape = normalizeSoundscape(data.soundscape);
+    }
+
+    if (data.backgroundMusicId !== undefined && data.backgroundMusicId !== null && user.role !== 'admin') {
+      throw new errorResponse({
+        message: 'Background music is temporarily unavailable while licensing is reviewed',
+        statusCode: 503,
+      });
+    }
+
     const accessMode = getEntitlementBypassMode({ role: user.role });
     if (accessMode !== 'admin') {
       const wantsFallUniverse = data.template === 'fall';
       const wantsTheme = data.themeId !== undefined;
-      const wantsMusic = data.backgroundMusicId !== undefined;
       const wantsCaption = data.caption !== undefined;
 
-      if (wantsTheme || wantsMusic || wantsCaption || wantsFallUniverse) {
+      if (wantsTheme || wantsCaption || wantsFallUniverse) {
         const rolePlan = getRoleEntitlementPlan({ role: user.role });
         const sub = rolePlan
           ? null
@@ -157,9 +169,7 @@ class GalaxyService {
           throw new errorResponse({ message: "Active subscription required", statusCode: 403 });
         }
 
-        // music và caption cần pro
-        if (wantsMusic && !planHasFeature(effectivePlan, 'music'))
-          throw new errorResponse({ message: 'Current plan does not include music', statusCode: 403 });
+        // caption cần pro
         if (wantsCaption && !planHasFeature(effectivePlan, 'text'))
           throw new errorResponse({ message: 'Current plan does not include captions', statusCode: 403 });
         if (wantsFallUniverse && !planHasFeature(effectivePlan, 'fall_universe'))

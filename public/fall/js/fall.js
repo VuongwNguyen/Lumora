@@ -6,7 +6,7 @@ const galaxyId = params.get('galaxyId');
 const activity = window.LumoraActivity;
 
 async function fetchData() {
-  if (!galaxyId) return { images: [], captions: [], music: null, theme: null };
+  if (!galaxyId) return { images: [], captions: [], soundscape: null, theme: null };
   try {
     const [viewRes, imgRes] = await Promise.all([
       fetch(`/galaxies/${galaxyId}/view`),
@@ -17,11 +17,11 @@ async function fetchData() {
     return {
       images: imgs.map(i => i.imageUrl),
       captions: view.caption || [],
-      music: view.music?.url || null,
+      soundscape: view.soundscape || null,
       theme: view.theme?.colors || null,
       name: view.name || ''
     };
-  } catch { return { images: [], captions: [], music: null, theme: null }; }
+  } catch { return { images: [], captions: [], soundscape: null, theme: null }; }
 }
 
 // ── Scene setup ────────────────────────────────────────────────────────────
@@ -640,8 +640,8 @@ async function init() {
   scene.background = bgColor;
   scene.fog = new THREE.FogExp2(bgColor.getHex(), 0.006);
 
-  // Music
-  window.musicManager?.init(data.music);
+  // Original Lumora soundscape
+  window.musicManager?.init(data.soundscape);
 
   // document.title
   if (data.name) document.title = `${data.name} — Lumora`;

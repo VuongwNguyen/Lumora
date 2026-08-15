@@ -668,10 +668,10 @@
             <option value="">No theme</option>
           </select>
         </div>
-        <div id="musicSection">
-          <label style="display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 6px;" data-i18n="music-label">Background Music</label>
-          <select id="musicSelect" style="width: 100%; padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Jost', sans-serif; font-size: 13px;">
-            <option value="">No music</option>
+        <div id="soundscapeSection">
+          <label style="display: block; font-size: 12px; color: var(--text-sub); margin-bottom: 6px;" data-i18n="soundscape-label">Ambient Soundscape</label>
+          <select id="soundscapeSelect" style="width: 100%; padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'Jost', sans-serif; font-size: 13px;">
+            <option value="none">No sound</option>
           </select>
         </div>
       </div>
@@ -735,8 +735,8 @@
       document.querySelector('[data-i18n="template-label"]').textContent = t.template;
       document.querySelector('[data-i18n="theme-label"]').textContent = t.theme;
       document.querySelector('#themeSelect option[value=""]').textContent = t.noTheme;
-      document.querySelector('[data-i18n="music-label"]').textContent = t.music;
-      document.querySelector('#musicSelect option[value=""]').textContent = t.noMusic;
+      document.querySelector('[data-i18n="soundscape-label"]').textContent = t.soundscape;
+      document.querySelector('#soundscapeSelect option[value="none"]').textContent = t.noSoundscape;
       document.querySelector('[data-i18n="captions-label"]').textContent = t.captions;
       document.getElementById('captionInput').placeholder = t.captionPlaceholder;
       document.getElementById('addCaptionBtn').textContent = t.addCaption;

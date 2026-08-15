@@ -305,6 +305,12 @@
     .music-item.selected .music-play { background: var(--accent-dim); border-color: var(--accent); }
     .music-info { flex: 1; min-width: 0; }
     .music-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .soundscape-description { margin-top: 3px; color: var(--text-sub); font-size: 11px; line-height: 1.35; }
+    .soundscape-controls { margin-top: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--r-sm); background: rgba(255,255,255,.02); }
+    .soundscape-control { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 12px; margin-bottom: 12px; color: var(--text-sub); font-size: 11px; }
+    .soundscape-control:last-child { margin-bottom: 0; }
+    .soundscape-control output { color: var(--accent-light); font-variant-numeric: tabular-nums; }
+    .soundscape-control input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
     .music-no {
       padding: 10px 12px; border-radius: var(--r-sm);
       font-size: 12px; color: var(--text-sub); cursor: pointer;
@@ -1029,9 +1035,9 @@
         </div>
       </div>
 
-      <!-- Music tab -->
+      <!-- Original Lumora soundscape tab -->
       <div class="tab-pane" id="tab-music" role="tabpanel">
-        <div class="tab-heading"><span class="tab-heading-icon" aria-hidden="true">♫</span><div><h2 data-i18n="setupMusicTitle">Nhạc nền</h2><p data-i18n="setupMusicDescription">Thêm một giai điệu để hoàn thiện cảm xúc.</p></div></div>
+        <div class="tab-heading"><span class="tab-heading-icon" aria-hidden="true">〰</span><div><h2 data-i18n="setupMusicTitle">Âm thanh không gian</h2><p data-i18n="setupMusicDescription">Âm thanh nguyên bản được Lumora tạo trực tiếp trong trình duyệt.</p></div></div>
         <div id="music-content">
           <div class="skeleton" style="height:52px;margin-bottom:6px"></div>
           <div class="skeleton" style="height:52px;margin-bottom:6px"></div>
@@ -1078,7 +1084,7 @@
   <script src="/shared/js/activityLogger.js"></script>
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
-  <script src="/shared/js/sc-widget-audio.js"></script>
+  <script src="/shared/js/soundscapeEngine.js"></script>
   <script src="/shared/js/i18n.js"></script>
   <script>
     document.documentElement.lang = userLang;
