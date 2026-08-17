@@ -254,6 +254,31 @@
       this._applyMasterGain();
     }
 
+    fadeTo(value, durationMilliseconds = 0) {
+      this._volume = clamp(value, 0, 1, this._volume);
+      if (!this._context || !this._master) return this._volume;
+      smoothAudioParam(
+        this._master.gain,
+        this._targetGain(),
+        this._context,
+        clamp(durationMilliseconds, 0, 30000, 0) / 1000,
+      );
+      return this._volume;
+    }
+
+    cancelVolumeTransition() {
+      if (!this._context || !this._master) return false;
+      const gain = this._master.gain;
+      const now = this._context.currentTime;
+      if (typeof gain.cancelAndHoldAtTime === 'function') {
+        gain.cancelAndHoldAtTime(now);
+      } else {
+        gain.cancelScheduledValues(now);
+        gain.setValueAtTime(gain.value, now);
+      }
+      return true;
+    }
+
     get muted() { return this._muted; }
     set muted(value) {
       this._muted = Boolean(value);
@@ -891,6 +916,14 @@
       },
 
       pause() { this.audio?.pause(); },
+
+      fadeTo(volume, durationMilliseconds) {
+        return this.audio?.fadeTo(volume, durationMilliseconds) ?? false;
+      },
+
+      cancelVolumeTransition() {
+        return this.audio?.cancelVolumeTransition() ?? false;
+      },
 
       setEnvironment(name, options) {
         return this.audio?.setEnvironment(name, options) ?? false;

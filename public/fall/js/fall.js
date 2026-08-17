@@ -4,13 +4,16 @@ import * as THREE from 'three';
 const params = new URLSearchParams(location.search);
 const galaxyId = params.get('galaxyId');
 const activity = window.LumoraActivity;
+const arrivalTransition = window.lumoraArrivalTransition;
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
 
 async function fetchData() {
   if (!galaxyId) return { images: [], captions: [], soundscape: null, theme: null };
   try {
-    const [viewRes, imgRes] = await Promise.all([
+    const [viewRes, imgRes, emotionRes] = await Promise.all([
       fetch(`/galaxies/${galaxyId}/view`),
-      fetch(`/gallary/items?galaxyId=${encodeURIComponent(galaxyId)}`)
+      fetch(`/gallary/items?galaxyId=${encodeURIComponent(galaxyId)}`),
+      fetch('/media/story-emotions'),
     ]);
     const view = viewRes.ok ? (await viewRes.json()).meta : {};
     const imgs = imgRes.ok ? (await imgRes.json()).meta : [];
@@ -19,7 +22,9 @@ async function fetchData() {
       captions: view.caption || [],
       soundscape: view.soundscape || null,
       theme: view.theme?.colors || null,
-      name: view.name || ''
+      name: view.name || '',
+      emotionConfig: view.emotionConfig || null,
+      emotionCatalog: emotionRes.ok ? (await emotionRes.json()).meta : null,
     };
   } catch { return { images: [], captions: [], soundscape: null, theme: null }; }
 }
@@ -586,11 +591,65 @@ function makePolaroidFromTex(tex, col, colOffsets, zPos) {
 // ── Camera fall state ──────────────────────────────────────────────────────
 const _autostart = new URLSearchParams(location.search).get('autostart') === 'true';
 let started = _autostart; // skip intro immediately in preview mode
+let experienceActivated = _autostart;
 let fallSpeed = 0;
 const TARGET_SPEED = 0.06;
 const ACCEL = 0.0004;
 let cameraZ = 0;
 let totalDepth = 0;
+let emotionSpeedScale = 1;
+let openingIntent = null;
+let openingScheduler = null;
+let openingRenderer = null;
+
+function createFallEmotionRenderer() {
+  const emotionEngine = window.LumoraStoryEmotion;
+  const soundscape = emotionEngine.createSoundscapeRenderer(window.musicManager);
+  return {
+    execute(action) {
+      if (action.type.startsWith('audio.')) return soundscape.execute(action);
+      const intensity = action.params.intensity || 0;
+      switch (action.type) {
+        case 'camera.pushIn': emotionSpeedScale = 1 + intensity * 0.24; break;
+        case 'camera.drift': emotionSpeedScale = 0.9 + intensity * 0.18; break;
+        case 'camera.freeze': emotionSpeedScale = 0.68; break;
+        case 'environment.dim': renderer.toneMappingExposure = 1 - intensity * 0.28; break;
+        case 'environment.brighten': renderer.toneMappingExposure = 1 + intensity * 0.22; break;
+        case 'environment.freeze': emotionSpeedScale = 0.68; break;
+        case 'environment.breathe': emotionSpeedScale = 0.9 + intensity * 0.16; break;
+        case 'wait': case 'hold': case 'pause': case 'silence': case 'delay': break;
+        default: break;
+      }
+    },
+    destroy() { soundscape.destroy(); },
+  };
+}
+
+function playFallEmotionOpening() {
+  const emotionEngine = window.LumoraStoryEmotion;
+  if (!openingIntent || !window._emotionCatalog || !emotionEngine || openingScheduler) return;
+  const timeline = emotionEngine.createUniverseOpeningTimeline({
+    catalog: window._emotionCatalog,
+    primaryEmotion: openingIntent.primaryEmotion,
+    intensity: openingIntent.intensity,
+    template: 'fall',
+  });
+  openingRenderer = createFallEmotionRenderer();
+  openingScheduler = new emotionEngine.TimelineScheduler(openingRenderer);
+  activity?.log({
+    action: openingIntent?.version === 1 ? 'Viewer Emotion Handoff Applied' : 'Viewer Emotion Direction Applied', feature: 'viewer', galaxyId, status: 1,
+    description: {
+      template: 'fall', primaryEmotion: openingIntent.primaryEmotion, reducedMotion,
+      source: openingIntent?.version === 1 ? 'handoff' : 'config',
+      transition: openingIntent?.version === 1 ? arrivalTransition?.payload?.type || 'direct' : null,
+    },
+  });
+  openingScheduler.play(emotionEngine.applyReducedMotion(timeline, reducedMotion)).finally(() => {
+    openingRenderer?.destroy();
+    openingRenderer = null;
+    openingScheduler = null;
+  });
+}
 
 // Subtle camera sway
 
@@ -614,14 +673,19 @@ renderer.domElement.addEventListener('touchmove', e => {
 }, { passive: true });
 
 const intro = document.getElementById('intro');
-function startExperience() {
+function startExperience({ enterFullscreen = true } = {}) {
+  if (experienceActivated) return false;
+  experienceActivated = true;
   started = true;
   intro.classList.add('hidden');
-  window.musicManager?.play()
-    .then(() => window.musicManager?.setEnvironment('open_space', { transitionSeconds: 4 }))
-    .catch(() => {});
-  const el = document.documentElement;
-  (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen)?.call(el);
+  window.musicManager?.play?.().catch?.(() => {});
+  window.musicManager?.setEnvironment('open_space', { transitionSeconds: 4 });
+  playFallEmotionOpening();
+  if (enterFullscreen) {
+    const el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen)?.call(el);
+  }
+  return true;
 }
 
 // Hide intro immediately in preview mode
@@ -632,6 +696,14 @@ if (_autostart) {
 // ── Main init ──────────────────────────────────────────────────────────────
 async function init() {
   const data = await fetchData();
+  window._emotionCatalog = data.emotionCatalog;
+  const emotionEngine = window.LumoraStoryEmotion;
+  const allowedEmotions = data.emotionCatalog?.emotions?.map(emotion => emotion.id) || [];
+  const handoff = emotionEngine?.consumeExperienceHandoff(sessionStorage, galaxyId, Date.now(), allowedEmotions);
+  openingIntent = handoff || (data.emotionConfig && data.emotionCatalog ? {
+    primaryEmotion: emotionEngine.resolvePrimaryEmotion(data.emotionConfig, data.emotionCatalog),
+    intensity: data.emotionConfig.intensity,
+  } : null);
 
   // Set title
   if (data.name) document.getElementById('intro-title').textContent = data.name;
@@ -643,7 +715,19 @@ async function init() {
 
   // Original Lumora soundscape
   window.musicManager?.init(data.soundscape);
-  if (!_autostart) intro.addEventListener('click', startExperience, { once: true });
+  if (handoff) intro.style.display = 'none';
+  else if (!_autostart) intro.addEventListener('click', startExperience, { once: true });
+
+  const enterUniverse = () => {
+    if (handoff) startExperience({ enterFullscreen: false });
+    animate();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'lumora:universe-ready', galaxyId, template: 'fall' }, location.origin);
+      }
+      arrivalTransition?.reveal({ duration: reducedMotion ? 180 : 1300 });
+    }));
+  };
 
   // document.title
   if (data.name) document.title = `${data.name} — Lumora`;
@@ -683,7 +767,7 @@ async function init() {
 
   // Build polaroids — infinite pool, pre-spawn ahead of camera
   const images = data.images.length ? data.images : [];
-  if (!images.length) { animate(); return; }
+  if (!images.length) { enterUniverse(); return; }
 
   const COLS = images.length <= 12 ? 3 : 4;
   const COL_SPACING = 8.5;
@@ -832,8 +916,7 @@ async function init() {
   window._nextRowZ = nextRowZ;
   window._captionSprites = captionSprites;
 
-  // Animate
-  animate();
+  enterUniverse();
 }
 
 let frozen = false;
@@ -947,7 +1030,9 @@ function animate() {
 
     if (!frozen) {
       // Accelerate to target speed + boost decay
-      if (fallSpeed < TARGET_SPEED) fallSpeed += ACCEL;
+      const emotionalTargetSpeed = TARGET_SPEED * emotionSpeedScale;
+      if (fallSpeed < emotionalTargetSpeed) fallSpeed += ACCEL;
+      else if (fallSpeed > emotionalTargetSpeed) fallSpeed = Math.max(emotionalTargetSpeed, fallSpeed - ACCEL * 0.5);
       if (boostSpeed > 0) boostSpeed = Math.max(0, boostSpeed - BOOST_DECAY);
 
       cameraZ -= (fallSpeed + boostSpeed);
@@ -1110,4 +1195,12 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-init();
+init().catch((error) => {
+  arrivalTransition?.reveal({ duration: 180 });
+  console.error('[fall] initialization failed:', error);
+});
+
+window.addEventListener('pagehide', () => {
+  openingScheduler?.destroy();
+  openingRenderer?.destroy();
+}, { once: true });

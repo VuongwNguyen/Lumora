@@ -7,6 +7,7 @@ const MediaController = require('../controllers/media.controller');
 router.get('/themes', asyncHandler(MediaController.getThemes));
 router.get('/soundscapes', asyncHandler(MediaController.getSoundscapes));
 router.get('/soundscape-instruments', asyncHandler(MediaController.getSoundscapeInstruments));
+router.get('/story-emotions', asyncHandler(MediaController.getStoryEmotions));
 router.get('/musics', requireAdmin, asyncHandler(MediaController.getMusics));
 
 // Admin routes - cần thêm middleware kiểm tra admin

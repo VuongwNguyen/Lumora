@@ -31,11 +31,23 @@
       font-weight:300; letter-spacing:0.1em;
       color:#f0ece4; text-align:center; margin-bottom:8px;
     }
+    #se-intro-eyebrow {
+      position:relative; margin-bottom:18px;
+      font:500 10px/1.4 sans-serif; color:var(--se-emotion-accent,rgba(196,181,253,.78));
+      letter-spacing:.26em; text-transform:uppercase; text-align:center;
+    }
     #se-intro-occasion {
       font-size:11px; color:rgba(255,255,255,0.3);
-      letter-spacing:0.22em; text-transform:uppercase; margin-bottom:56px;
+      letter-spacing:0.22em; text-transform:uppercase; margin-bottom:14px;
       font-family:sans-serif;
     }
+    #se-intro-message {
+      width:min(620px,calc(100vw - 48px)); margin:0 auto 44px;
+      font-size:clamp(15px,2.25vw,21px); line-height:1.8; font-style:italic;
+      font-weight:300; color:rgba(240,236,228,.68); text-align:center;
+      display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; overflow:hidden;
+    }
+    #se-intro-message:empty { display:none; }
     .se-stars {
       position:absolute; inset:0; overflow:hidden; pointer-events:none;
     }
@@ -79,12 +91,105 @@
     #se-photo-bg {
       position:absolute; inset:-30px;
       background-size:cover; background-position:center;
-      filter:blur(24px) brightness(0.35);
+      filter:blur(28px) brightness(0.24) saturate(.72);
       transform:scale(1.08);
     }
     #se-photo-img {
       position:absolute; inset:0;
       width:100%; height:100%; object-fit:contain;
+      transform-origin:center center;
+      will-change:transform,filter;
+    }
+
+    /* ── SE v2 memory scene: one chapter, one spatial composition ── */
+    #se-memory-camera {
+      position:absolute; inset:0; z-index:1; display:none;
+      transform-origin:50% 50%; will-change:transform;
+    }
+    #se-photo.scene-mode #se-photo-img { display:none; }
+    #se-photo.scene-mode #se-memory-camera { display:block; }
+    #se-memory-frames { position:absolute; inset:0; perspective:1000px; }
+    .se-memory-frame {
+      position:absolute; margin:0; z-index:1;
+      width:clamp(150px,34vw,430px); aspect-ratio:4/5;
+      transform:rotate(var(--frame-rotate,0deg));
+    }
+    .se-memory-frame-inner {
+      width:100%; height:100%; overflow:hidden; opacity:0;
+      border:1px solid rgba(255,255,255,.18); border-radius:4px;
+      background:rgba(255,255,255,.06);
+      box-shadow:0 28px 90px rgba(0,0,0,.58),0 0 0 7px rgba(255,255,255,.025);
+      will-change:transform,opacity,filter;
+    }
+    .se-memory-frame img { width:100%; height:100%; display:block; object-fit:cover; }
+
+    .scene-spotlight .se-memory-frame:first-child { width:min(74vw,540px); height:min(68vh,680px); left:50%; top:50%; transform:translate(-50%,-50%) rotate(-1deg); }
+    .scene-spotlight .se-memory-frame:nth-child(n+2) { width:min(28vw,240px); right:5%; bottom:8%; --frame-rotate:5deg; }
+
+    .scene-constellation .se-memory-frame:nth-child(1) { left:4%; top:10%; --frame-rotate:-5deg; }
+    .scene-constellation .se-memory-frame:nth-child(2) { right:5%; top:7%; --frame-rotate:4deg; z-index:2; }
+    .scene-constellation .se-memory-frame:nth-child(3) { left:32%; top:37%; --frame-rotate:-1.5deg; z-index:3; }
+    .scene-constellation .se-memory-frame:nth-child(4) { right:2%; bottom:5%; --frame-rotate:6deg; }
+    .scene-constellation .se-memory-frame:nth-child(5) { left:5%; bottom:2%; --frame-rotate:-6deg; }
+    .scene-constellation .se-memory-frame:nth-child(6) { left:58%; bottom:0; --frame-rotate:2deg; }
+
+    .scene-crescendo .se-memory-frame { width:clamp(130px,26vw,330px); }
+    .scene-crescendo .se-memory-frame:nth-child(1) { left:0; top:8%; --frame-rotate:-7deg; }
+    .scene-crescendo .se-memory-frame:nth-child(2) { right:0; top:5%; --frame-rotate:6deg; }
+    .scene-crescendo .se-memory-frame:nth-child(3) { width:min(64vw,620px); height:min(68vh,700px); left:50%; top:50%; transform:translate(-50%,-50%) rotate(-1deg); z-index:4; }
+    .scene-crescendo .se-memory-frame:nth-child(4) { left:3%; bottom:3%; --frame-rotate:5deg; z-index:2; }
+    .scene-crescendo .se-memory-frame:nth-child(5) { right:2%; bottom:2%; --frame-rotate:-5deg; z-index:2; }
+    .scene-crescendo .se-memory-frame:nth-child(6) { left:56%; bottom:-5%; --frame-rotate:2deg; }
+
+    .scene-cascade .se-memory-frame { width:min(42vw,390px); }
+    .scene-cascade .se-memory-frame:nth-child(1) { left:8%; top:4%; --frame-rotate:-4deg; }
+    .scene-cascade .se-memory-frame:nth-child(2) { right:8%; top:19%; --frame-rotate:4deg; z-index:2; }
+    .scene-cascade .se-memory-frame:nth-child(3) { left:20%; top:43%; --frame-rotate:-2deg; z-index:3; }
+    .scene-cascade .se-memory-frame:nth-child(4) { right:14%; bottom:0; --frame-rotate:5deg; }
+    .scene-cascade .se-memory-frame:nth-child(n+5) { display:none; }
+
+    .scene-horizon .se-memory-frame { width:min(57vw,500px); left:50%; top:48%; }
+    .scene-horizon .se-memory-frame:nth-child(1) { transform:translate(-56%,-50%) rotate(-5deg); opacity:.48; }
+    .scene-horizon .se-memory-frame:nth-child(2) { transform:translate(-44%,-50%) rotate(5deg); opacity:.62; z-index:2; }
+    .scene-horizon .se-memory-frame:last-child { transform:translate(-50%,-50%); opacity:1; z-index:4; }
+
+    /* Emotion scenes use count-aware geometry from the shared Director. */
+    #se-photo.scene-directed #se-memory-frames::before {
+      content:""; position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.9;
+    }
+    #se-photo.scene-directed .se-memory-frame {
+      width:var(--scene-w); height:var(--scene-h);
+      left:var(--scene-x); top:var(--scene-y);
+      right:auto; bottom:auto; opacity:var(--scene-opacity); z-index:var(--scene-z);
+      transform:translate(-50%,-50%) rotate(var(--scene-rotate));
+    }
+    #se-photo.scene-embrace .se-memory-frame-inner { border-radius:12px; }
+    #se-photo.scene-embrace #se-memory-frames::before {
+      background:radial-gradient(ellipse at 50% 48%,rgba(244,177,131,.24),transparent 48%),linear-gradient(90deg,rgba(20,9,9,.36),transparent 30% 70%,rgba(20,9,9,.36));
+    }
+    #se-photo.scene-duet .se-memory-frame-inner { border-radius:10px; }
+    #se-photo.scene-duet #se-memory-frames::before {
+      background:radial-gradient(circle at 29% 50%,rgba(240,154,192,.18),transparent 30%),radial-gradient(circle at 71% 50%,rgba(240,154,192,.18),transparent 30%),linear-gradient(90deg,transparent 49.7%,rgba(255,255,255,.07) 50%,transparent 50.3%);
+    }
+    #se-photo.scene-archive #se-memory-frames::before {
+      background:repeating-linear-gradient(90deg,rgba(196,167,231,.035) 0 1px,transparent 1px 12%),linear-gradient(180deg,rgba(37,25,44,.12),rgba(10,7,15,.42));
+    }
+    #se-photo.scene-stillness #se-memory-frames::before {
+      background:radial-gradient(ellipse at 50% 48%,rgba(143,164,202,.13),transparent 34%),linear-gradient(90deg,rgba(1,4,12,.56),transparent 38% 62%,rgba(1,4,12,.56));
+    }
+    #se-photo.scene-stillness .se-memory-frame:not(:first-child) img { filter:saturate(.55); }
+    #se-photo.scene-orbit .se-memory-frame-inner { border-radius:9px; }
+    #se-photo.scene-orbit #se-memory-frames::before {
+      background:radial-gradient(circle at 50% 48%,transparent 0 23%,rgba(121,217,242,.11) 23.3% 23.8%,transparent 24.2% 39%,rgba(121,217,242,.06) 39.3% 39.7%,transparent 40%);
+    }
+    #se-photo.scene-ascent .se-memory-frame-inner { border-radius:7px; }
+    #se-photo.scene-ascent #se-memory-frames::before {
+      background:linear-gradient(155deg,rgba(4,12,12,.36) 8%,transparent 45%,rgba(143,227,189,.16) 82%,rgba(218,247,229,.12)),linear-gradient(0deg,rgba(143,227,189,.1),transparent 58%);
+    }
+
+    #se-environment-overlay {
+      position:absolute; inset:0; z-index:3; pointer-events:none;
+      opacity:0; background:#020207; transition:opacity 1s ease;
     }
 
     /* ── Gradient overlay bottom ── */
@@ -102,6 +207,13 @@
       opacity:0; transition:opacity 0.55s ease;
     }
     #se-hook-overlay.visible { opacity:1; }
+    #se-photo.scene-mode #se-hook-overlay {
+      z-index:5; top:50%; bottom:auto; left:50%; right:auto;
+      width:min(760px,calc(100vw - 44px)); padding:28px;
+      transform:translate(-50%,-50%); text-align:center;
+      border-radius:18px;
+      background:radial-gradient(circle,rgba(5,5,14,.78),rgba(5,5,14,.2) 66%,transparent 76%);
+    }
     #se-chapter-tag {
       font-family:sans-serif; font-size:clamp(11px,1.6vh,15px); letter-spacing:0.18em;
       text-transform:uppercase; color:rgba(255,255,255,0.45);
@@ -114,29 +226,45 @@
       letter-spacing:0.02em; font-style:italic;
     }
 
-    /* ── Photo dots (per-photo inside chapter) ── */
-    #se-photo-dots {
-      position:fixed; bottom:calc(12px + env(safe-area-inset-bottom)); right:calc(18px + env(safe-area-inset-right)); z-index:40;
-      display:flex; gap:4px; align-items:center; pointer-events:none;
-    }
-    .se-dot {
-      width:4px; height:4px; border-radius:50%;
-      background:rgba(255,255,255,0.22); transition:all 0.25s;
-    }
-    .se-dot.active { width:12px; border-radius:2px; background:rgba(255,255,255,0.72); }
-
     /* ── Finale ── */
     #se-finale {
       position:fixed; inset:0; z-index:60;
       display:flex; align-items:center; justify-content:center;
-      background:#060610; opacity:0; pointer-events:none;
-      transition:opacity 1s ease;
+      background:#060610; opacity:0; visibility:hidden; pointer-events:none;
+      transition:opacity 1.5s ease,visibility 0s linear 1.5s;
     }
-    #se-finale.visible { opacity:1; }
+    #se-finale.visible { opacity:1; visibility:visible; transition:opacity 1.5s ease; }
+    #se-finale-memory {
+      position:absolute; inset:-36px; background-position:center; background-size:cover;
+      filter:brightness(.55) saturate(.72); transform:scale(1.04);
+    }
+    #se-finale-veil {
+      position:absolute; inset:0;
+      background:linear-gradient(180deg,rgba(5,5,13,.38),rgba(5,5,13,.76));
+    }
+    #se-finale-eyebrow {
+      font:500 10px/1.4 sans-serif; letter-spacing:.26em; text-transform:uppercase;
+      color:var(--se-emotion-accent,rgba(196,181,253,.75));
+    }
+    #se-finale-title {
+      max-width:min(720px,calc(100vw - 48px)); font-size:clamp(26px,5vw,54px);
+      font-weight:300; letter-spacing:.06em; color:#f2eee8; text-align:center;
+    }
     #se-finale-text {
-      font-size:clamp(15px,2.5vw,26px);
-      font-weight:300; color:rgba(240,236,228,0.65);
-      letter-spacing:0.05em; text-align:center; padding:0 32px;
+      max-width:680px; font-size:clamp(16px,2.5vw,25px); line-height:1.75;
+      font-weight:300; font-style:italic; color:rgba(240,236,228,0.7);
+      letter-spacing:0.025em; text-align:center; padding:0 24px;
+    }
+    .se-finale-content { position:relative; display:flex; flex-direction:column; align-items:center; gap:18px; }
+    .se-finale-actions { display:flex; gap:10px; margin-top:12px; pointer-events:auto; opacity:0; transform:translateY(8px); transition:opacity .8s ease 1.2s,transform .8s ease 1.2s; }
+    #se-finale.visible .se-finale-actions { opacity:1; transform:none; }
+    .se-finale-action {
+      min-height:38px; padding:8px 15px; border:1px solid rgba(255,255,255,.13); border-radius:999px;
+      color:rgba(255,255,255,.68); background:rgba(255,255,255,.055); font:12px sans-serif; cursor:pointer;
+    }
+    .se-finale-action:hover, .se-finale-action:focus-visible { outline:none; border-color:rgba(196,181,253,.55); color:#fff; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
     }
 
     /* ── Audio button ── */
@@ -149,14 +277,24 @@
       display:flex; align-items:center; justify-content:center;
     }
     #btn-audio.hidden { display:none; }
+
+    /* Universe stays inside the current viewing document so fullscreen survives SE handoff. */
+    .se-universe-host {
+      position:fixed; inset:0; z-index:80; overflow:hidden; background:#020207;
+    }
+    .se-universe-host iframe {
+      display:block; width:100%; height:100%; border:0; background:#020207;
+    }
   </style>
 </head>
 <body>
 
-  <div id="se-intro">
+  <div id="se-intro" role="button" tabindex="0" aria-label="Chạm để bắt đầu câu chuyện">
     <div class="se-stars" id="se-stars"></div>
+    <div id="se-intro-eyebrow">Một câu chuyện dành cho bạn</div>
     <div id="se-intro-title">Lumora</div>
     <div id="se-intro-occasion"></div>
+    <div id="se-intro-message"></div>
     <div class="se-pulse"></div>
     <div class="se-tap-hint">Chạm để bắt đầu</div>
   </div>
@@ -166,7 +304,11 @@
   <div id="se-photo">
     <div id="se-photo-bg"></div>
     <img id="se-photo-img" src="" alt="" />
-    <canvas id="se-effect-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
+    <div id="se-memory-camera" aria-hidden="true">
+      <div id="se-memory-frames"></div>
+    </div>
+    <canvas id="se-effect-canvas" style="position:absolute;inset:0;z-index:2;width:100%;height:100%;pointer-events:none;"></canvas>
+    <div id="se-environment-overlay"></div>
     <div id="se-photo-gradient"></div>
     <div id="se-hook-overlay">
       <div id="se-chapter-tag"></div>
@@ -174,9 +316,19 @@
     </div>
   </div>
 
-  <div id="se-photo-dots"></div>
-
-  <div id="se-finale"><div id="se-finale-text">Và đây là tất cả ký ức của chúng ta...</div></div>
+  <div id="se-finale">
+    <div id="se-finale-memory"></div>
+    <div id="se-finale-veil"></div>
+    <div class="se-finale-content">
+      <div id="se-finale-eyebrow">Điều còn ở lại</div>
+      <div id="se-finale-title"></div>
+      <div id="se-finale-text">Và đây là tất cả ký ức của chúng ta...</div>
+      <div class="se-finale-actions">
+        <button id="se-replay" class="se-finale-action" type="button">Xem lại</button>
+        <button id="se-continue" class="se-finale-action" type="button">Bước vào vũ trụ →</button>
+      </div>
+    </div>
+  </div>
 
   <button id="btn-audio" class="hidden">🔇</button>
 
@@ -198,10 +350,12 @@
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
   <script src="/shared/js/soundscapeEngine.js?v=20260815-mobile2"></script>
+  <script src="/shared/js/storyEmotionEngine.js?v=20260816-scene-grammar1"></script>
+  <script src="/shared/js/experienceTransition.js?v=20260816-se2"></script>
   <script>
     window.musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio', hiddenClass: 'hidden' });
   </script>
 
-  <script type="module" src="./js/story.js"></script>
+  <script type="module" src="./js/story.js?v=20260816-scene-grammar1"></script>
 </body>
 </html>

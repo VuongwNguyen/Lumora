@@ -1,8 +1,22 @@
 # SE v2 — Implementation Audit và Roadmap
 
-**Ngày audit:** 2026-08-15
+**Ngày audit:** 2026-08-16
 
 **Phạm vi:** Story setup, Story viewer, primitive effects, soundscape, Galaxy persistence, public `/view/` gateway
+
+> **Cập nhật triển khai 2026-08-16:** SE v2 MVP (Milestone A–G) đã được hiện thực sau thời điểm audit. Các nhận định “chưa có” bên dưới mô tả snapshot trước triển khai và được giữ lại làm căn cứ kiến trúc. Trạng thái code hiện tại: primitive lifecycle; action allowlist/validator; scheduler; deterministic Director; 6 emotion presets; role curve; intentional silence; capability fallback; optional persistence; ownership-scoped Auto/Manual APIs; emotion-first UI; semantic audio; Story–Galaxy/Fall handoff; reduced-motion; lifecycle analytics và regression tests. Public SE viewer và authoring preview hiện render **một spatial Memory Scene cho mỗi chapter** (`spotlight`, `constellation`, `cascade`, `crescendo`, `horizon`) thay cho vòng lặp per-photo slider; legacy Story chưa opt-in vẫn giữ playback cũ. Advanced manual controls vẫn được giữ ngoài primary UX đúng phạm vi MVP; nghiệm thu cảm xúc trên thiết bị thật là bước PO/UX sau validation kỹ thuật.
+
+### Trạng thái MVP sau audit
+
+| Milestone | Trạng thái | Bằng chứng chính |
+|---|---|---|
+| A — Legacy foundation | Hoàn tất | Effect lifecycle, resize, reduced-motion density, idempotent cleanup |
+| B — Actions & Timeline | Hoàn tất | Allowlist, validator, scheduler, Story/Soundscape renderers, fake clock |
+| C — Presets & Director | Hoàn tất | 6 preset canonical, realized chapter roles, scene composition, contrast, silence, deterministic snapshots |
+| D — Persistence & API | Hoàn tất | Optional `emotionConfig`, manual chapter override, ownership + validation, public projection |
+| E — Emotion-first UX | Hoàn tất | Auto Director, emotion selector, intensity, chapter-level Memory Scene preview/viewer; không expose technical effect |
+| F — Universe continuity | Hoàn tất | Single-use allowlisted handoff và capability adapters cho Galaxy/Fall |
+| G — Analytics & QA | Hoàn tất ở mức code | Adoption/lifecycle events, legacy/v2/reduced-motion/cleanup/security tests; còn nghiệm thu cảm nhận trên thiết bị thật |
 
 **Nguồn chuẩn:** [Lumora — Story Emotion Engine (SE v2) Specification](./Lumora%20%E2%80%94%20Story%20Emotion%20Engine%20%28SE%20v2%29%20Specification.md)
 
@@ -490,6 +504,15 @@ Hướng ưu tiên:
 4. sau khi adapters ổn định mới cân nhắc bỏ full-page redirect bằng một shell chung.
 
 Không nên refactor gateway thành SPA ngay ở Milestone A–C.
+
+Trạng thái triển khai hiện tại:
+
+- Story ghi emotional handoff và một transition marker ngắn hạn, allowlisted trong `sessionStorage`;
+- `memory_dissolve` che khoảng dựng Universe; Story giữ top-level viewing document làm host và giữ URL công khai canonical `/view/?galaxyId=...` nên fullscreen không bị hủy giữa chừng và `skip_se` không lộ trên thanh địa chỉ;
+- Universe có handoff hợp lệ bỏ cổng intro lặp lại, tự chạy opening timeline rồi reveal scene đã render;
+- Galaxy/Fall chạy trong same-origin experience frame, báo `universe-ready` sau first render; top-level navigation chỉ còn là fallback khi frame lỗi và refresh URL vẫn vào thẳng Universe;
+- transition marker là single-use, hết hạn sau 60 giây và chỉ mang `type` cùng màu accent đã validate; không truyền action, nội dung riêng tư hoặc URL;
+- Web Audio vẫn tuân theo autoplay policy của trình duyệt. Hình ảnh không chờ audio; nếu mobile chặn AudioContext sau navigation, nút âm thanh hiện có là recovery path.
 
 ### Milestone G — Analytics và QA
 

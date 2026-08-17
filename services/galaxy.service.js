@@ -4,6 +4,8 @@ const { PLANS, FREE_MAX_GALAXIES, planHasFeature } = require("../config/plans");
 const { errorResponse } = require("../context/responseHandle");
 const { getEntitlementBypassMode, getRoleEntitlementPlan } = require('../config/runtime');
 const { normalizeSoundscape, validateSoundscape } = require('../config/soundscapes');
+const { EMOTION_KEYS, normalizeEmotionConfig, validateEmotionConfig } = require('../config/storyEmotions');
+const STORY_CONFIG = require('../public/shared/story-config.json');
 
 class GalaxyService {
   async createGalaxy({ userId, name, userRole }) {
@@ -104,7 +106,51 @@ class GalaxyService {
       occasion: galaxy.occasion || null,
       chapters: galaxy.chapters || [],
       seEffect: galaxy.seEffect || 'none',
+      emotionConfig: galaxy.emotionConfig ? normalizeEmotionConfig(galaxy.emotionConfig.toObject?.() || galaxy.emotionConfig) : null,
     };
+  }
+
+  async updateEmotionConfig({ galaxyId, userId, emotionConfig }) {
+    if (!validateEmotionConfig(emotionConfig)) {
+      throw new errorResponse({ message: 'Invalid Story emotion configuration', statusCode: 400 });
+    }
+    const normalized = normalizeEmotionConfig(emotionConfig);
+    const galaxy = await GalaxyModel.findOneAndUpdate(
+      { _id: galaxyId, userId },
+      { $set: { emotionConfig: normalized } },
+      { new: true, runValidators: true, context: 'query' },
+    );
+    if (!galaxy) {
+      throw new errorResponse({ message: 'Galaxy not found', statusCode: 404 });
+    }
+    return galaxy.emotionConfig;
+  }
+
+  async updateChapterEmotion({ galaxyId, userId, chapterId, data }) {
+    if (typeof chapterId !== 'string' || !/^[a-z0-9_-]{1,64}$/i.test(chapterId)) {
+      throw new errorResponse({ message: 'Invalid Story chapter id', statusCode: 400 });
+    }
+    const input = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+    if (!Object.hasOwn(input, 'emotion') || !Object.hasOwn(input, 'intensity') || Object.keys(input).some(key => !['emotion', 'intensity'].includes(key))) {
+      throw new errorResponse({ message: 'Invalid chapter emotion configuration', statusCode: 400 });
+    }
+    const emotion = input.emotion === null ? null : input.emotion;
+    const intensity = input.intensity === null ? null : input.intensity;
+    if (emotion !== null && !EMOTION_KEYS.includes(emotion)) {
+      throw new errorResponse({ message: 'Invalid chapter emotion', statusCode: 400 });
+    }
+    if (intensity !== null && (!Number.isFinite(intensity) || intensity < 0 || intensity > 1)) {
+      throw new errorResponse({ message: 'Invalid chapter emotion intensity', statusCode: 400 });
+    }
+    const galaxy = await GalaxyModel.findOneAndUpdate(
+      { _id: galaxyId, userId, 'chapters.id': chapterId },
+      { $set: { 'chapters.$.emotion': emotion, 'chapters.$.intensity': intensity } },
+      { new: true, runValidators: true, context: 'query' },
+    );
+    if (!galaxy) {
+      throw new errorResponse({ message: 'Galaxy chapter not found', statusCode: 404 });
+    }
+    return galaxy.chapters.find(chapter => chapter.id === chapterId);
   }
 
   async updateGalaxy({ galaxyId, userId, user, data }) {
@@ -144,6 +190,42 @@ class GalaxyService {
       data.soundscape = normalizeSoundscape(data.soundscape);
     }
 
+    if (data.storyType !== undefined && data.storyType !== null && !Object.hasOwn(STORY_CONFIG, data.storyType)) {
+      throw new errorResponse({ message: 'Invalid Story type', statusCode: 400 });
+    }
+    const effectiveStoryType = data.storyType ?? galaxy.storyType;
+    if (data.occasion !== undefined && data.occasion !== null) {
+      if (!effectiveStoryType || !Object.hasOwn(STORY_CONFIG[effectiveStoryType]?.occasions || {}, data.occasion)) {
+        throw new errorResponse({ message: 'Invalid Story occasion', statusCode: 400 });
+      }
+    }
+    if (data.chapters !== undefined) {
+      if (!Array.isArray(data.chapters) || data.chapters.length > 20) {
+        throw new errorResponse({ message: 'Invalid Story chapters', statusCode: 400 });
+      }
+      const effectiveOccasion = data.occasion ?? galaxy.occasion;
+      const configuredChapters = STORY_CONFIG[effectiveStoryType]?.occasions?.[effectiveOccasion]?.chapters;
+      const allowedChapterIds = new Set((configuredChapters || Object.values(STORY_CONFIG)
+        .flatMap(type => Object.values(type.occasions || {}))
+        .flatMap(occasion => occasion.chapters || [])).map(chapter => chapter.id));
+      const existingById = new Map((galaxy.chapters || []).map(chapter => [chapter.id, chapter]));
+      data.chapters = data.chapters.map((chapter) => {
+        if (!chapter || typeof chapter !== 'object' || Array.isArray(chapter)
+          || typeof chapter.id !== 'string' || !allowedChapterIds.has(chapter.id)
+          || (chapter.hookText !== null && chapter.hookText !== undefined && typeof chapter.hookText !== 'string')
+          || String(chapter.hookText || '').length > 500) {
+          throw new errorResponse({ message: 'Invalid Story chapter', statusCode: 400 });
+        }
+        const existing = existingById.get(chapter.id);
+        return {
+          id: chapter.id,
+          hookText: typeof chapter.hookText === 'string' ? chapter.hookText.trim() : null,
+          emotion: existing?.emotion || null,
+          intensity: Number.isFinite(existing?.intensity) ? existing.intensity : null,
+        };
+      });
+    }
+
     if (data.backgroundMusicId !== undefined && data.backgroundMusicId !== null && user.role !== 'admin') {
       throw new errorResponse({
         message: 'Background music is temporarily unavailable while licensing is reviewed',
@@ -179,7 +261,7 @@ class GalaxyService {
       }
     }
 
-    return await GalaxyModel.findByIdAndUpdate(galaxyId, data, { new: true });
+    return await GalaxyModel.findByIdAndUpdate(galaxyId, data, { new: true, runValidators: true, context: 'query' });
   }
 }
 

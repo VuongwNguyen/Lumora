@@ -3,6 +3,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { FontLoader } from "three/examples/jsm/loaders/FontLoader.js";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
 const activity = window.LumoraActivity;
+const arrivalTransition = window.lumoraArrivalTransition;
+const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
 // ---- KHỞI TẠO SCENE, CAMERA, RENDERER ----
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x000000, 0.0015);
@@ -21,9 +23,20 @@ async function fetchGalaxyView() {
   }
 }
 
+async function fetchEmotionCatalog() {
+  try {
+    const response = await fetch('/media/story-emotions');
+    return response.ok ? (await response.json()).meta : null;
+  } catch { return null; }
+}
+
 async function main() {
   // Load galaxy settings before building the scene
-  const galaxyView = await fetchGalaxyView();
+  const [galaxyView, emotionCatalog] = await Promise.all([fetchGalaxyView(), fetchEmotionCatalog()]);
+  const galaxyId = new URLSearchParams(window.location.search).get('galaxyId');
+  const emotionEngine = window.LumoraStoryEmotion;
+  const allowedEmotions = emotionCatalog?.emotions?.map(emotion => emotion.id) || [];
+  const handoff = emotionEngine?.consumeExperienceHandoff(sessionStorage, galaxyId, Date.now(), allowedEmotions);
 
   // Apply captions → ringTexts
   if (galaxyView?.caption?.length) {
@@ -62,6 +75,89 @@ async function main() {
   controls.zoomSpeed = 0.3;
   controls.rotateSpeed = 0.3;
   controls.update();
+
+  let openingScheduler = null;
+  let openingRenderer = null;
+  const openingIntent = handoff || (galaxyView?.emotionConfig && emotionCatalog ? {
+    primaryEmotion: emotionEngine.resolvePrimaryEmotion(
+      galaxyView.emotionConfig,
+      emotionCatalog,
+      { storyType: galaxyView.storyType, occasion: galaxyView.occasion },
+    ),
+    intensity: galaxyView.emotionConfig.intensity,
+  } : null);
+
+  function createUniverseRenderer() {
+    const soundscape = emotionEngine.createSoundscapeRenderer(window.musicManager);
+    const frameIds = new Set();
+    const tween = (from, to, duration, update) => {
+      const startedAt = performance.now();
+      const frame = now => {
+        const progress = Math.min(1, (now - startedAt) / Math.max(1, duration));
+        const eased = 0.5 - Math.cos(Math.PI * progress) / 2;
+        update(from + (to - from) * eased);
+        if (progress < 1) {
+          const id = requestAnimationFrame(frame);
+          frameIds.add(id);
+        }
+      };
+      const id = requestAnimationFrame(frame);
+      frameIds.add(id);
+    };
+    return {
+      execute(action) {
+        if (action.type.startsWith('audio.')) return soundscape.execute(action);
+        const intensity = action.params.intensity || 0;
+        switch (action.type) {
+          case 'camera.pushIn': tween(camera.fov, 75 - intensity * 9, action.params.duration, value => { camera.fov = value; camera.updateProjectionMatrix(); }); break;
+          case 'camera.pullOut': tween(camera.fov, 75 + intensity * 8, action.params.duration, value => { camera.fov = value; camera.updateProjectionMatrix(); }); break;
+          case 'camera.orbit': controls.autoRotate = true; controls.autoRotateSpeed = 0.35 + intensity * 0.8; break;
+          case 'camera.drift': controls.autoRotate = true; controls.autoRotateSpeed = 0.2 + intensity * 0.45; break;
+          case 'camera.freeze': controls.autoRotate = false; break;
+          case 'environment.dim': tween(renderer.toneMappingExposure, 1 - intensity * 0.3, action.params.duration, value => { renderer.toneMappingExposure = value; }); break;
+          case 'environment.brighten': tween(renderer.toneMappingExposure, 1 + intensity * 0.24, action.params.duration, value => { renderer.toneMappingExposure = value; }); break;
+          case 'environment.freeze': controls.autoRotate = false; break;
+          case 'environment.breathe': controls.autoRotateSpeed = 0.25 + intensity * 0.35; break;
+          case 'wait': case 'hold': case 'pause': case 'silence': case 'delay': break;
+          default: break;
+        }
+      },
+      destroy() {
+        frameIds.forEach(id => cancelAnimationFrame(id));
+        frameIds.clear();
+        soundscape.destroy();
+      },
+    };
+  }
+
+  function playUniverseOpening() {
+    if (!openingIntent || !emotionCatalog || !emotionEngine || openingScheduler) return;
+    const timeline = emotionEngine.createUniverseOpeningTimeline({
+      catalog: emotionCatalog,
+      primaryEmotion: openingIntent.primaryEmotion,
+      intensity: openingIntent.intensity,
+      template: 'galaxy',
+    });
+    openingRenderer = createUniverseRenderer();
+    openingScheduler = new emotionEngine.TimelineScheduler(openingRenderer);
+    activity?.log({
+      action: handoff ? 'Viewer Emotion Handoff Applied' : 'Viewer Emotion Direction Applied', feature: 'viewer', galaxyId, status: 1,
+      description: {
+        template: 'galaxy', primaryEmotion: openingIntent.primaryEmotion, reducedMotion,
+        source: handoff ? 'handoff' : 'config', transition: handoff ? arrivalTransition?.payload?.type || 'direct' : null,
+      },
+    });
+    openingScheduler.play(emotionEngine.applyReducedMotion(timeline, reducedMotion)).finally(() => {
+      openingRenderer?.destroy();
+      openingRenderer = null;
+      openingScheduler = null;
+    });
+  }
+
+  window.addEventListener('pagehide', () => {
+    openingScheduler?.destroy();
+    openingRenderer?.destroy();
+  }, { once: true });
 
   // ---- HÀM TIỆN ÍCH TẠO HIỆU ỨNG GLOW ----
   function createGlowMaterial(color, size = 128, opacity = 0.55) {
@@ -1423,6 +1519,22 @@ async function main() {
       elem.msRequestFullscreen();
     }
   }
+
+  function startUniverse({ enterFullscreen = false } = {}) {
+    if (introStarted) return false;
+    if (enterFullscreen) requestFullScreen();
+    introStarted = true;
+    fadeInProgress = true;
+    document.body.classList.add("intro-started");
+    startCameraAnimation();
+    if (starField && starField.geometry) {
+      starField.geometry.setDrawRange(0, originalStarCount);
+    }
+    window.musicManager?.play?.().catch?.(() => {});
+    playUniverseOpening();
+    return true;
+  }
+
   function onCanvasClick(event) {
     if (introStarted) return;
 
@@ -1439,21 +1551,7 @@ async function main() {
         galaxyId: new URLSearchParams(location.search).get('galaxyId'),
         description: { template: 'galaxy' },
       });
-      requestFullScreen();
-      introStarted = true;
-      fadeInProgress = true;
-      document.body.classList.add("intro-started");
-      startCameraAnimation();
-
-      if (window.musicManager) {
-        window.musicManager.play().catch(() => {});
-      } else {
-        console.error("musicManager chưa được khởi tạo!");
-      }
-
-      if (starField && starField.geometry) {
-        starField.geometry.setDrawRange(0, originalStarCount);
-      }
+      startUniverse({ enterFullscreen: true });
     } else if (introStarted) {
       const heartIntersects = raycaster.intersectObjects(heartPointClouds);
       if (heartIntersects.length > 0) {
@@ -1484,7 +1582,14 @@ async function main() {
     }, 800);
   }
 
+  if (handoff) startUniverse();
   animate();
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'lumora:universe-ready', galaxyId, template: 'galaxy' }, location.origin);
+    }
+    arrivalTransition?.reveal({ duration: reducedMotion ? 180 : 1300 });
+  }));
 
   planet.name = "main-planet";
   centralGlow.name = "main-glow";
@@ -1562,4 +1667,7 @@ async function getHeartImages() {
   return heartImages;
 }
 
-main();
+main().catch((error) => {
+  arrivalTransition?.reveal({ duration: 180 });
+  console.error('[galaxy] initialization failed:', error);
+});

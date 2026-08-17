@@ -44,20 +44,85 @@
     #preview-photos {
       position: absolute; inset: 0; z-index: 1;
     }
-    .preview-photo-bg {
-      position: absolute; inset: 0;
-      opacity: 0; transition: opacity 1s ease;
+    .preview-memory-root {
+      position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease;
     }
-    .preview-photo-bg .ph-blur {
+    .preview-memory-blur {
       position: absolute; inset: -30px;
       background-size: cover; background-position: center;
-      filter: blur(24px) brightness(0.35);
+      filter: blur(24px) brightness(0.24) saturate(.72);
       transform: scale(1.08);
     }
-    .preview-photo-bg img {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: contain;
+    .preview-memory-camera { position:absolute; inset:0; }
+    .preview-memory-frame {
+      position:absolute; width:34%; aspect-ratio:4/5;
+      overflow:hidden; border:1px solid rgba(255,255,255,.16); border-radius:3px;
+      background:rgba(255,255,255,.05); box-shadow:0 16px 44px rgba(0,0,0,.55);
+      transform:rotate(var(--preview-rotate,0deg));
+    }
+    .preview-memory-frame img { width:100%; height:100%; display:block; object-fit:cover; }
+    .preview-scene-spotlight .preview-memory-frame:first-child {
+      width:min(44%, 540px); height:min(66%, 700px); left:50%; top:45%;
+      transform:translate(-50%,-50%) rotate(-.5deg);
+      border-color:rgba(255,255,255,.22); border-radius:10px;
+      background:rgba(3,3,9,.72); box-shadow:0 30px 90px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.035);
+    }
+    .preview-scene-spotlight .preview-memory-frame:first-child img { object-fit:contain; }
+    .preview-scene-constellation .preview-memory-frame:nth-child(1),
+    .preview-scene-crescendo .preview-memory-frame:nth-child(1) { left:2%; top:8%; --preview-rotate:-5deg; }
+    .preview-scene-constellation .preview-memory-frame:nth-child(2),
+    .preview-scene-crescendo .preview-memory-frame:nth-child(2) { right:2%; top:7%; --preview-rotate:5deg; }
+    .preview-scene-constellation .preview-memory-frame:nth-child(3) { left:34%; top:34%; z-index:3; }
+    .preview-scene-constellation .preview-memory-frame:nth-child(4) { right:3%; bottom:2%; --preview-rotate:5deg; }
+    .preview-scene-constellation .preview-memory-frame:nth-child(5) { left:4%; bottom:1%; --preview-rotate:-5deg; }
+    .preview-scene-crescendo .preview-memory-frame:nth-child(3) { width:52%; height:72%; left:50%; top:50%; transform:translate(-50%,-50%); z-index:4; }
+    .preview-scene-crescendo .preview-memory-frame:nth-child(4) { left:3%; bottom:1%; --preview-rotate:5deg; }
+    .preview-scene-crescendo .preview-memory-frame:nth-child(5) { right:3%; bottom:1%; --preview-rotate:-5deg; }
+    .preview-scene-horizon .preview-memory-frame { width:48%; left:50%; top:50%; transform:translate(-50%,-50%); }
+    .preview-scene-horizon .preview-memory-frame:nth-child(1) { transform:translate(-58%,-50%) rotate(-5deg); opacity:.52; }
+    .preview-scene-horizon .preview-memory-frame:last-child { transform:translate(-44%,-50%) rotate(4deg); z-index:3; }
+    .preview-scene-cascade .preview-memory-frame { width:38%; height:58%; top:21%; }
+    .preview-scene-cascade .preview-memory-frame:nth-child(1) { left:5%; --preview-rotate:-6deg; opacity:.52; }
+    .preview-scene-cascade .preview-memory-frame:nth-child(2) { left:20%; top:17%; --preview-rotate:-3deg; opacity:.72; z-index:2; }
+    .preview-scene-cascade .preview-memory-frame:nth-child(3) { left:36%; top:13%; z-index:4; }
+    .preview-scene-cascade .preview-memory-frame:nth-child(4) { right:11%; top:18%; --preview-rotate:3deg; opacity:.72; z-index:3; }
+    .preview-scene-cascade .preview-memory-frame:nth-child(5) { right:2%; top:23%; --preview-rotate:6deg; opacity:.5; }
+
+    /* Emotion scenes use count-aware geometry from the shared Director. */
+    .preview-scene-directed .preview-memory-camera::before {
+      content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+      opacity:.9;
+    }
+    .preview-scene-directed .preview-memory-frame {
+      width:var(--scene-w); height:var(--scene-h);
+      left:var(--scene-x); top:var(--scene-y);
+      right:auto; bottom:auto; opacity:var(--scene-opacity); z-index:var(--scene-z);
+      transform:translate(-50%,-50%) rotate(var(--scene-rotate));
+      border-radius:var(--scene-radius,5px);
+    }
+    .preview-scene-embrace { --scene-radius:12px; }
+    .preview-scene-embrace .preview-memory-camera::before {
+      background:radial-gradient(ellipse at 50% 48%,rgba(244,177,131,.24),transparent 48%),linear-gradient(90deg,rgba(20,9,9,.36),transparent 30% 70%,rgba(20,9,9,.36));
+    }
+    .preview-scene-duet { --scene-radius:10px; }
+    .preview-scene-duet .preview-memory-camera::before {
+      background:radial-gradient(circle at 29% 50%,rgba(240,154,192,.18),transparent 30%),radial-gradient(circle at 71% 50%,rgba(240,154,192,.18),transparent 30%),linear-gradient(90deg,transparent 49.7%,rgba(255,255,255,.07) 50%,transparent 50.3%);
+    }
+    .preview-scene-archive { --scene-radius:3px; }
+    .preview-scene-archive .preview-memory-camera::before {
+      background:repeating-linear-gradient(90deg,rgba(196,167,231,.035) 0 1px,transparent 1px 12%),linear-gradient(180deg,rgba(37,25,44,.12),rgba(10,7,15,.42));
+    }
+    .preview-scene-stillness .preview-memory-camera::before {
+      background:radial-gradient(ellipse at 50% 48%,rgba(143,164,202,.13),transparent 34%),linear-gradient(90deg,rgba(1,4,12,.56),transparent 38% 62%,rgba(1,4,12,.56));
+    }
+    .preview-scene-stillness .preview-memory-frame:not(:first-child) { filter:saturate(.55); }
+    .preview-scene-orbit { --scene-radius:9px; }
+    .preview-scene-orbit .preview-memory-camera::before {
+      background:radial-gradient(circle at 50% 48%,transparent 0 23%,rgba(121,217,242,.11) 23.3% 23.8%,transparent 24.2% 39%,rgba(121,217,242,.06) 39.3% 39.7%,transparent 40%);
+    }
+    .preview-scene-ascent { --scene-radius:7px; }
+    .preview-scene-ascent .preview-memory-camera::before {
+      background:linear-gradient(155deg,rgba(4,12,12,.36) 8%,transparent 45%,rgba(143,227,189,.16) 82%,rgba(218,247,229,.12)),linear-gradient(0deg,rgba(143,227,189,.1),transparent 58%);
     }
 
     /* Bottom text overlay — mirrors SE viewer */
@@ -108,7 +173,14 @@
     }
     /* Hide center overlay when photo is shown */
     #preview-pane.has-photo #se-center { opacity: 0; }
-    #preview-pane.has-photo #se-bottom { opacity: 1; }
+    #preview-pane.has-photo #se-bottom {
+      top:auto; bottom:clamp(22px,4.5vh,52px); left:50%; right:auto;
+      width:min(calc(100% - 48px),720px); padding:17px 20px 18px;
+      transform:translateX(-50%); text-align:left; opacity:1;
+      border:1px solid rgba(255,255,255,.105); border-radius:16px;
+      background:linear-gradient(145deg,rgba(5,5,13,.82),rgba(11,8,24,.68));
+      box-shadow:0 18px 60px rgba(0,0,0,.38); backdrop-filter:blur(18px);
+    }
     #preview-label {
       font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
       color: rgba(255,255,255,0.25); font-family: 'Jost', sans-serif;
@@ -163,6 +235,11 @@
     }
     #story-panel.collapsed { width: 0; border-color: transparent; }
 
+    .panel-header { order:0; }
+    .story-mobile-tabs { display:none; order:1; }
+    .chat-wrap { order:2; }
+    .emotion-director { order:3; }
+
     /* Panel header */
     .panel-header {
       padding: 18px 20px 14px;
@@ -212,6 +289,68 @@
       padding: 20px 16px 32px;
       display: flex; flex-direction: column;
     }
+    .emotion-director {
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,.065);
+      background: linear-gradient(145deg, rgba(139,92,246,.07), rgba(255,255,255,.012));
+    }
+    .emotion-director summary {
+      min-height: 43px;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: rgba(237,233,248,.74);
+      cursor: pointer;
+      list-style: none;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .emotion-director summary::-webkit-details-marker { display: none; }
+    .emotion-director summary::after { content: '⌄'; color: var(--accent-light); transition: transform .2s ease; }
+    .emotion-director[open] summary::after { transform: rotate(180deg); }
+    .emotion-director summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+    .emotion-director-body { padding: 0 22px 16px; }
+    .emotion-director-copy { margin-bottom: 11px; color: rgba(255,255,255,.38); font-size: 10px; line-height: 1.5; }
+    .emotion-auto {
+      width: 100%; min-height: 42px; padding: 9px 11px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      border: 1px solid rgba(167,139,250,.16); border-radius: 11px;
+      background: rgba(139,92,246,.045); color: rgba(237,233,248,.7);
+      font: 500 11px 'Jost',sans-serif; text-align: left; cursor: pointer;
+    }
+    .emotion-auto span:last-child { color: rgba(196,181,253,.42); font-size: 9px; font-weight: 400; }
+    .emotion-auto[aria-pressed="true"] { border-color: rgba(167,139,250,.55); background: rgba(139,92,246,.18); color: #fff; }
+    .emotion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .emotion-card {
+      min-width: 0; min-height: 54px; padding: 9px 10px;
+      border: 1px solid rgba(255,255,255,.07); border-radius: 11px;
+      background: rgba(255,255,255,.018); color: rgba(237,233,248,.66);
+      font: 500 10px 'Jost',sans-serif; text-align: left; cursor: pointer;
+    }
+    .emotion-card small { display: block; margin-top: 3px; overflow: hidden; color: rgba(255,255,255,.3); font-size: 8px; font-weight: 300; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .emotion-card:hover, .emotion-card:focus-visible { outline: none; border-color: color-mix(in srgb, var(--emotion-accent, #8b5cf6) 58%, transparent); color: #fff; }
+    .emotion-card[aria-pressed="true"] { border-color: var(--emotion-accent, #8b5cf6); background: color-mix(in srgb, var(--emotion-accent, #8b5cf6) 14%, transparent); color: #fff; }
+    .emotion-intensity { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; margin-top: 13px; color: rgba(255,255,255,.46); font-size: 10px; }
+    .emotion-intensity output { color: var(--accent-light); font-variant-numeric: tabular-nums; }
+    .emotion-intensity input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+    .emotion-actions { display: flex; align-items: center; gap: 9px; margin-top: 12px; }
+    .emotion-preview {
+      min-height: 34px; padding: 7px 11px; border: 1px solid rgba(167,139,250,.28); border-radius: 9px;
+      background: rgba(139,92,246,.1); color: var(--accent-light); font: 500 10px 'Jost',sans-serif; cursor: pointer;
+    }
+    .emotion-preview:disabled { opacity: .45; cursor: wait; }
+    .emotion-preview[hidden] { display:none; }
+    .emotion-finish {
+      min-height:34px; margin-left:auto; padding:7px 12px; border:1px solid rgba(167,139,250,.42); border-radius:9px;
+      background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; font:500 10px 'Jost',sans-serif; cursor:pointer;
+      box-shadow:0 8px 20px rgba(109,40,217,.2);
+    }
+    .emotion-finish:disabled { opacity:.48; cursor:wait; }
+    .emotion-status { min-width: 0; color: rgba(255,255,255,.35); font-size: 9px; line-height: 1.35; }
+    .emotion-status.error { color: #fca5a5; }
     .chat-wrap::-webkit-scrollbar { width: 3px; }
     .chat-wrap::-webkit-scrollbar-thumb { background: var(--accent-border); border-radius: 2px; }
 
@@ -348,7 +487,7 @@
 
     /* ── Lumora Story workspace redesign ── */
     :root {
-      --panel-w: 430px;
+      --panel-w: 460px;
       --story-surface: rgba(8,7,18,.965);
     }
     body { background: #020207; }
@@ -482,6 +621,14 @@
       padding: 22px 22px 40px;
       scrollbar-color: rgba(139,92,246,.3) transparent;
     }
+    .emotion-director-copy { font-size:11px; }
+    .emotion-auto { min-height:44px; font-size:12px; }
+    .emotion-auto span:last-child { font-size:10px; }
+    .emotion-card { min-height:66px; padding:10px 11px; font-size:11px; }
+    .emotion-card small {
+      display:-webkit-box; margin-top:4px; overflow:hidden; font-size:9px; line-height:1.42;
+      text-overflow:clip; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+    }
     .chat-intro {
       margin: 0 0 22px;
       padding: 15px 16px;
@@ -578,13 +725,13 @@
       :root { --panel-w: 390px; }
       .story-preview-brand span:last-child { display: none; }
     }
-    @media (max-width: 640px) {
+    @media (max-width: 640px), (orientation: landscape) and (max-height: 560px) and (max-width: 900px) {
       html, body { height: 100%; height: 100dvh; }
-      #preview-pane { height: 34dvh; min-height: 190px; flex: none; }
+      #preview-pane { height: 41dvh; min-height: 230px; flex: none; }
       #preview-pane::after { background: linear-gradient(180deg,transparent 65%,rgba(0,0,0,.25)); }
       #story-panel {
         width: 100%;
-        height: 66dvh;
+        height: 59dvh;
         min-height: 0;
         border-left: 0;
         border-top-color: rgba(196,181,253,.13);
@@ -595,21 +742,83 @@
       #panel-toggle { display: none; }
       .story-preview-bar { top: 14px; left: 14px; }
       .story-preview-brand, .story-preview-step { min-height: 30px; padding: 6px 9px; font-size: 8px; }
+      .preview-scene-spotlight .preview-memory-frame:first-child {
+        width:min(64%, 270px); height:72%; top:47%; border-radius:8px;
+        box-shadow:0 18px 46px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.035);
+      }
       #se-center { padding: 58px 20px 24px; }
       #preview-name { font-size: 34px; }
       #preview-occasion { margin-bottom: 25px; }
       #se-bottom { padding: 70px 20px 22px; }
-      #se-bottom-hook { font-size: 16px; }
-      .panel-header { padding: 15px 18px 14px; }
-      .story-panel-nav { margin-bottom: 11px; }
-      #galaxy-name, #galaxy-name-input { font-size: 23px; }
-      .chat-wrap { padding: 18px 16px 32px; }
+      #preview-pane.has-photo #se-bottom {
+        bottom:10px; width:calc(100% - 24px); padding:10px 12px 11px;
+        border-radius:12px; background:rgba(5,5,13,.76); backdrop-filter:blur(14px);
+      }
+      #se-bottom-label { margin-bottom:4px; font-size:8px; letter-spacing:.17em; }
+      #se-bottom-hook {
+        display:-webkit-box; overflow:hidden; font-size:13px; line-height:1.4;
+        -webkit-box-orient:vertical; -webkit-line-clamp:2;
+      }
+      .panel-header { padding:11px 16px 10px; }
+      .story-panel-nav { margin-bottom:7px; }
+      .story-mode-badge { min-height:25px; padding:4px 7px; font-size:8px; }
+      .header-eyebrow { display:none; }
+      #galaxy-name, #galaxy-name-input { font-size:20px; }
+      #galaxy-name-status { margin-top:3px; min-height:0; }
+      .story-mobile-tabs {
+        display:grid; grid-template-columns:1fr 1fr; gap:4px; flex-shrink:0;
+        margin:10px 14px 8px; padding:4px; border:1px solid rgba(255,255,255,.065);
+        border-radius:12px; background:rgba(255,255,255,.025);
+      }
+      .story-mobile-tab {
+        min-height:39px; padding:8px 10px; border:0; border-radius:9px;
+        color:rgba(237,233,248,.44); background:transparent;
+        font:500 11px 'Jost',sans-serif; cursor:pointer;
+      }
+      .story-mobile-tab[aria-selected="true"] {
+        color:#fff; background:linear-gradient(145deg,rgba(139,92,246,.28),rgba(91,33,182,.18));
+        box-shadow:inset 0 0 0 1px rgba(167,139,250,.2);
+      }
+      .story-mobile-tab:disabled { opacity:.35; cursor:not-allowed; }
+      .story-mobile-tab:focus-visible { outline:2px solid var(--accent-light); outline-offset:2px; }
+      #story-panel[data-mobile-section="emotion"] .chat-wrap { display:none; }
+      #story-panel[data-mobile-section="story"] .emotion-director { display:none; }
+      .chat-wrap { padding:12px 14px max(28px, env(safe-area-inset-bottom)); }
+      .emotion-director { flex:1; min-height:0; overflow-y:auto; border-bottom:0; }
+      .emotion-director { scrollbar-color:rgba(139,92,246,.3) transparent; scrollbar-width:thin; }
+      .emotion-director::-webkit-scrollbar { width:3px; }
+      .emotion-director::-webkit-scrollbar-thumb { background:var(--accent-border); border-radius:2px; }
+      .emotion-director summary { display:none; }
+      .emotion-director-body { padding:8px 16px max(22px, env(safe-area-inset-bottom)); }
+      .emotion-director-copy { margin-bottom:9px; font-size:10px; }
+      .emotion-auto { min-height:43px; }
+      .emotion-card { min-height:66px; padding:10px 11px; font-size:11px; }
+      .emotion-card small {
+        display:-webkit-box; margin-top:4px; overflow:hidden; font-size:9px; line-height:1.4;
+        text-overflow:clip; white-space:normal; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+      }
+      .emotion-intensity { margin-top:14px; font-size:11px; }
+      .emotion-preview { min-height:40px; padding-inline:14px; font-size:11px; }
+      .emotion-finish { min-height:40px; padding-inline:15px; font-size:11px; }
       .chat-intro { margin-bottom: 18px; }
       .chips-wrap, .ch-card, .action-row, .btn-yesno { margin-left: 38px; }
     }
     @media (max-width: 390px) {
       .chips-wrap, .ch-card, .action-row, .btn-yesno { margin-left: 0; }
       .ch-card { width: 100%; }
+    }
+    @media (max-width: 640px) and (max-height: 700px) {
+      #preview-pane { height:37dvh; min-height:190px; }
+      #story-panel { height:63dvh; }
+      .panel-header { padding-block:8px; }
+      .story-panel-nav { margin-bottom:4px; }
+      .story-mobile-tabs { margin-block:7px 6px; }
+    }
+    @media (orientation: landscape) and (max-height: 560px) {
+      body { flex-direction:row; }
+      #preview-pane { height:100dvh; min-height:0; flex:1; }
+      #story-panel { width:min(46vw,390px); height:100dvh; border-top:0; border-left:1px solid rgba(196,181,253,.13); border-radius:0; }
+      .preview-scene-spotlight .preview-memory-frame:first-child { width:52%; height:68%; }
     }
     @media (prefers-reduced-motion: reduce) {
       #story-panel, .preview-photo-bg, .se-star, .se-pulse { transition: none; animation: none; }
@@ -642,7 +851,7 @@
   </div>
 
   <!-- Chat Panel -->
-  <div id="story-panel">
+  <div id="story-panel" data-mobile-section="story">
     <div class="panel-header">
       <div class="story-panel-nav">
         <a id="back-link" href="/portal/" class="back-btn" data-track-action="Story Back Click" data-track-id="story_back"><span aria-hidden="true">←</span> <span data-i18n="storySetupBack">Thiết lập vũ trụ</span></a>
@@ -655,6 +864,29 @@
       <input id="galaxy-name-input" type="text" aria-label="Tên vũ trụ" data-i18n-label="setupNameLabel" autocomplete="off" hidden />
       <div id="galaxy-name-status" role="status" aria-live="polite"></div>
     </div>
+    <div class="story-mobile-tabs" role="tablist" aria-label="Các bước thiết lập Story" data-i18n-label="storyMobileStepsLabel">
+      <button id="story-mobile-story-tab" class="story-mobile-tab" type="button" role="tab" aria-selected="true" aria-controls="chat" data-mobile-section="story" data-i18n="storyMobileStoryTab" data-track-action="Story Mobile Section Select" data-track-id="story_mobile_story">Câu chuyện</button>
+      <button id="story-mobile-emotion-tab" class="story-mobile-tab" type="button" role="tab" aria-selected="false" aria-controls="emotion-director" aria-disabled="true" disabled data-mobile-section="emotion" data-i18n="storyMobileEmotionTab" data-track-action="Story Mobile Section Select" data-track-id="story_mobile_emotion">Cảm xúc</button>
+    </div>
+    <details id="emotion-director" class="emotion-director" hidden>
+      <summary><span data-i18n="storyEmotionHeading">Cảm xúc người xem</span></summary>
+      <div class="emotion-director-body">
+        <p class="emotion-director-copy" data-i18n="storyEmotionCopy">Bạn chọn cảm giác. Lumora tự đạo diễn nhịp kể, hình ảnh và âm thanh.</p>
+        <button id="emotion-auto" class="emotion-auto" type="button" aria-pressed="true">
+          <span data-i18n="storyEmotionAuto">Tự động đạo diễn</span><span data-i18n="storyEmotionAutoHint">Theo câu chuyện</span>
+        </button>
+        <div id="emotion-grid" class="emotion-grid" role="group" aria-label="Cảm xúc chính" data-i18n-label="storyEmotionGroupLabel"></div>
+        <label class="emotion-intensity" for="emotion-intensity">
+          <span data-i18n="storyEmotionIntensity">Độ sâu cảm xúc</span><output id="emotion-intensity-value">65%</output>
+          <input id="emotion-intensity" type="range" min="0" max="100" step="5" value="65" />
+        </label>
+        <div class="emotion-actions">
+          <button id="emotion-preview" class="emotion-preview" type="button" data-track-action="Story Emotion Preview Stop" data-track-id="story_emotion_preview_stop" data-i18n="storyEmotionPreview" hidden>Cảm thử</button>
+          <div id="emotion-status" class="emotion-status" role="status" aria-live="polite"></div>
+          <button id="emotion-finish" class="emotion-finish" type="button" data-track-action="Story Emotion Complete" data-track-id="story_emotion_complete" data-i18n="storyEmotionFinish">Hoàn tất ✓</button>
+        </div>
+      </div>
+    </details>
     <div class="chat-wrap" id="chat">
       <div class="chat-intro" data-i18n="storySetupIntro">Lumora sẽ dẫn bạn qua từng bước để biến những bức ảnh thành một câu chuyện có cảm xúc.</div>
     </div>
@@ -694,127 +926,83 @@
       pane.appendChild(s);
     }
 
-    // ── Firefly effect ─────────────────────────────────────
-    const canvas = document.getElementById('se-canvas');
-    canvas.width  = pane.offsetWidth;
-    canvas.height = pane.offsetHeight;
-    new ResizeObserver(() => {
-      canvas.width  = pane.offsetWidth;
-      canvas.height = pane.offsetHeight;
-    }).observe(pane);
-
-    (function runFirefly() {
-      const ctx = canvas.getContext('2d');
-      const N = 18;
-      let flies = [];
-      function init() {
-        const W = canvas.width, H = canvas.height;
-        flies = Array.from({ length: N }, () => ({
-          x: Math.random() * W, y: Math.random() * H,
-          r: Math.random() * 3.5 + 2,
-          vx: (Math.random() - 0.5) * 0.28,
-          vy: (Math.random() - 0.5) * 0.28,
-          phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.012 + 0.006,
-          warm: Math.random() < 0.5,
-        }));
-      }
-      init();
-      function draw() {
-        const W = canvas.width, H = canvas.height;
-        ctx.clearRect(0, 0, W, H);
-        const t = Date.now();
-        flies.forEach(f => {
-          f.x += f.vx + Math.sin(t * 0.0007 + f.phase) * 0.38;
-          f.y += f.vy + Math.cos(t * 0.0008 + f.phase) * 0.32;
-          if (f.x < -30) f.x = W + 30;
-          if (f.x > W+30) f.x = -30;
-          if (f.y < -30) f.y = H + 30;
-          if (f.y > H+30) f.y = -30;
-          const pulse = 0.45 + 0.55 * Math.sin(t * f.speed * 1000 + f.phase);
-          const col = f.warm ? '255,210,110' : '190,150,255';
-          const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 3.8);
-          grad.addColorStop(0,   `rgba(${col},${(pulse * 0.85).toFixed(2)})`);
-          grad.addColorStop(0.4, `rgba(${col},${(pulse * 0.28).toFixed(2)})`);
-          grad.addColorStop(1,   `rgba(${col},0)`);
-          ctx.beginPath();
-          ctx.arc(f.x, f.y, f.r * 3.8, 0, Math.PI * 2);
-          ctx.fillStyle = grad;
-          ctx.fill();
-        });
-        requestAnimationFrame(draw);
-      }
-      draw();
-    })();
-
     // ── Preview text update (called from story-setup.js) ───
     window.updateSEPreview = function(type, occasion, galaxyName) {
       if (galaxyName) document.getElementById('preview-name').textContent = galaxyName;
       if (occasion)   document.getElementById('preview-occasion').textContent = occasion.toUpperCase();
     };
 
-    // ── Photo preview: 1 ảnh duy nhất, cross-fade khi đổi chapter ──
+    // ── Memory Scene preview: one chapter is one spatial composition ──
 
-    function showSinglePhoto(url) {
+    function showMemoryScene(urls, direction = {}) {
       const pane   = document.getElementById('preview-pane');
       const wrap   = document.getElementById('preview-photos');
       const center = document.getElementById('se-center');
 
-      if (!url) {
+      if (!urls.length) {
         pane.classList.remove('has-photo');
         center.style.removeProperty('opacity'); // let CSS take over
         [...wrap.children].forEach(c => { c.style.opacity = '0'; setTimeout(() => c.remove(), 1000); });
         return;
       }
 
-      const div = document.createElement('div');
-      div.style.cssText = 'position:absolute;inset:0;opacity:0;transition:opacity 1s ease;';
+      const role = direction.role || (urls.length >= 4 ? 'climax' : (urls.length === 1 ? 'intro' : 'memory'));
+      const composition = direction.composition || window.LumoraStoryEmotion?.resolveSceneComposition(role, urls.length)
+        || (urls.length >= 4 ? 'crescendo' : (urls.length === 1 ? 'spotlight' : 'constellation'));
+      const sceneUrls = urls.slice(0, 5);
+      const frameLayout = window.LumoraStoryEmotion?.resolveSceneFrameLayout(composition, sceneUrls.length) || [];
+      const scene = document.createElement('div');
+      scene.className = `preview-memory-root preview-scene-${composition}${frameLayout.length ? ' preview-scene-directed' : ''}`;
       const blur = document.createElement('div');
-      blur.style.cssText = 'position:absolute;inset:-30px;background-size:cover;background-position:center;filter:blur(24px) brightness(0.35);transform:scale(1.08);';
-      blur.style.backgroundImage = `url(${url})`;
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = '';
-      img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
-      div.appendChild(blur);
-      div.appendChild(img);
-      wrap.appendChild(div);
+      blur.className = 'preview-memory-blur';
+      blur.style.backgroundImage = `url(${JSON.stringify(urls[Math.min(2, urls.length - 1)])})`;
+      const camera = document.createElement('div');
+      camera.className = 'preview-memory-camera';
+      sceneUrls.forEach((url, index) => {
+        const frame = document.createElement('div');
+        frame.className = 'preview-memory-frame';
+        const frameDirection = frameLayout[index];
+        if (frameDirection) {
+          frame.style.setProperty('--scene-x', `${frameDirection.x}%`);
+          frame.style.setProperty('--scene-y', `${frameDirection.y}%`);
+          frame.style.setProperty('--scene-w', `${frameDirection.width}%`);
+          frame.style.setProperty('--scene-h', `${frameDirection.height}%`);
+          frame.style.setProperty('--scene-rotate', `${frameDirection.rotate}deg`);
+          frame.style.setProperty('--scene-opacity', frameDirection.opacity);
+          frame.style.setProperty('--scene-z', frameDirection.z);
+        }
+        const image = document.createElement('img');
+        image.src = url;
+        image.alt = '';
+        frame.appendChild(image);
+        camera.appendChild(frame);
+      });
+      scene.append(blur, camera);
+      wrap.appendChild(scene);
 
       pane.classList.add('has-photo');
       center.style.removeProperty('opacity'); // CSS class handles hiding
 
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        div.style.opacity = '0.9';
+        scene.style.opacity = '0.94';
         [...wrap.children].forEach(c => {
-          if (c === div) return;
+          if (c === scene) return;
           c.style.opacity = '0';
           setTimeout(() => c.remove(), 1100);
         });
       }));
     }
 
-    // Slideshow only when chapter has multiple photos
-    let _slideTimer = null;
     let _previewGen = 0; // generation counter — cancels stale async calls
 
-    function startChapterPreview(urls) {
-      clearInterval(_slideTimer);
-      _slideTimer = null;
-      if (!urls.length) { showSinglePhoto(null); return; }
-      showSinglePhoto(urls[0]);
-      if (urls.length > 1) {
-        let idx = 0;
-        _slideTimer = setInterval(() => {
-          idx = (idx + 1) % urls.length;
-          showSinglePhoto(urls[idx]);
-        }, 3500);
-      }
+    function startChapterPreview(urls, direction) {
+      showMemoryScene(urls, direction);
     }
 
     // From server URLs (sync — always wins over any in-flight async)
-    window.setPreviewPhotoUrls = urls => {
+    window.setPreviewPhotoUrls = (urls, direction) => {
       _previewGen++; // invalidate any in-flight setPreviewPhotos call
-      startChapterPreview(urls || []);
+      startChapterPreview(urls || [], direction);
     };
 
     // From file select — use FileReader (data: URLs pass CSP; blob: URLs do not)
@@ -838,11 +1026,37 @@
       this.setAttribute('aria-label', collapsed ? t.storySetupPanelShow : t.storySetupPanelHide);
       this.title = collapsed ? t.storySetupPanelShow : t.storySetupPanelHide;
     };
+
+    // Mobile is a guided two-step workspace instead of a compressed desktop editor.
+    const storyPanel = document.getElementById('story-panel');
+    const mobileStoryTabs = [...document.querySelectorAll('.story-mobile-tab')];
+    function setMobileStorySection(section, moveFocus) {
+      storyPanel.dataset.mobileSection = section;
+      mobileStoryTabs.forEach(tab => {
+        const selected = tab.dataset.mobileSection === section;
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        if (selected && moveFocus) tab.focus();
+      });
+      if (section === 'story') requestAnimationFrame(() => document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight);
+    }
+    mobileStoryTabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => setMobileStorySection(tab.dataset.mobileSection, false));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        const next = mobileStoryTabs[(index + direction + mobileStoryTabs.length) % mobileStoryTabs.length];
+        setMobileStorySection(next.dataset.mobileSection, true);
+      });
+    });
+    setMobileStorySection('story', false);
   </script>
   <script src="/shared/js/activityApi.js"></script>
   <script src="/shared/js/activityLogger.js"></script>
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
-  <script type="module" src="./js/story-setup.js"></script>
+  <script src="/shared/js/storyEmotionEngine.js?v=20260816-scene-grammar1"></script>
+  <script type="module" src="./js/story-setup.js?v=20260816-emotion-autoplay1"></script>
 </body>
 </html>

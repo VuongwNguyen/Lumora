@@ -1,3 +1,5 @@
+import { createEffect } from '../../story/js/effects.js';
+
 const params   = new URLSearchParams(location.search);
 const galaxyId = params.get('galaxyId');
 const token    = localStorage.getItem('token');
@@ -35,8 +37,21 @@ if (!galaxyId) window.location.href = '/portal/';
 const chat = document.getElementById('chat');
 
 let STORY_CONFIG = null;
+let EMOTION_CATALOG = null;
 let selectedStoryType = null;
 let selectedOccasion = null;
+let emotionConfigState = null;
+let emotionConfigPersisted = false;
+let emotionPreviewScheduler = null;
+let emotionPreviewEffect = null;
+let emotionPreviewEffectName = null;
+let emotionPreviewRunId = 0;
+let emotionPreviewInProgress = false;
+let emotionStepAvailable = false;
+let emotionFinishDestination = null;
+let emotionFinishInProgress = false;
+let currentPreviewChapterId = null;
+let sceneRefreshGeneration = 0;
 const chapterFiles = {};
 const chapterHooks = {};
 
@@ -143,6 +158,478 @@ function appendErrMsg(text) {
 }
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function emotionLabel(emotion) {
+  return isVietnamese ? emotion.labelVi : emotion.labelEn;
+}
+
+function emotionDescription(emotion) {
+  return isVietnamese ? emotion.descriptionVi : emotion.descriptionEn;
+}
+
+function activeEmotion() {
+  const id = window.LumoraStoryEmotion?.resolvePrimaryEmotion(
+    emotionConfigState,
+    EMOTION_CATALOG,
+    { storyType: selectedStoryType, occasion: selectedOccasion },
+  );
+  return EMOTION_CATALOG?.emotions?.find(emotion => emotion.id === id) || null;
+}
+
+function applyEmotionMood() {
+  const emotion = activeEmotion();
+  const pane = document.getElementById('preview-pane');
+  if (!emotion || !pane) return;
+  pane.style.setProperty('--emotion-accent', emotion.accent);
+  pane.style.boxShadow = `inset 0 0 120px color-mix(in srgb, ${emotion.accent} 14%, transparent)`;
+  if (emotionPreviewEffectName !== emotion.effect) {
+    emotionPreviewEffect?.destroy();
+    emotionPreviewEffect = createEffect(emotion.effect, document.getElementById('se-canvas'), {
+      intensity: emotionConfigState.intensity,
+      reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false,
+    });
+    emotionPreviewEffectName = emotion.effect;
+    emotionPreviewEffect.start();
+  } else {
+    emotionPreviewEffect?.setIntensity(emotionConfigState.intensity);
+  }
+}
+
+function updateEmotionControls() {
+  const autoButton = document.getElementById('emotion-auto');
+  const intensity = document.getElementById('emotion-intensity');
+  const output = document.getElementById('emotion-intensity-value');
+  if (!autoButton || !emotionConfigState) return;
+  autoButton.setAttribute('aria-pressed', String(emotionConfigState.mode === 'auto' && !emotionConfigState.primaryEmotion));
+  document.querySelectorAll('.emotion-card').forEach(card => {
+    card.setAttribute('aria-pressed', String(
+      emotionConfigState.primaryEmotion === card.dataset.emotion,
+    ));
+  });
+  const percent = Math.round(emotionConfigState.intensity * 100);
+  intensity.value = String(percent);
+  output.textContent = `${percent}%`;
+  applyEmotionMood();
+}
+
+let emotionSaveGeneration = 0;
+async function persistEmotionConfig() {
+  if (!emotionConfigState) return false;
+  const generation = ++emotionSaveGeneration;
+  const status = document.getElementById('emotion-status');
+  status.textContent = tr('setupSaving');
+  status.classList.remove('error');
+  try {
+    const response = await fetch(`/galaxies/${galaxyId}/emotion`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(emotionConfigState),
+    });
+    if (!response.ok) throw new Error(`Emotion save failed: ${response.status}`);
+    const body = await response.json();
+    if (generation === emotionSaveGeneration) {
+      emotionConfigState = body.meta;
+      emotionConfigPersisted = true;
+      status.textContent = tr('storyEmotionSaved');
+      updateEmotionControls();
+    }
+    return true;
+  } catch (error) {
+    if (generation === emotionSaveGeneration) {
+      emotionConfigPersisted = false;
+      status.textContent = tr('storyEmotionSaveFailed');
+      status.classList.add('error');
+    }
+    storyResult('Story Emotion Save Result', false, {
+      mode: emotionConfigState.mode,
+      primaryEmotion: emotionConfigState.primaryEmotion,
+      intensity: emotionConfigState.intensity,
+      errorType: 'story_emotion_save_fail',
+    }, error);
+    throw error;
+  }
+}
+
+function resetEmotionPreviewVisuals() {
+  const pane = document.getElementById('preview-pane');
+  const photos = document.getElementById('preview-photos');
+  const bottom = document.getElementById('se-bottom');
+  const canvas = document.getElementById('se-canvas');
+  photos.style.opacity = '';
+  bottom.style.opacity = '';
+  pane.style.filter = '';
+  emotionPreviewEffect?.setIntensity(emotionConfigState?.intensity ?? 0.65);
+  photos.querySelectorAll('img').forEach(image => {
+    image.style.transition = '';
+    image.style.transform = '';
+    image.style.filter = '';
+  });
+  photos.querySelectorAll('.preview-memory-camera').forEach(camera => {
+    camera.getAnimations?.().forEach(animation => animation.cancel());
+    camera.style.transform = '';
+  });
+}
+
+function createEmotionPreviewRenderer() {
+  const pane = document.getElementById('preview-pane');
+  const photos = document.getElementById('preview-photos');
+  const bottom = document.getElementById('se-bottom');
+  const images = () => photos.querySelectorAll('img');
+  const cameras = () => photos.querySelectorAll('.preview-memory-camera');
+  const duration = action => `${action.params.duration || 0}ms`;
+  const moveCamera = (from, to, action) => cameras().forEach(camera => {
+    if (typeof camera.animate === 'function') {
+      camera.animate([{ transform: from }, { transform: to }], {
+        duration: Math.max(250, action.params.duration || 1000),
+        easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards',
+      });
+    } else {
+      camera.style.transition = `transform ${duration(action)} ease`;
+      camera.style.transform = to;
+    }
+  });
+  return {
+    execute(action) {
+      if (action.type.startsWith('audio.') || ['wait', 'hold', 'pause', 'silence', 'delay'].includes(action.type)) return;
+      switch (action.type) {
+        case 'image.fadeIn': photos.style.transition = `opacity ${duration(action)} ease`; photos.style.opacity = '1'; break;
+        case 'image.fadeOut': photos.style.transition = `opacity ${duration(action)} ease`; photos.style.opacity = '0'; break;
+        case 'image.desaturate': images().forEach(image => { image.style.transition = `filter ${duration(action)} ease`; image.style.filter = `grayscale(${action.params.intensity})`; }); break;
+        case 'text.reveal': bottom.style.transition = `opacity ${duration(action)} ease`; bottom.style.opacity = '1'; break;
+        case 'text.fade':
+        case 'text.disappear': bottom.style.transition = `opacity ${duration(action)} ease`; bottom.style.opacity = '0'; break;
+        case 'camera.pushIn': moveCamera('scale(1)', `scale(${1.04 + action.params.intensity * 0.12})`, action); break;
+        case 'camera.pullOut': moveCamera(`scale(${1.1 + action.params.intensity * 0.08})`, 'scale(1.01)', action); break;
+        case 'camera.drift': moveCamera(`scale(1.06) translateX(${-2 - action.params.intensity * 2}%)`, `scale(1.06) translateX(${2 + action.params.intensity * 2}%)`, action); break;
+        case 'camera.freeze': break;
+        case 'effect.intensity': emotionPreviewEffect?.setIntensity(action.params.intensity); break;
+        case 'effect.start': emotionPreviewEffect?.start(); break;
+        case 'effect.stop': emotionPreviewEffect?.stop(); break;
+        case 'effect.fadeIn': emotionPreviewEffect?.fadeIn(action.params.duration); break;
+        case 'effect.fadeOut': emotionPreviewEffect?.fadeOut(action.params.duration); break;
+        case 'environment.dim': pane.style.transition = `filter ${duration(action)} ease`; pane.style.filter = `brightness(${1 - action.params.intensity * 0.35})`; break;
+        case 'environment.brighten': pane.style.transition = `filter ${duration(action)} ease`; pane.style.filter = `brightness(${1 + action.params.intensity * 0.22})`; break;
+        default: break;
+      }
+    },
+  };
+}
+
+function chapterPreviewHook(chapter) {
+  return chapterHooks[chapter.id]
+    || window._dbChapterHooks?.[chapter.id]
+    || chapterPrompt(chapter);
+}
+
+function updateChapterPreviewCopy(chapter, chapterIdx, totalChapters) {
+  const occasionCfg = STORY_CONFIG?.[selectedStoryType]?.occasions?.[selectedOccasion];
+  const labelEl = document.getElementById('se-bottom-label');
+  const hookEl = document.getElementById('se-bottom-hook');
+  if (labelEl) {
+    const num = String(chapterIdx + 1).padStart(2, '0');
+    const total = String(totalChapters).padStart(2, '0');
+    labelEl.textContent = [occasionLabel(selectedOccasion, occasionCfg).toUpperCase(), `${num} / ${total}`].filter(Boolean).join(' · ');
+  }
+  if (hookEl) hookEl.textContent = chapterPreviewHook(chapter) || '';
+}
+
+function previewFileAsDataUrl(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = event => resolve(event.target.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function getDirectedPreviewChapters() {
+  const configured = STORY_CONFIG?.[selectedStoryType]?.occasions?.[selectedOccasion]?.chapters || [];
+  const chapters = await Promise.all(configured.map(async chapter => {
+    const localFiles = chapterFiles[chapter.id] || [];
+    const urls = localFiles.length
+      ? (await Promise.all(localFiles.map(previewFileAsDataUrl))).filter(Boolean)
+      : [...(window._galleryByChapter?.[chapter.id] || [])];
+    const stored = window._dbChaptersById?.[chapter.id] || {};
+    return { ...chapter, emotion: stored.emotion, intensity: stored.intensity, urls };
+  }));
+  return chapters.filter(chapter => chapter.urls.length > 0);
+}
+
+async function refreshCurrentPreviewComposition() {
+  if (!currentPreviewChapterId || !emotionConfigState || emotionPreviewInProgress) return;
+  const generation = ++sceneRefreshGeneration;
+  const directedChapters = await getDirectedPreviewChapters();
+  if (generation !== sceneRefreshGeneration || emotionPreviewInProgress) return;
+  const currentIndex = directedChapters.findIndex(chapter => chapter.id === currentPreviewChapterId);
+  if (currentIndex < 0) return;
+  const experiencePlan = window.LumoraStoryEmotion.buildExperiencePlan({
+    catalog: EMOTION_CATALOG,
+    emotionConfig: emotionConfigState,
+    context: { storyType: selectedStoryType, occasion: selectedOccasion },
+    chapters: directedChapters.map(chapter => ({ ...chapter, photoCount: chapter.urls.length })),
+  });
+  const chapter = directedChapters[currentIndex];
+  const direction = experiencePlan.chapters.find(item => item.chapterId === chapter.id) || {};
+  const sceneUrls = window.LumoraStoryEmotion.directScenePhotos(chapter.urls, direction.mediaStrategy);
+  window.setPreviewPhotoUrls?.(sceneUrls, {
+    role: direction.role || 'memory',
+    composition: direction.composition || 'constellation',
+  });
+  updateChapterPreviewCopy(chapter, currentIndex, directedChapters.length);
+}
+
+function requestCurrentPreviewComposition() {
+  refreshCurrentPreviewComposition().catch(error => {
+    storyResult('Story Emotion Scene Refresh Result', false, { errorType: 'story_action_fail' }, error);
+  });
+}
+
+function restoreEmotionPreviewButton() {
+  const button = document.getElementById('emotion-preview');
+  button.disabled = false;
+  button.setAttribute('aria-pressed', 'false');
+  button.textContent = tr('storyEmotionPreview');
+  button.hidden = true;
+}
+
+function stopEmotionPreview({ log = true } = {}) {
+  if (!emotionPreviewInProgress) return false;
+  emotionPreviewRunId += 1;
+  emotionPreviewInProgress = false;
+  emotionPreviewScheduler?.cancel();
+  resetEmotionPreviewVisuals();
+  restoreEmotionPreviewButton();
+  const status = document.getElementById('emotion-status');
+  status.textContent = emotionConfigPersisted ? tr('storyEmotionSaved') : '';
+  if (log) activity?.log({ action: 'Story Emotion Preview Stopped', feature: 'story', level: 'warn', galaxyId });
+  return true;
+}
+
+async function runEmotionPreview() {
+  if (!EMOTION_CATALOG || !emotionConfigState || !window.LumoraStoryEmotion) return;
+  const button = document.getElementById('emotion-preview');
+  const status = document.getElementById('emotion-status');
+  if (emotionPreviewInProgress) {
+    stopEmotionPreview();
+    return;
+  }
+
+  const directedChapters = await getDirectedPreviewChapters();
+  if (!directedChapters.length) {
+    status.textContent = tr('storyEmotionPreviewEmpty');
+    status.classList.add('error');
+    return;
+  }
+
+  const experiencePlan = window.LumoraStoryEmotion.buildExperiencePlan({
+    catalog: EMOTION_CATALOG,
+    emotionConfig: emotionConfigState,
+    context: { storyType: selectedStoryType, occasion: selectedOccasion },
+    chapters: directedChapters.map(chapter => ({
+      ...chapter,
+      photoCount: chapter.urls.length,
+    })),
+  });
+  const directionByChapter = new Map(experiencePlan.chapters.map(chapter => [chapter.chapterId, chapter]));
+  const runId = ++emotionPreviewRunId;
+  emotionPreviewInProgress = true;
+  emotionPreviewScheduler?.destroy();
+  resetEmotionPreviewVisuals();
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
+  emotionPreviewScheduler = new window.LumoraStoryEmotion.TimelineScheduler(createEmotionPreviewRenderer());
+  button.hidden = false;
+  button.setAttribute('aria-pressed', 'true');
+  button.textContent = tr('storyEmotionPreviewing');
+  status.classList.remove('error');
+  activity?.log({
+    action: 'Story Emotion Preview Started', feature: 'story', galaxyId,
+    description: {
+      mode: emotionConfigState.mode, primaryEmotion: experiencePlan.primaryEmotion,
+      intensity: emotionConfigState.intensity, reducedMotion: reduced, chapterCount: directedChapters.length,
+    },
+  });
+  try {
+    window.setPreviewPhotoUrls?.([]);
+    status.textContent = tr('storyEmotionPreviewOpening');
+    await wait(reduced ? 20 : 900);
+    if (runId !== emotionPreviewRunId) return;
+    const rememberedUrls = [];
+    for (let index = 0; index < directedChapters.length; index += 1) {
+      if (runId !== emotionPreviewRunId) return;
+      const chapter = directedChapters[index];
+      currentPreviewChapterId = chapter.id;
+      const direction = directionByChapter.get(chapter.id) || {};
+      const chapterEmotionConfig = direction.emotion
+        ? { mode: 'manual', primaryEmotion: direction.emotion, intensity: direction.intensity }
+        : emotionConfigState;
+      const sourceUrls = direction.role === 'ending' && rememberedUrls.length
+        ? [...rememberedUrls.slice(-2), ...chapter.urls]
+        : chapter.urls;
+      const sceneUrls = window.LumoraStoryEmotion.directScenePhotos(sourceUrls, direction.mediaStrategy);
+      resetEmotionPreviewVisuals();
+      window.setPreviewPhotoUrls?.(sceneUrls, {
+        role: direction.role || 'memory',
+        composition: direction.composition || 'constellation',
+      });
+      updateChapterPreviewCopy(chapter, index, directedChapters.length);
+      status.textContent = tr('storyEmotionPreviewProgress', index + 1, directedChapters.length, chapterLabel(chapter));
+      await wait(reduced ? 20 : 320);
+      if (runId !== emotionPreviewRunId) return;
+      const timeline = window.LumoraStoryEmotion.buildEmotionalChapterTimeline({
+        catalog: EMOTION_CATALOG,
+        emotionConfig: chapterEmotionConfig,
+        context: { storyType: selectedStoryType, occasion: selectedOccasion },
+        role: direction.role || 'memory',
+        photoCount: sceneUrls.length,
+        capabilities: 'story',
+      });
+      const result = await emotionPreviewScheduler.play(window.LumoraStoryEmotion.applyReducedMotion(timeline, reduced));
+      if (result.status !== 'completed' || runId !== emotionPreviewRunId) return;
+      rememberedUrls.push(...chapter.urls);
+      await wait(reduced ? 20 : 280);
+    }
+    status.textContent = tr('storyEmotionPreviewComplete');
+    activity?.log({
+      action: 'Story Emotion Preview Completed', feature: 'story', status: 1, galaxyId,
+      description: { chapterCount: directedChapters.length, primaryEmotion: experiencePlan.primaryEmotion },
+    });
+  } catch (error) {
+    if (runId === emotionPreviewRunId) {
+      status.textContent = tr('storyEmotionPreviewFailed');
+      status.classList.add('error');
+      storyResult('Story Emotion Preview Result', false, { errorType: 'story_action_fail' }, error);
+    }
+  } finally {
+    if (runId !== emotionPreviewRunId) return;
+    resetEmotionPreviewVisuals();
+    emotionPreviewInProgress = false;
+    restoreEmotionPreviewButton();
+  }
+}
+
+async function persistAndRunEmotionPreview() {
+  const persistence = persistEmotionConfig().catch(() => false);
+  await runEmotionPreview();
+  await persistence;
+}
+
+function makeEmotionStepAvailable(destination, { open = false, select = false } = {}) {
+  if (!emotionStepAvailable) return false;
+  emotionFinishDestination = destination || `/portal/galaxy-setup.html?galaxyId=${galaxyId}`;
+  const section = document.getElementById('emotion-director');
+  const tab = document.getElementById('story-mobile-emotion-tab');
+  section.hidden = false;
+  section.open = open;
+  tab.disabled = false;
+  tab.setAttribute('aria-disabled', 'false');
+  if (select) {
+    tab.click();
+    requestAnimationFrame(() => section.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  }
+  return true;
+}
+
+function logStoryComplete() {
+  activity?.log({
+    action: 'Story Wizard Complete', feature: 'story', status: 1, galaxyId,
+    description: { storyType: selectedStoryType, occasion: selectedOccasion },
+  });
+}
+
+async function redirectCompletedStory(destination) {
+  logStoryComplete();
+  await wait(800);
+  window.location.href = destination;
+}
+
+async function continueToEmotionStep(destination) {
+  appendLMsg(tr('storyEmotionAfterStory'));
+  if (makeEmotionStepAvailable(destination, { open: true, select: true })) return;
+  appendLMsgWithNote(tr('storySetupReady'), tr('storySetupRedirecting'));
+  await redirectCompletedStory(destination);
+}
+
+async function finishEmotionStep() {
+  if (emotionFinishInProgress) return;
+  const button = document.getElementById('emotion-finish');
+  const status = document.getElementById('emotion-status');
+  if (emotionPreviewInProgress) {
+    stopEmotionPreview({ log: false });
+  }
+  emotionFinishInProgress = true;
+  button.disabled = true;
+  button.textContent = tr('storyEmotionFinishing');
+  try {
+    if (!emotionConfigPersisted) await persistEmotionConfig();
+    status.classList.remove('error');
+    status.textContent = tr('storySetupReady');
+    await redirectCompletedStory(emotionFinishDestination || `/portal/galaxy-setup.html?galaxyId=${galaxyId}`);
+  } catch {
+    emotionFinishInProgress = false;
+    button.disabled = false;
+    button.textContent = tr('storyEmotionFinish');
+  }
+}
+
+function setupEmotionDirector(galaxy) {
+  const section = document.getElementById('emotion-director');
+  if (!EMOTION_CATALOG?.emotions?.length || !window.LumoraStoryEmotion) {
+    emotionStepAvailable = false;
+    section.hidden = true;
+    document.getElementById('story-mobile-story-tab')?.click();
+    return;
+  }
+  emotionStepAvailable = true;
+  emotionConfigPersisted = Boolean(galaxy.emotionConfig);
+  emotionConfigState = galaxy.emotionConfig || { ...EMOTION_CATALOG.defaultConfig };
+  const grid = document.getElementById('emotion-grid');
+  EMOTION_CATALOG.emotions.forEach(emotion => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'emotion-card';
+    card.dataset.emotion = emotion.id;
+    card.style.setProperty('--emotion-accent', emotion.accent);
+    const label = document.createElement('span');
+    label.textContent = emotionLabel(emotion);
+    const description = document.createElement('small');
+    description.textContent = emotionDescription(emotion);
+    card.append(label, description);
+    card.addEventListener('click', async () => {
+      stopEmotionPreview({ log: false });
+      emotionConfigState = { ...emotionConfigState, mode: 'auto', primaryEmotion: emotion.id };
+      emotionConfigPersisted = false;
+      updateEmotionControls();
+      activity?.log({ action: 'Story Emotion Selected', feature: 'story', galaxyId, description: { primaryEmotion: emotion.id, intensity: emotionConfigState.intensity } });
+      await persistAndRunEmotionPreview();
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('emotion-auto').addEventListener('click', async () => {
+    stopEmotionPreview({ log: false });
+    emotionConfigState = { ...emotionConfigState, mode: 'auto', primaryEmotion: null };
+    emotionConfigPersisted = false;
+    updateEmotionControls();
+    activity?.log({ action: 'Story Emotion Auto Enabled', feature: 'story', galaxyId, description: { intensity: emotionConfigState.intensity } });
+    await persistAndRunEmotionPreview();
+  });
+  const intensity = document.getElementById('emotion-intensity');
+  intensity.addEventListener('input', () => {
+    stopEmotionPreview({ log: false });
+    emotionConfigState = { ...emotionConfigState, intensity: Number(intensity.value) / 100 };
+    emotionConfigPersisted = false;
+    updateEmotionControls();
+  });
+  intensity.addEventListener('change', async () => {
+    activity?.log({ action: 'Story Emotion Intensity Changed', feature: 'story', galaxyId, description: { intensity: emotionConfigState.intensity } });
+    await persistAndRunEmotionPreview();
+  });
+  document.getElementById('emotion-preview').addEventListener('click', runEmotionPreview);
+  document.getElementById('emotion-finish').addEventListener('click', finishEmotionStep);
+  updateEmotionControls();
+  if (galaxy.storyType && galaxy.occasion) {
+    makeEmotionStepAvailable(`/portal/galaxy-setup.html?galaxyId=${galaxyId}`);
+  }
+}
 
 async function typingThen(text, italicText, delayMs = 700) {
   const row = makeLRow();
@@ -360,6 +847,7 @@ function setupNameEditor(initialName) {
 // ── Left preview helpers ──────────────────────────────────────────────────────
 
 function showChapterPreview(chapter, chapterIdx, totalChapters) {
+  currentPreviewChapterId = chapter.id;
   activity?.log({ action: 'Story Chapter Preview Open', feature: 'story', galaxyId, description: { chapterId: chapter.id, chapterIndex: chapterIdx, totalChapters } });
   const localFiles = chapterFiles[chapter.id];
   if (localFiles && localFiles.length) {
@@ -371,19 +859,8 @@ function showChapterPreview(chapter, chapterIdx, totalChapters) {
     const serverUrls = window._galleryByChapter?.[chapter.id] || [];
     window.setPreviewPhotoUrls?.(serverUrls);
   }
-  // Set bottom text directly — skip window bridge to avoid timing issues
-  const occasionCfg = STORY_CONFIG?.[selectedStoryType]?.occasions?.[selectedOccasion];
-  const hookText = chapterHooks[chapter.id]
-    || window._dbChapterHooks?.[chapter.id]
-    || chapterPrompt(chapter);
-  const labelEl = document.getElementById('se-bottom-label');
-  const hookEl  = document.getElementById('se-bottom-hook');
-  if (labelEl) {
-    const num = String(chapterIdx + 1).padStart(2, '0');
-    const tot = String(totalChapters).padStart(2, '0');
-    labelEl.textContent = [occasionLabel(selectedOccasion, occasionCfg).toUpperCase(), `${num} / ${tot}`].filter(Boolean).join(' · ');
-  }
-  if (hookEl) hookEl.textContent = hookText || '';
+  updateChapterPreviewCopy(chapter, chapterIdx, totalChapters);
+  if (emotionConfigState) requestCurrentPreviewComposition();
 }
 
 // ── Chapter card builder ──────────────────────────────────────────────────────
@@ -619,10 +1096,7 @@ async function runLastChapter(chapter, chapterIdx, totalChapters) {
       try {
         await saveChapter(chapter.id);
         await saveStoryMeta(selectedOccasion);
-        activity?.log({ action: 'Story Wizard Complete', feature: 'story', status: 1, galaxyId, description: { storyType: selectedStoryType, occasion: selectedOccasion } });
-        appendLMsgWithNote(tr('storySetupReady'), tr('storySetupRedirecting'));
-        await wait(1800);
-        window.location.href = `/portal/galaxy.html?galaxyId=${galaxyId}`;
+        await continueToEmotionStep(`/portal/galaxy.html?galaxyId=${galaxyId}`);
         resolve();
       } catch (err) {
         appendErrMsg(err.message);
@@ -638,14 +1112,16 @@ async function runLastChapter(chapter, chapterIdx, totalChapters) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const [cfgRes, galaxyRes] = await Promise.all([
+  const [cfgRes, galaxyRes, emotionRes] = await Promise.all([
     fetch('/shared/story-config.json'),
     fetch(`/galaxies/${galaxyId}`, { headers: { Authorization: 'Bearer ' + token } }),
+    fetch('/media/story-emotions').catch(() => null),
   ]);
 
   if (!galaxyRes.ok || !cfgRes.ok) { window.location.href = '/portal/'; return; }
 
   STORY_CONFIG = await cfgRes.json();
+  EMOTION_CATALOG = emotionRes?.ok ? (await emotionRes.json()).meta : null;
   const galaxy = (await galaxyRes.json()).meta;
   storyResult('Story Setup Loaded', true, { editMode: Boolean(galaxy.storyType) });
 
@@ -654,10 +1130,13 @@ async function init() {
   setupNameEditor(gName);
   document.getElementById('back-link').href = `/portal/galaxy-setup.html?galaxyId=${galaxyId}`;
   window.updateSEPreview?.(null, null, gName);
+  setupEmotionDirector(galaxy);
 
   // Store DB hookText per chapter (user customized in v1, null in v2)
   window._dbChapterHooks = {};
+  window._dbChaptersById = {};
   (galaxy.chapters || []).forEach(ch => {
+    window._dbChaptersById[ch.id] = ch;
     if (ch.hookText) window._dbChapterHooks[ch.id] = ch.hookText;
   });
 
@@ -684,6 +1163,7 @@ async function init() {
   if (galaxy.storyType && galaxy.occasion) {
     selectedStoryType = galaxy.storyType;
     selectedOccasion  = galaxy.occasion;
+    updateEmotionControls();
 
     const typeCfg = STORY_CONFIG[galaxy.storyType];
     const occasionCfg = typeCfg?.occasions?.[galaxy.occasion];
@@ -707,9 +1187,7 @@ async function init() {
       ]);
 
       if (action === 'done') {
-        await typingThen(tr('storySetupGalaxyReady'));
-        await wait(1200);
-        window.location.href = `/portal/galaxy-setup.html?galaxyId=${galaxyId}`;
+        await continueToEmotionStep(`/portal/galaxy-setup.html?galaxyId=${galaxyId}`);
         return;
       }
 
@@ -735,6 +1213,7 @@ async function init() {
         });
         selectedStoryType = newType;
         selectedOccasion  = newOcc;
+        updateEmotionControls();
         chapters = STORY_CONFIG[newType].occasions[newOcc].chapters;
         window.updateSEPreview?.(newType, newOccLabel, null);
         showChapterPreview(chapters[0], 0, chapters.length);
@@ -772,9 +1251,7 @@ async function init() {
       ]);
 
       if (next === 'done') {
-        await typingThen(tr('storySetupGalaxyReady'));
-        await wait(1200);
-        window.location.href = `/portal/galaxy-setup.html?galaxyId=${galaxyId}`;
+        await continueToEmotionStep(`/portal/galaxy-setup.html?galaxyId=${galaxyId}`);
         return;
       }
       // else continue loop
@@ -807,6 +1284,7 @@ async function init() {
           appendUMsg(chip.textContent);
           typeWrap.querySelectorAll('.chip').forEach(c => { c.style.pointerEvents = 'none'; });
           window.updateSEPreview?.(chip.dataset.id, null, null);
+          updateEmotionControls();
           resolve(chip.dataset.id);
         }, 200);
       });
@@ -840,6 +1318,7 @@ async function init() {
           appendUMsg(chip.textContent);
           chipsWrap.querySelectorAll('.chip').forEach(c => { c.style.pointerEvents = 'none'; });
           window.updateSEPreview?.(selectedStoryType, chip.textContent, null);
+          updateEmotionControls();
           resolve(chip.dataset.id);
         }, 200);
       });
@@ -865,3 +1344,10 @@ init().catch(err => {
   storyResult('Story Setup Failed', false, { errorType: 'story_save_fail' }, err);
   console.error('[story-setup] init failed:', err);
 });
+
+window.addEventListener('pagehide', () => {
+  emotionPreviewRunId += 1;
+  emotionPreviewInProgress = false;
+  emotionPreviewScheduler?.destroy();
+  emotionPreviewEffect?.destroy();
+}, { once: true });

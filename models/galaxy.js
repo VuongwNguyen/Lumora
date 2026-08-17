@@ -1,5 +1,6 @@
 const { model, Schema } = require("mongoose");
 const { SOUNDSCAPE_INSTRUMENT_KEYS, SOUNDSCAPE_KEYS } = require('../config/soundscapes');
+const { EMOTION_KEYS, EMOTION_MODES } = require('../config/storyEmotions');
 
 const soundscapeSchema = new Schema({
   preset: {
@@ -14,6 +15,12 @@ const soundscapeSchema = new Schema({
   tempo: { type: Number, min: 40, max: 140, default: 76 },
   space: { type: Number, min: 0, max: 100, default: 50 },
   variation: { type: Number, min: 0, max: 100, default: 50 },
+}, { _id: false });
+
+const emotionConfigSchema = new Schema({
+  mode: { type: String, enum: [...EMOTION_MODES], required: true },
+  primaryEmotion: { type: String, enum: [...EMOTION_KEYS, null], default: null },
+  intensity: { type: Number, min: 0, max: 1, required: true },
 }, { _id: false });
 
 const galaxySchema = new Schema({
@@ -62,6 +69,10 @@ const galaxySchema = new Schema({
     enum: ['none', 'stardust', 'firefly', 'aurora'],
     default: 'none',
   },
+  emotionConfig: {
+    type: emotionConfigSchema,
+    default: undefined,
+  },
   storyType: {
     type: String,
     enum: ['couple', 'birthday', 'friendship', 'school', 'family', 'self', 'travel', 'special'],
@@ -76,6 +87,8 @@ const galaxySchema = new Schema({
       {
         id:       { type: String },
         hookText: { type: String, default: null },
+        emotion:  { type: String, enum: [...EMOTION_KEYS, null], default: null },
+        intensity: { type: Number, min: 0, max: 1, default: null },
       }
     ],
     default: [],

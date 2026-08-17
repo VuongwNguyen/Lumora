@@ -20,6 +20,7 @@
       }
     }
   </script>
+    <script src="/shared/js/experienceTransition.js?v=20260816-se2"></script>
 
     <style>
         .text-white {
@@ -82,6 +83,17 @@
 </head>
 
 <body>
+    <script>
+        try {
+            window.lumoraArrivalTransition = window.LumoraExperienceTransition.bootstrapArrival({
+                storage: window.sessionStorage,
+                galaxyId: new URLSearchParams(location.search).get('galaxyId'),
+                document,
+            });
+        } catch {
+            window.lumoraArrivalTransition = null;
+        }
+    </script>
     <div id="container"></div>
 
     <div id="landscape-warning">
@@ -117,10 +129,9 @@
     <script src="/shared/js/activityLogger.js"></script>
     <script src="/shared/js/trackedFetch.js"></script>
     <script src="/shared/js/activityAutoTracker.js"></script>
-    <script type="module" src="./js/script.js"></script>
-
     <!-- Shared original Web Audio soundscape engine -->
     <script src="/shared/js/soundscapeEngine.js?v=20260815-mobile2"></script>
+    <script src="/shared/js/storyEmotionEngine.js?v=20260816-scene-grammar1"></script>
     <script>
         const musicManager = window.LumoraSoundscape.createManager({
             buttonId: 'toggle-audio',
@@ -139,6 +150,7 @@
 
         window.musicManager = musicManager;
     </script>
+    <script type="module" src="./js/script.js?v=20260816-handoff2"></script>
 </body>
 
 </html>

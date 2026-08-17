@@ -43,6 +43,11 @@ class MediaController {
     return new successfullyResponse({ message: 'Soundscape instruments fetched', meta: instruments }).json(res);
   }
 
+  async getStoryEmotions(req, res, next) {
+    const config = MediaService.getStoryEmotions();
+    return new successfullyResponse({ message: 'Story emotions fetched', meta: config }).json(res);
+  }
+
   musicQuarantined(req, res, next) {
     return next(new errorResponse({
       message: 'Background music is temporarily unavailable while licensing is reviewed',

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Fall Through Memories</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <script src="/shared/js/experienceTransition.js?v=20260816-se2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none; }
     body { background: #000; overflow: hidden; font-family: sans-serif; }
@@ -78,6 +79,17 @@
   </style>
 </head>
 <body>
+  <script>
+    try {
+      window.lumoraArrivalTransition = window.LumoraExperienceTransition.bootstrapArrival({
+        storage: window.sessionStorage,
+        galaxyId: new URLSearchParams(location.search).get('galaxyId'),
+        document,
+      });
+    } catch {
+      window.lumoraArrivalTransition = null;
+    }
+  </script>
   <div id="canvas-container"></div>
 
   <div id="landscape-warning">
@@ -114,6 +126,7 @@
   <script src="/shared/js/trackedFetch.js"></script>
   <script src="/shared/js/activityAutoTracker.js"></script>
   <script src="/shared/js/soundscapeEngine.js?v=20260815-dynamic1"></script>
+    <script src="/shared/js/storyEmotionEngine.js?v=20260816-scene-grammar1"></script>
   <script>
     const musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio', hiddenClass: 'hidden' });
     window.musicManager = musicManager;
@@ -128,6 +141,6 @@
     checkOrientation();
   </script>
 
-  <script type="module" src="./js/fall.js"></script>
+  <script type="module" src="./js/fall.js?v=20260816-handoff2"></script>
 </body>
 </html>

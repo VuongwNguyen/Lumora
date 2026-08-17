@@ -135,3 +135,24 @@ test('semantic acoustic environments transition smoothly without rebuilding the 
     soundscape.destroy();
   }
 });
+
+test('semantic volume fades reuse the existing master graph and can be cancelled', async () => {
+  const { calls, ramps, engine } = loadEngine();
+  const soundscape = engine.create({
+    preset: 'deep_focus',
+    intensity: 50,
+    seed: 'volume-transition-regression',
+  });
+
+  await soundscape.play();
+  try {
+    const graphGainCount = calls.filter(call => call === 'createGain').length;
+    assert.equal(soundscape.fadeTo(0.35, 1200), 0.35);
+    assert.equal(soundscape.volume, 0.35);
+    assert.ok(ramps.some(ramp => ramp.endTime === 1.2));
+    assert.equal(calls.filter(call => call === 'createGain').length, graphGainCount);
+    assert.equal(soundscape.cancelVolumeTransition(), true);
+  } finally {
+    soundscape.destroy();
+  }
+});
