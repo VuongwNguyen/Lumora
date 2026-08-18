@@ -13,7 +13,7 @@
     "test:story-emotion": "node --test tests/story-emotion-engine.test.js tests/story-emotion-config.test.js",
     "test:upload": "node --test tests/gallery-upload.test.js",
     "test:tmdt": "node --test tests/tmdt-compliance.test.js",
-    "test:abyss": "node --test tests/abyss-depth.test.js tests/abyss-palette.test.js tests/abyss-layout.test.js",
+    "test:abyss": "node --test tests/abyss-depth.test.js tests/abyss-palette.test.js tests/abyss-layout.test.js tests/abyss-phases.test.js",
     "test": "npm run test:database && npm run test:soundscape && npm run test:story-emotion && npm run test:upload && npm run test:activity && npm run test:tmdt && npm run test:abyss",
     "audit:activity": "node scripts/audit-activity-coverage.js",
     "deploy": "git push origin main",

@@ -830,6 +830,7 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   const theme = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/theme.js'), 'utf8');
   const palette = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/palette.js'), 'utf8');
   const phases = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/phases.js'), 'utf8');
+  const layout = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/layout.js'), 'utf8');
   const water = fs.readFileSync(path.join(__dirname, '../public/abyss/js/fx/water.js'), 'utf8');
   const fauna = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/fauna.js'), 'utf8');
   const beacon = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/beacon.js'), 'utf8');
@@ -847,8 +848,11 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   assert.match(palette, /Math\.min\(ACCENT_HUE_MAX, Math\.max\(ACCENT_HUE_MIN/);
   assert.doesNotMatch(theme, /150\s*\/\s*360/);
   assert.match(theme, /from '\.\/palette\.js'/);
-  assert.match(phases, /first_glow.*start: 120/s);
-  assert.match(phases, /release.*start: 540/s);
+  // Biên phase giờ tính từ trọng số trong layout.js, không còn là hằng số trong phases.js.
+  assert.match(layout, /first_glow: 90/);
+  assert.match(layout, /'release'/);
+  assert.match(phases, /while \(currentIndex < table\.length - 1/); // đơn hướng
+  assert.doesNotMatch(phases, /start: 120/);
   assert.match(water, /marineSnow/);
   assert.match(water, /bubbleSpeed/);
   assert.match(water, /ShaderMaterial/);
