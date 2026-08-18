@@ -825,6 +825,38 @@ test('admin bypasses backend galaxy feature checks without a subscription lookup
   }
 });
 
+test('Abyss visual implementation follows the depth-driven underwater contract', () => {
+  const abyss = fs.readFileSync(path.join(__dirname, '../public/abyss/js/abyss.js'), 'utf8');
+  const theme = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/theme.js'), 'utf8');
+  const palette = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/palette.js'), 'utf8');
+  const phases = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/phases.js'), 'utf8');
+  const water = fs.readFileSync(path.join(__dirname, '../public/abyss/js/fx/water.js'), 'utf8');
+  const fauna = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/fauna.js'), 'utf8');
+  const beacon = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/beacon.js'), 'utf8');
+
+  assert.match(abyss, /const D0 = 40/);
+  assert.match(abyss, /depthFromCamera\(\)/);
+  assert.match(abyss, /Math\.min\(\(now - lastFrame\) \/ 1000, 1 \/ 30\)/);
+  assert.match(abyss, /camera\.position\.z -= speed \* dt/);
+  assert.match(abyss, /densityForDepth\(depth\)/);
+  assert.match(abyss, /prefers-reduced-motion/);
+  assert.doesNotMatch(abyss, /elapsed \* 2\)\.padStart/);
+  // Ràng buộc hue accent đã chuyển sang palette.js; theme.js giờ chỉ bọc THREE.Color.
+  assert.match(palette, /ACCENT_HUE_MIN = 150 \/ 360/);
+  assert.match(palette, /ACCENT_HUE_MAX = 210 \/ 360/);
+  assert.match(palette, /Math\.min\(ACCENT_HUE_MAX, Math\.max\(ACCENT_HUE_MIN/);
+  assert.doesNotMatch(theme, /150 \/ 360/);
+  assert.match(phases, /first_glow.*start: 120/s);
+  assert.match(phases, /release.*start: 540/s);
+  assert.match(water, /marineSnow/);
+  assert.match(water, /bubbleSpeed/);
+  assert.match(water, /ShaderMaterial/);
+  assert.match(fauna, /whaleFallLandmark/);
+  assert.match(fauna, /memoryShrimp/);
+  assert.match(beacon, /MemoryLattice|CylinderGeometry\(3, 3, 5\.4/);
+  assert.doesNotMatch(beacon, /PointLight/);
+});
+
 test('partner receives Pro Galaxy features and the Pro galaxy-count limit without a subscription', async () => {
   const originals = {
     galaxyFindOne: GalaxyModel.findOne,
