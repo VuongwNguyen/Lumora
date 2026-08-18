@@ -157,7 +157,7 @@ async function init() {
   waterFX = createWaterFX(renderTheme, adaptiveTier.config, reducedMotion); root.add(waterFX.group);
   seabed = createSeabed(renderTheme, adaptiveTier.config); root.add(seabed.group);
   beacon = createMemoryBeacon(renderTheme); root.add(beacon.group);
-  fauna = createFauna(renderTheme, adaptiveTier.config, reducedMotion); root.add(fauna.group);
+  fauna = createFauna(renderTheme, adaptiveTier.config, reducedMotion, plan); root.add(fauna.group);
   relics = await createRelics(data.images, data.captions, renderTheme, adaptiveTier.config, reducedMotion, plan);
   root.add(relics.group);
   renderRelicNav();
@@ -188,7 +188,7 @@ function loop(now) {
   const targetYaw = Math.atan2(Math.sin(-lookX), Math.cos(-lookX)); const targetPitch = -lookY; const damping = 1 - Math.pow(1 - .12, dt * 60);
   camera.rotation.y += Math.atan2(Math.sin(targetYaw - camera.rotation.y), Math.cos(targetYaw - camera.rotation.y)) * damping;
   camera.rotation.x += (targetPitch - camera.rotation.x) * damping; camera.rotation.z += (0 - camera.rotation.z) * damping;
-  updateDepthAtmosphere(depth, dt); waterFX?.update(dt, camera, elapsed); seabed?.update(elapsed); beacon?.update(dt, elapsed, phase); fauna?.update(elapsed, phase, camera, index => phaseDirector.blendInto(index), waterFX?.getCausticShafts?.() || []); relics?.update(dt, elapsed, camera);
+  updateDepthAtmosphere(depth, dt); waterFX?.update(dt, camera, elapsed); seabed?.update(elapsed); beacon?.update(dt, elapsed, phase); fauna?.update(elapsed, phase, camera, index => phaseDirector.blendInto(index), phaseDirector.table, waterFX?.getCausticShafts?.() || []); relics?.update(dt, elapsed, camera);
   depthLabel.textContent = `DEPTH ${String(Math.round(depth)).padStart(3, '0')} M`;
   if (phase.id === 'release' && releaseElapsed >= 8 && !finished) { finished = true; resetButton.classList.add('visible'); manualDiveButton.classList.remove('visible'); beacon?.triggerPulse(); }
   adaptiveTier.update(dt, averageFrame); renderer.render(scene, camera);
