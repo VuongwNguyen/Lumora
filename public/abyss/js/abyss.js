@@ -138,7 +138,7 @@ document.addEventListener('keydown', event => { if (event.key === 'Escape' && li
 
 function resetDive() {
   camera.position.set(0, 0, START_Z); camera.rotation.set(0, 0, 0); lookX = 0; lookY = 0; phaseDirector?.reset(); finished = false; releaseElapsed = 0; resetButton.classList.remove('visible'); if (reducedMotion) manualDiveButton.classList.add('visible');
-  relics?.getRelics().forEach(item => { item.position.copy(item.userData.base); item.userData.focused = false; });
+  relics?.reset();
 }
 resetButton.addEventListener('click', resetDive);
 if (reducedMotion) manualDiveButton.classList.add('visible');

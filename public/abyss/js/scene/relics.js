@@ -45,6 +45,14 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
   const group = new THREE.Group();
   const relics = [];
   const { span } = relicSpawnRange(plan);
+  // Stride của stream = số relic THỰC SỰ mang ảnh. Far field không có ảnh nên
+  // plan.relicCount đếm thừa: với planContent(8, 6) stride sai thành 9 % 8 = 1,
+  // mỗi lần cuộn lại hiện đúng tấm vừa đi qua và ảnh cuối không bao giờ xuất hiện.
+  // Lưu ý: nếu imageRelicCount và images.length có ước chung, mỗi relic bị khoá
+  // trong một lớp thặng dư (planContent(20, 16): gcd(11, 20) = 1 nên không sao,
+  // nhưng gcd > 1 vẫn xảy ra ở cấu hình khác). Chấp nhận: "số ô có ảnh" là quy
+  // tắc đọc được, còn đi tìm stride nguyên tố cùng nhau thì sau này không ai lần ra.
+  const imageRelicCount = plan.near + plan.mid;
   const pending = [];
 
   for (let i = 0; i < plan.relicCount; i++) {
@@ -66,6 +74,10 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
       new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: field === 'far' ? 0.34 : 0.5, side: THREE.DoubleSide }),
     );
     glass.material.color.lerp(theme.accent, 0.14);
+    // Far field không mở được lightbox (không có url), nên cũng không được ăn
+    // raycast: nếu ăn thì nó vẫn kéo 0.32 khi hover và bật alarm của waterFX,
+    // hứa một tương tác không tồn tại.
+    if (field === 'far') glass.raycast = () => {};
     frame.add(glass);
 
     let imageMesh = null;
@@ -87,7 +99,7 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
       relic: true, field, index: i, sequence: i,
       url: field === 'far' ? null : images[i],
       caption: field === 'far' ? '' : (captions[i] || ''),
-      base: frame.position.clone(), phase: Math.random() * 6,
+      base: frame.position.clone(), spawn: frame.position.clone(), phase: Math.random() * 6,
       imageMesh, focused: false, hovered: false,
     };
     group.add(frame);
@@ -100,6 +112,9 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
 
   function update(dt, elapsed, camera) {
     relics.forEach((frame, i) => {
+      // setVisibleCount được gọi CHÍNH VÌ GPU đang đuối; chạy tiếp vòng recycle
+      // cho relic đã ẩn nghĩa là vẫn tải và upload texture cho thứ không ai thấy.
+      if (i >= visibleCount) return;
       const data = frame.userData;
       if (data.focused) {
         const target = camera.position.clone().add(new THREE.Vector3(0, 0, -5));
@@ -107,6 +122,9 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
         return;
       }
       const hoverPull = data.hovered ? 0.32 : 0;
+      // x cũng phải trả về base: nhánh focused lerp cả ba trục, nên nếu bỏ sót
+      // thì đóng lightbox xong relic đứng lại giữa màn hình như lỗi render.
+      frame.position.x = data.base.x;
       frame.position.y = data.base.y + Math.sin(elapsed * 0.3 + data.phase) * (reducedMotion ? 0.03 : 0.18);
       frame.position.z = data.base.z + hoverPull;
       if (!reducedMotion) frame.rotation.z += Math.sin(elapsed * 0.25 + i) * 0.0007;
@@ -115,12 +133,14 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
         data.base.z -= span;
         frame.position.z = data.base.z;
         if (plan.streamed && data.imageMesh) {
-          data.sequence = (data.sequence + plan.relicCount) % images.length;
+          data.sequence = (data.sequence + imageRelicCount) % images.length;
           data.url = images[data.sequence];
           data.caption = captions[data.sequence] || '';
           const mesh = data.imageMesh;
           loadTexture(data.url, tier.texture).then(texture => {
-            if (texture) { mesh.material.map = texture; mesh.material.needsUpdate = true; }
+            // three không tự giải phóng texture bị thay: không dispose là rò
+            // đúng thứ ngân sách 48 MB ở mục 13.7 đang cố giữ.
+            if (texture) { mesh.material.map?.dispose(); mesh.material.map = texture; mesh.material.needsUpdate = true; }
           });
         }
       }
@@ -129,10 +149,23 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
 
   function getRelics() { return relics.slice(0, visibleCount); }
 
+  // base.z bị trừ dần mỗi lần cuộn, nên sau một lần lặn hết hành trình mọi relic
+  // đều nằm sâu hơn điểm dừng của camera. Không có reset thì lần lặn thứ hai là
+  // nước trống hoàn toàn. spawn giữ nguyên vị trí sinh ra để khôi phục.
+  function reset() {
+    relics.forEach(frame => {
+      const data = frame.userData;
+      data.base.copy(data.spawn);
+      frame.position.copy(data.spawn);
+      data.focused = false;
+      data.hovered = false;
+    });
+  }
+
   function setVisibleCount(count) {
     visibleCount = Math.max(0, Math.min(relics.length, count));
     relics.forEach((frame, i) => { frame.visible = i < visibleCount; });
   }
 
-  return { group, update, getRelics, setVisibleCount };
+  return { group, update, getRelics, setVisibleCount, reset };
 }
