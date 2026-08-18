@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { createAbyssTheme } from './core/theme.js';
 import { createPhaseDirector } from './core/phases.js';
 import { createAdaptiveTier, detectPerformanceTier } from './core/tiers.js';
+import { D0, START_Z, densityForDepth, depthFromZ, easeTowards } from './core/depth.js';
+import { buildPhaseTable, planContent } from './core/layout.js';
 import { createWaterFX } from './fx/water.js';
 import { createSeabed } from './scene/seabed.js';
 import { createMemoryBeacon } from './scene/beacon.js';
@@ -20,23 +22,45 @@ const lightboxCaption = document.getElementById('lightbox-caption');
 const relicNav = document.getElementById('relic-nav');
 const resetButton = document.getElementById('reset-dive');
 const manualDiveButton = document.getElementById('manual-dive');
+const emptyState = document.getElementById('empty-state');
 
-const D0 = 40;
-const START_Z = 5;
-const FULL_DIVE_DEPTH = 620;
 const BASE_SPEED = reducedMotion ? 0 : 1.8;
+let plan = null;
+let phaseDirector = null;
+let endDepth = D0 + 500;
 
 async function fetchData() {
-  if (!galaxyId) return { images: [], captions: [], name: '', soundscape: null, theme: null };
+  const empty = { images: [], captions: [], createdAt: [], name: '', soundscape: null, theme: null };
+  if (!galaxyId) return empty;
   try {
     const [viewRes, imageRes] = await Promise.all([
       fetch(`/galaxies/${encodeURIComponent(galaxyId)}/view`),
       fetch(`/gallary/items?galaxyId=${encodeURIComponent(galaxyId)}`),
     ]);
     const view = viewRes.ok ? (await viewRes.json()).meta || {} : {};
-    const items = imageRes.ok ? (await imageRes.json()).meta || [] : [];
-    return { images: items.map(item => item.imageUrl).filter(Boolean), captions: view.caption || [], name: view.name || '', soundscape: view.soundscape || null, theme: view.theme?.colors || null };
-  } catch { return { images: [], captions: [], name: '', soundscape: null, theme: null }; }
+    const items = (imageRes.ok ? (await imageRes.json()).meta || [] : []).filter(item => item?.imageUrl);
+    return {
+      images: items.map(item => item.imageUrl),
+      // /gallary/items sắp xếp createdAt giảm dần rồi có thể sắp lại theo stage,
+      // nên không suy ra được ảnh cũ nhất từ thứ tự mảng. Giữ lại mốc thời gian.
+      createdAt: items.map(item => item.createdAt || null),
+      captions: view.caption || [],
+      name: view.name || '',
+      soundscape: view.soundscape || null,
+      theme: view.theme?.colors || null,
+    };
+  } catch { return empty; }
+}
+
+function oldestMemory(data) {
+  let best = -1;
+  let bestTime = Infinity;
+  data.createdAt.forEach((stamp, index) => {
+    const time = stamp ? Date.parse(stamp) : NaN;
+    if (Number.isFinite(time) && time < bestTime) { bestTime = time; best = index; }
+  });
+  if (best < 0) best = data.images.length - 1;
+  return best >= 0 ? { url: data.images[best], caption: data.captions[best] || '' } : null;
 }
 
 const scene = new THREE.Scene();
@@ -56,29 +80,16 @@ window.addEventListener('resize', () => { camera.aspect = innerWidth / innerHeig
 
 const root = new THREE.Group();
 scene.add(root);
-const phaseDirector = createPhaseDirector();
 let waterFX; let seabed; let beacon; let fauna; let relics;
 let lookX = 0; let lookY = 0; let dragging = false; let didMove = false; let lastX = 0; let lastY = 0;
 let focusedRelic = null; let pausedForReading = false; let finished = false; let elapsed = 0; let lastFrame = performance.now();
 let releaseElapsed = 0;
 let averageFrame = 60;
 
-function depthFromCamera() { return D0 + (START_Z - camera.position.z); }
-
-function densityForDepth(depth) {
-  const bands = [[120, .0108], [210, .0152], [330, .0217], [430, .0304]];
-  if (depth <= 40) return .008;
-  for (let i = 0; i < bands.length; i++) {
-    const [end, value] = bands[i];
-    const start = i === 0 ? 40 : bands[i - 1][0];
-    if (depth <= end) { const t = (depth - start) / (end - start); return THREE.MathUtils.lerp(i === 0 ? .008 : bands[i - 1][1], value, t); }
-  }
-  return .0304;
-}
+function currentDepth() { return depthFromZ(camera.position.z, START_Z, D0); }
 
 function updateDepthAtmosphere(depth, dt) {
-  const blend = 1 - Math.exp(-dt / 6);
-  scene.fog.density += (densityForDepth(depth) - scene.fog.density) * blend;
+  scene.fog.density = easeTowards(scene.fog.density, densityForDepth(depth), dt, 6);
 }
 
 function moveLook(dx, dy) {
@@ -126,7 +137,7 @@ lightbox.addEventListener('click', event => { if (event.target === lightbox) clo
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && lightbox.classList.contains('open')) closeRelic(); });
 
 function resetDive() {
-  camera.position.set(0, 0, START_Z); camera.rotation.set(0, 0, 0); lookX = 0; lookY = 0; phaseDirector.reset(); finished = false; releaseElapsed = 0; resetButton.classList.remove('visible'); if (reducedMotion) manualDiveButton.classList.add('visible');
+  camera.position.set(0, 0, START_Z); camera.rotation.set(0, 0, 0); lookX = 0; lookY = 0; phaseDirector?.reset(); finished = false; releaseElapsed = 0; resetButton.classList.remove('visible'); if (reducedMotion) manualDiveButton.classList.add('visible');
   relics?.getRelics().forEach(item => { item.position.copy(item.userData.base); item.userData.focused = false; });
 }
 resetButton.addEventListener('click', resetDive);
@@ -135,6 +146,10 @@ manualDiveButton.addEventListener('click', () => { if (reducedMotion && !finishe
 
 async function init() {
   const data = await fetchData();
+  plan = planContent(data.images.length, adaptiveTier.config.relics);
+  endDepth = D0 + plan.diveDistance;
+  phaseDirector = createPhaseDirector(buildPhaseTable(plan.phaseIds, D0, endDepth));
+  if (plan.empty && emptyState) emptyState.classList.add('visible');
   const theme = createAbyssTheme(data.theme);
   const renderTheme = { ...theme.scene, accent: theme.accent, accentSecondary: theme.accentSecondary };
   scene.background = theme.scene.background;
@@ -143,11 +158,15 @@ async function init() {
   seabed = createSeabed(renderTheme, adaptiveTier.config); root.add(seabed.group);
   beacon = createMemoryBeacon(renderTheme); root.add(beacon.group);
   fauna = createFauna(renderTheme, adaptiveTier.config, reducedMotion); root.add(fauna.group);
-  relics = await createRelics(data.images, data.captions, renderTheme, adaptiveTier.config, reducedMotion); root.add(relics.group); renderRelicNav();
+  relics = await createRelics(data.images, data.captions, renderTheme, adaptiveTier.config, reducedMotion, plan);
+  root.add(relics.group);
+  renderRelicNav();
+  // attachOldestMemory được thêm ở Task 10; gọi tuỳ chọn để plan chạy được theo thứ tự.
+  fauna.attachOldestMemory?.(oldestMemory(data));
   window.musicManager?.init(data.soundscape || null);
   document.getElementById('title').textContent = `LUMORA · ${data.name || 'ABYSS OF MEMORIES'}`;
   try { window.parent.postMessage({ type: 'lumora:universe-ready', galaxyId, template: 'abyss' }, location.origin); } catch {}
-  activity?.log({ action: 'Viewer Universe Start', feature: 'viewer', galaxyId, description: { template: 'abyss', photoCount: data.images.length, tier: initialTier, reducedMotion } });
+  activity?.log({ action: 'Viewer Universe Start', feature: 'viewer', galaxyId, description: { template: 'abyss', photoCount: data.images.length, tier: initialTier, diveDistance: plan.diveDistance, reducedMotion } });
   requestAnimationFrame(loop);
 }
 
@@ -156,7 +175,8 @@ intro.addEventListener('click', () => { intro.classList.add('hidden'); window.mu
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min((now - lastFrame) / 1000, 1 / 30); lastFrame = now; elapsed += dt; averageFrame = averageFrame * .95 + (1 / Math.max(dt, .001)) * .05;
-  const depth = depthFromCamera(); const phase = phaseDirector.update(depth);
+  const depth = currentDepth();
+  const phase = phaseDirector.update(depth);
   if (phase.id === 'release') releaseElapsed += dt; else releaseElapsed = 0;
   phase.releaseProgress = phase.id === 'release' ? Math.min(1, releaseElapsed / 8) : 0;
   const releaseEase = phase.id === 'release' ? 1 - phase.releaseProgress : 1;
@@ -168,7 +188,7 @@ function loop(now) {
   const targetYaw = Math.atan2(Math.sin(-lookX), Math.cos(-lookX)); const targetPitch = -lookY; const damping = 1 - Math.pow(1 - .12, dt * 60);
   camera.rotation.y += Math.atan2(Math.sin(targetYaw - camera.rotation.y), Math.cos(targetYaw - camera.rotation.y)) * damping;
   camera.rotation.x += (targetPitch - camera.rotation.x) * damping; camera.rotation.z += (0 - camera.rotation.z) * damping;
-  updateDepthAtmosphere(depth, dt); waterFX?.update(dt, camera, elapsed); seabed?.update(elapsed); beacon?.update(dt, elapsed, phase); fauna?.update(elapsed, phase, camera); relics?.update(dt, elapsed, camera);
+  updateDepthAtmosphere(depth, dt); waterFX?.update(dt, camera, elapsed); seabed?.update(elapsed); beacon?.update(dt, elapsed, phase); fauna?.update(elapsed, phase, camera, index => phaseDirector.blendInto(index), waterFX?.getCausticShafts?.() || []); relics?.update(dt, elapsed, camera);
   depthLabel.textContent = `DEPTH ${String(Math.round(depth)).padStart(3, '0')} M`;
   if (phase.id === 'release' && releaseElapsed >= 8 && !finished) { finished = true; resetButton.classList.add('visible'); manualDiveButton.classList.remove('visible'); beacon?.triggerPulse(); }
   adaptiveTier.update(dt, averageFrame); renderer.render(scene, camera);

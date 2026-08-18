@@ -835,8 +835,11 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   const fauna = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/fauna.js'), 'utf8');
   const beacon = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/beacon.js'), 'utf8');
 
-  assert.match(abyss, /const D0 = 40/);
-  assert.match(abyss, /depthFromCamera\(\)/);
+  // D0 và toán độ sâu giờ đến từ core/depth.js; abyss.js không định nghĩa lại.
+  assert.match(abyss, /import \{[^}]*D0[^}]*\} from '\.\/core\/depth\.js'/);
+  assert.match(abyss, /function currentDepth\(\)/);
+  assert.match(abyss, /depthFromZ\(camera\.position\.z/);
+  assert.doesNotMatch(abyss, /const D0 = 40/);
   assert.match(abyss, /Math\.min\(\(now - lastFrame\) \/ 1000, 1 \/ 30\)/);
   assert.match(abyss, /camera\.position\.z -= speed \* dt/);
   assert.match(abyss, /densityForDepth\(depth\)/);

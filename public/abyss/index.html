@@ -31,6 +31,8 @@
     #reset-dive.visible { display: block; }
     #manual-dive { display: none; pointer-events: auto; position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); border: 1px solid rgba(184,255,240,.42); border-radius: 999px; padding: 10px 16px; background: rgba(1,8,12,.72); color: #b8fff0; font: 12px system-ui, sans-serif; cursor: pointer; }
     #manual-dive.visible { display: block; }
+    #empty-state { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 74vw; text-align: center; font: 15px/1.7 Georgia, serif; color: rgba(184,255,240,.66); }
+    #empty-state.visible { display: block; }
     @media (orientation: portrait) and (pointer: coarse) { #title { left: 18px; } #depth { right: 18px; } }
   </style>
 </head>
@@ -41,6 +43,7 @@
   <div id="canvas-container"></div>
   <div id="hud"><div id="title">LUMORA · ABYSS OF MEMORIES</div><div id="depth">DEPTH 040 M</div><button id="btn-audio" type="button" aria-label="Bật hoặc tắt âm thanh">🔇</button><button id="reset-dive" type="button">Trở lên mặt nước</button><button id="manual-dive" type="button">Lặn sâu hơn</button></div>
   <nav id="relic-nav" aria-label="Các ký ức dưới đáy biển"></nav>
+  <div id="empty-state">Rãnh biển này chưa có ký ức nào.<br />Hãy thả xuống đây tấm ảnh đầu tiên.</div>
   <div id="intro"><h1>Abyss of Memories</h1><p>Lặn xuống nơi ký ức phát sáng</p><div class="pulse"></div></div>
   <div id="lightbox"><button id="lightbox-close" type="button" aria-label="Đóng">×</button><figure><img id="lightbox-image" alt="Ký ức" /><figcaption id="lightbox-caption"></figcaption></figure></div>
   <script>if (new URLSearchParams(location.search).get('autostart') === 'true') document.getElementById('intro').classList.add('hidden');</script>
@@ -54,6 +57,6 @@
   <script>
     window.musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio' });
   </script>
-  <script type="module" src="./js/abyss.js?v=20260818-abyss4"></script>
+  <script type="module" src="./js/abyss.js?v=20260818-abyss5"></script>
 </body>
 </html>
