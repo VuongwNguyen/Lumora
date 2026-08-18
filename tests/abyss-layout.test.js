@@ -53,7 +53,8 @@ test('9-16 ảnh: bố cục đầy đủ theo mục 4.4 và đủ 6 phase', asy
   const { planContent } = await import(modulePath);
   const plan = planContent(14, 16);
   assert.equal(plan.near, 3);
-  assert.ok(plan.mid >= 6 && plan.mid <= 8);
+  assert.equal(plan.mid, 8);
+  assert.equal(plan.far, 3);
   assert.equal(plan.near + plan.mid + plan.far, plan.relicCount);
   assert.equal(plan.diveDistance, 500);
   assert.equal(plan.phaseIds.length, 6);
@@ -66,24 +67,54 @@ test('tier thấp giới hạn số relic hiển thị nhưng không đổi quã
   assert.equal(low.relicCount, 6);
   assert.equal(high.relicCount, 14);
   assert.equal(low.diveDistance, high.diveDistance);
+
+  const sparse = planContent(8, 6);
+  assert.equal(sparse.streamed, true, 'ảnh bị bỏ mà không bật cờ stream');
 });
 
-test('trên 16 ảnh: pool relic bị chặn, quãng đường dài thêm 12 m mỗi ảnh dư', async () => {
+test('trên 16 ảnh: pool relic bị chặn, quãng đường dài thêm 12 m mỗi ảnh dư rồi chặn ở 620 m', async () => {
   const { planContent } = await import(modulePath);
   const plan = planContent(40, 16);
   assert.equal(plan.relicCount, 16);
   assert.equal(plan.streamed, true);
-  assert.equal(plan.diveDistance, 500 + 24 * 12);
+  assert.equal(plan.diveDistance, 620, 'quãng đường phải bị chặn ở 620 m');
+  assert.equal(planContent(26, 16).diveDistance, 620, 'n=26 là điểm chạm trần');
+  assert.equal(planContent(25, 16).diveDistance, 608, 'n=25 chưa chạm trần');
+  assert.equal(planContent(200, 16).diveDistance, 620);
 });
 
-test('relic gần nhất luôn nằm trong quãng đường lặn', async () => {
-  const { planContent, relicSpawnRange } = await import(modulePath);
-  for (const n of [1, 3, 8, 16, 40]) {
+test('relic sâu nhất luôn nằm trong quãng đường lặn', async () => {
+  const { planContent, relicDistanceAt } = await import(modulePath);
+  for (const n of [1, 2, 3, 6, 14, 40]) {
     const plan = planContent(n, 16);
-    const range = relicSpawnRange(plan);
-    assert.ok(range.first > 0, `relic đầu ở ${range.first}`);
-    assert.ok(range.last <= plan.diveDistance, `relic cuối ở ${range.last} vượt ${plan.diveDistance}`);
-    assert.ok(range.first < range.last || plan.relicCount <= 1);
+    const deepest = relicDistanceAt(plan, Math.max(0, plan.relicCount - 1));
+    assert.ok(deepest < plan.diveDistance, `n=${n}: relic sâu nhất ${deepest} > lặn ${plan.diveDistance}`);
+    assert.ok(relicDistanceAt(plan, 0) > 0);
+  }
+});
+
+test('relicDistanceAt trải relic đều trong spawn range', async () => {
+  const { planContent, relicSpawnRange, relicDistanceAt } = await import(modulePath);
+  const plan = planContent(14, 16);
+  const { first, last } = relicSpawnRange(plan);
+  assert.equal(relicDistanceAt(plan, 0), first);
+  assert.equal(relicDistanceAt(plan, plan.relicCount - 1), last);
+  let prev = -Infinity;
+  for (let i = 0; i < plan.relicCount; i++) {
+    const d = relicDistanceAt(plan, i);
+    assert.ok(d > prev, `không đơn điệu ở index ${i}`);
+    assert.ok(d >= first && d <= last, `index ${i} ra ngoài spawn range`);
+    prev = d;
+  }
+});
+
+test('relicDistanceAt không chia cho 0 khi chỉ có 1 relic', async () => {
+  const { planContent, relicSpawnRange, relicDistanceAt } = await import(modulePath);
+  for (const n of [0, 1]) {
+    const plan = planContent(n, 16);
+    const d = relicDistanceAt(plan, 0);
+    assert.ok(Number.isFinite(d), `n=${n} cho ${d}`);
+    assert.equal(d, relicSpawnRange(plan).first);
   }
 });
 
@@ -100,6 +131,14 @@ test('buildPhaseTable co lại theo tỉ lệ khi lặn ngắn', async () => {
   assert.equal(table[0].start, 40);
   assert.equal(table[table.length - 1].start, 220);
   for (let i = 1; i < table.length; i++) assert.ok(table[i].start > table[i - 1].start);
+});
+
+test('buildPhaseTable không để phase id lạ làm NaN các phase hợp lệ', async () => {
+  const { buildPhaseTable } = await import(modulePath);
+  const table = buildPhaseTable(['descent', 'bogus', 'release'], 40, 540);
+  for (const phase of table) {
+    assert.ok(Number.isFinite(phase.start), `${phase.id}.start không hữu hạn`);
+  }
 });
 
 test('số ảnh âm hoặc không phải số được coi như rỗng', async () => {

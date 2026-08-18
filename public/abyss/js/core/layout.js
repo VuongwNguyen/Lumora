@@ -9,16 +9,23 @@ const PHASE_WEIGHTS = Object.freeze({
   descent: 80, first_glow: 90, memory_trench: 120, beacon_reveal: 100, living_ocean: 110,
 });
 
+// Pool trần 16 mesh relic — cố ý khớp TIER_CONFIG.high.relics ở core/tiers.js.
+// Không import tiers.js ở đây để hai module giữ tách rời.
 const MAX_POOL = 16;
+
+// Nhánh 4-8 ảnh luôn cần 3 silhouette rỗng ở far field để giữ chiều sâu,
+// bất kể tier hay số ảnh thật (mục 13.11).
+const SPARSE_FAR_SILHOUETTES = 3;
 
 export function buildPhaseTable(phaseIds, startDepth, endDepth) {
   const body = phaseIds.filter(id => id !== 'release');
-  const totalWeight = body.reduce((sum, id) => sum + PHASE_WEIGHTS[id], 0);
+  // ?? 0: phase id lạ không được để làm NaN lan sang các phase hợp lệ khác.
+  const totalWeight = body.reduce((sum, id) => sum + (PHASE_WEIGHTS[id] ?? 0), 0);
   const span = endDepth - startDepth;
   let cursor = startDepth;
   const table = body.map(id => {
     const start = cursor;
-    cursor += span * (PHASE_WEIGHTS[id] / totalWeight);
+    cursor += span * ((PHASE_WEIGHTS[id] ?? 0) / totalWeight);
     return { id, start, end: cursor };
   });
   table.push({ id: 'release', start: cursor, end: Infinity });
@@ -36,6 +43,8 @@ export function planContent(imageCount, tierRelics = MAX_POOL) {
   }
 
   if (n <= 3) {
+    // Không áp tierRelics ở đây một cách cố ý: tier thấp nhất vẫn cấp 6 relic
+    // (core/tiers.js), lớn hơn 3, nên nhánh này không bao giờ bị tier bó hẹp.
     return frozen({
       relicCount: n, near: n, mid: 0, far: 0, streamed: false, empty: false,
       diveDistance: 180, phaseIds: ['descent', 'beacon_reveal', 'release'],
@@ -46,9 +55,10 @@ export function planContent(imageCount, tierRelics = MAX_POOL) {
     const withImages = Math.min(n, tierRelics);
     const near = Math.min(2, withImages);
     const mid = withImages - near;
-    const far = 3; // silhouette rỗng, không nhận ảnh
+    const far = SPARSE_FAR_SILHOUETTES;
     return frozen({
-      relicCount: near + mid + far, near, mid, far, streamed: false, empty: false,
+      relicCount: near + mid + far, near, mid, far,
+      streamed: withImages < n, empty: false,
       diveDistance: 320,
       phaseIds: ['descent', 'first_glow', 'memory_trench', 'beacon_reveal', 'release'],
     });
@@ -60,7 +70,10 @@ export function planContent(imageCount, tierRelics = MAX_POOL) {
   return frozen({
     relicCount, near, mid, far: relicCount - near - mid,
     streamed: n > relicCount, empty: false,
-    diveDistance: 500 + Math.max(0, n - MAX_POOL) * 12,
+    // Trần 620 m khớp công thức clamp(180, 40×N, 620) của mục 13.11 — pool
+    // relic vẫn chặn ở MAX_POOL nên thêm quãng đường sau đó chỉ kéo dài thời
+    // gian bơi mà không thêm nội dung.
+    diveDistance: Math.min(620, 500 + Math.max(0, n - MAX_POOL) * 12),
     phaseIds: FULL_PHASE_IDS.slice(),
   });
 }
@@ -73,10 +86,15 @@ export function relicSpawnRange(plan) {
   return { first, last, span: last - first };
 }
 
+// Chỉ số 0..near-1 là near field, near..near+mid-1 là mid field, phần còn
+// lại là far field (mục 4.4) — Task 6 phải map mesh theo đúng thứ tự này.
 export function relicDistanceAt(plan, index) {
   const { first, span } = relicSpawnRange(plan);
   if (plan.relicCount <= 1) return first;
-  return first + span * (index / (plan.relicCount - 1));
+  // Kẹp index để một pool mesh cố định lớn hơn relicCount không ngoại suy
+  // quá "last" hay quá diveDistance.
+  const clampedIndex = Math.min(Math.max(index, 0), plan.relicCount - 1);
+  return first + span * (clampedIndex / (plan.relicCount - 1));
 }
 
 function frozen(plan) {
