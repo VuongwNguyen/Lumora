@@ -3,14 +3,11 @@
 export function createPhaseDirector(table) {
   if (!Array.isArray(table) || table.length === 0) throw new Error('phase table rỗng');
   let currentIndex = 0;
+  let lastDepth = table[0].start;
   return {
     get table() { return table; },
     update(depth) {
-      // Chốt biên "kế tiếp" TRƯỚC khi phase tiến: nếu chốt sau, đúng lúc
-      // currentIndex vừa nhảy qua biên thì "next" sẽ trỏ sang biên xa hơn
-      // phía sau (của phase mới), khiến nextBlend rơi thẳng về 0 ngay tại
-      // biên thay vì 0.5 — tức mất luôn cross-fade ở đúng chỗ cần nó nhất.
-      const upcoming = table[currentIndex + 1];
+      lastDepth = depth;
       // Đơn hướng: chỉ tiến, không bao giờ lùi (mục 13.4).
       while (currentIndex < table.length - 1 && depth >= table[currentIndex + 1].start) currentIndex += 1;
       const phase = table[currentIndex];
@@ -22,8 +19,14 @@ export function createPhaseDirector(table) {
         start: phase.start,
         end: phase.end,
         progress,
-        nextBlend: upcoming ? phaseBlend(depth, upcoming.start) : 0,
+        depth,
       };
+    },
+    // Blend liên tục 0->1 quanh biên vào phase `phaseIndex`, không phụ thuộc
+    // director đang ở phase nào — nên cross-fade không bị đứt khi index nhảy.
+    blendInto(phaseIndex) {
+      const target = table[phaseIndex];
+      return target ? phaseBlend(lastDepth, target.start) : 1;
     },
     reset() { currentIndex = 0; },
   };

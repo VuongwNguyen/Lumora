@@ -15,7 +15,10 @@ async function fullDirector() {
 test('phase tiến theo độ sâu và không bao giờ lùi', async () => {
   const director = await fullDirector();
   assert.equal(director.update(45).id, 'descent');
-  assert.equal(director.update(200).id, 'first_glow');
+  const atFirstGlow = director.update(200);
+  assert.equal(atFirstGlow.id, 'first_glow');
+  assert.ok(Number.isFinite(atFirstGlow.depth));
+  assert.equal(atFirstGlow.depth, 200);
   assert.equal(director.update(600).id, 'release');
   // Kéo camera lên không được đưa phase về lại.
   assert.equal(director.update(45).id, 'release');
@@ -51,12 +54,33 @@ test('phaseBlend cho cross-fade 8 m quanh biên', async () => {
   assert.ok(phaseBlend(116, 120, 8) > 0 && phaseBlend(116, 120, 8) < 0.5);
 });
 
-test('director expose blend tới biên kế tiếp để scene fade thay vì nhảy bậc', async () => {
-  const director = await fullDirector();
-  const early = director.update(60);
-  assert.equal(early.nextBlend, 0);
-  const atBoundary = director.update(120);
-  assert.ok(Math.abs(atBoundary.nextBlend - 0.5) < 1e-6);
+test('blendInto cho ramp liên tục 0->1 quanh biên, không đứt khi phase nhảy', async () => {
+  const { createPhaseDirector } = await import(phasesPath);
+  const { buildPhaseTable, FULL_PHASE_IDS } = await import(layoutPath);
+  const director = createPhaseDirector(buildPhaseTable(FULL_PHASE_IDS, 40, 540));
+  // Biên vào first_glow là 120 m; cửa sổ cross-fade là 112..128.
+  const seen = [];
+  for (let depth = 100; depth <= 140; depth += 2) {
+    director.update(depth);
+    seen.push(director.blendInto(1));
+  }
+  for (let i = 1; i < seen.length; i++) {
+    assert.ok(seen[i] >= seen[i - 1], `blend giảm ở bước ${i}: ${seen[i - 1]} -> ${seen[i]}`);
+  }
+  assert.equal(seen[0], 0);
+  assert.equal(seen[seen.length - 1], 1);
+  assert.ok(seen.some(v => v > 0 && v < 1), 'ramp nhảy thẳng 0->1, không có cross-fade');
+});
+
+test('blendInto đo biên cố định, không đổi theo phase hiện tại', async () => {
+  const { createPhaseDirector } = await import(phasesPath);
+  const { buildPhaseTable, FULL_PHASE_IDS } = await import(layoutPath);
+  const director = createPhaseDirector(buildPhaseTable(FULL_PHASE_IDS, 40, 540));
+  director.update(124);
+  // Đã ở first_glow, nhưng vẫn hỏi được về biên đã qua và biên chưa tới.
+  assert.equal(director.blendInto(1), 0.75);
+  assert.equal(director.blendInto(2), 0);
+  assert.equal(director.blendInto(99), 1, 'index ngoài bảng coi như đã vào hẳn');
 });
 
 test('bảng phase rút gọn vẫn chạy đúng thứ tự', async () => {
