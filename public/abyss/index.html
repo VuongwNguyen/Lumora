@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Abyss of Memories</title>
+  <link rel="icon" href="/favicon.ico" />
+  <script src="/shared/js/experienceTransition.js?v=20260816-se2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #010609; color: #d9fff5; font-family: Georgia, serif; }
+    #canvas-container { position: fixed; inset: 0; }
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+    #title { position: absolute; top: calc(24px + env(safe-area-inset-top)); left: 28px; letter-spacing: .18em; text-transform: uppercase; font: 11px/1.4 system-ui, sans-serif; color: rgba(190,255,239,.72); }
+    #depth { position: absolute; right: 28px; bottom: calc(24px + env(safe-area-inset-bottom)); font: 11px system-ui, sans-serif; letter-spacing: .12em; color: rgba(190,255,239,.48); }
+    #btn-audio { pointer-events: auto; position: absolute; top: calc(18px + env(safe-area-inset-top)); right: 20px; width: 42px; height: 42px; border: 1px solid rgba(151,246,218,.24); border-radius: 50%; background: rgba(1,12,16,.6); color: #c8fff1; cursor: pointer; }
+    #intro { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: radial-gradient(circle at 50% 42%, rgba(17,92,101,.36), #010609 64%); transition: opacity .9s ease; cursor: pointer; }
+    #intro.hidden { opacity: 0; pointer-events: none; }
+    #intro h1 { margin: 0; font-size: clamp(32px, 7vw, 76px); font-weight: 400; letter-spacing: .1em; color: #d8fff5; }
+    #intro p { margin: 14px 0 44px; font: 11px system-ui, sans-serif; letter-spacing: .24em; text-transform: uppercase; color: rgba(207,255,243,.48); }
+    .pulse { width: 58px; height: 58px; border: 1px solid rgba(147,255,220,.75); border-radius: 50%; animation: breathe 2.4s ease-out infinite; }
+    @keyframes breathe { from { transform: scale(.72); opacity: .85; } to { transform: scale(1.65); opacity: 0; } }
+    #lightbox { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; padding: 24px; background: rgba(0,7,10,.82); backdrop-filter: blur(10px); }
+    #lightbox.open { display: grid; }
+    #lightbox figure { max-width: min(78vw, 560px); max-height: 84vh; margin: 0; text-align: center; }
+    #lightbox img { display: block; max-width: 100%; max-height: 72vh; border: 7px solid rgba(219,255,245,.9); box-shadow: 0 0 50px rgba(54,231,195,.2); }
+    #lightbox figcaption { margin-top: 14px; font: 14px system-ui, sans-serif; color: rgba(218,255,247,.78); }
+    #lightbox button { position: absolute; top: 24px; right: 24px; width: 40px; height: 40px; border: 1px solid rgba(218,255,247,.3); border-radius: 50%; background: transparent; color: #d8fff5; font-size: 20px; cursor: pointer; }
+    #relic-nav { position: fixed; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+    #reset-dive { display: none; pointer-events: auto; position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); border: 1px solid rgba(184,255,240,.42); border-radius: 999px; padding: 10px 16px; background: rgba(1,8,12,.72); color: #b8fff0; font: 12px system-ui, sans-serif; cursor: pointer; }
+    #reset-dive.visible { display: block; }
+    #manual-dive { display: none; pointer-events: auto; position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); border: 1px solid rgba(184,255,240,.42); border-radius: 999px; padding: 10px 16px; background: rgba(1,8,12,.72); color: #b8fff0; font: 12px system-ui, sans-serif; cursor: pointer; }
+    #manual-dive.visible { display: block; }
+    @media (orientation: portrait) and (pointer: coarse) { #title { left: 18px; } #depth { right: 18px; } }
+  </style>
+</head>
+<body>
+  <script>
+    try { window.lumoraArrivalTransition = window.LumoraExperienceTransition.bootstrapArrival({ storage: window.sessionStorage, galaxyId: new URLSearchParams(location.search).get('galaxyId'), document }); } catch { window.lumoraArrivalTransition = null; }
+  </script>
+  <div id="canvas-container"></div>
+  <div id="hud"><div id="title">LUMORA · ABYSS OF MEMORIES</div><div id="depth">DEPTH 040 M</div><button id="btn-audio" type="button" aria-label="Bật hoặc tắt âm thanh">🔇</button><button id="reset-dive" type="button">Trở lên mặt nước</button><button id="manual-dive" type="button">Lặn sâu hơn</button></div>
+  <nav id="relic-nav" aria-label="Các ký ức dưới đáy biển"></nav>
+  <div id="intro"><h1>Abyss of Memories</h1><p>Lặn xuống nơi ký ức phát sáng</p><div class="pulse"></div></div>
+  <div id="lightbox"><button id="lightbox-close" type="button" aria-label="Đóng">×</button><figure><img id="lightbox-image" alt="Ký ức" /><figcaption id="lightbox-caption"></figcaption></figure></div>
+  <script>if (new URLSearchParams(location.search).get('autostart') === 'true') document.getElementById('intro').classList.add('hidden');</script>
+  <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.152.2/build/three.module.js"}}</script>
+  <script src="/shared/js/activityApi.js"></script>
+  <script src="/shared/js/activityLogger.js"></script>
+  <script src="/shared/js/trackedFetch.js"></script>
+  <script src="/shared/js/activityAutoTracker.js"></script>
+  <script src="/shared/js/soundscapeEngine.js?v=20260815-dynamic1"></script>
+  <script src="/shared/js/storyEmotionEngine.js?v=20260816-scene-grammar1"></script>
+  <script>
+    window.musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio' });
+  </script>
+  <script type="module" src="./js/abyss.js?v=20260818-abyss4"></script>
+</body>
+</html>
