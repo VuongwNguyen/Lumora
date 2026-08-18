@@ -86,7 +86,10 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     whaleFall = new THREE.Group(); whaleFall.position.set(0, -7.8, at(PLACEMENT.whaleFall));
     const boneMaterial = new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: .78 });
     for (let i = 0; i < 7; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(2 + Math.sin(i) * .25, .16, 6, 16, Math.PI), boneMaterial); rib.position.set((i - 3) * 1.5, 1.2 + Math.sin(i) * .3, 0); rib.rotation.z = Math.PI / 2; whaleFall.add(rib); }
-    whaleFall.userData.fauna = { type: 'whaleFall', phase: 0, startPhaseId: 'living_ocean' }; actors.push(whaleFall); group.add(whaleFall);
+    // essential: whale fall là landmark MANG NỘI DUNG (ảnh cũ nhất, mục 14.3),
+    // không phải sinh vật trang trí — nó không được phép biến mất chỉ vì galaxy
+    // nhỏ không có living_ocean, nếu không ảnh cũ nhất không còn chỗ để treo.
+    whaleFall.userData.fauna = { type: 'whaleFall', phase: 0, startPhaseId: 'living_ocean', essential: true }; actors.push(whaleFall); group.add(whaleFall);
   }
   function brineMemoryPool() {
     memoryPool = new THREE.Mesh(new THREE.CircleGeometry(7, 32), new THREE.MeshBasicMaterial({ color: theme.rareViolet, transparent: true, opacity: .08, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
@@ -103,10 +106,7 @@ export function createFauna(theme, tier, reducedMotion, plan) {
   function update(elapsed, phase, camera, blendInto, phaseTable, causticShafts = []) {
     actors.forEach(actor => {
       const meta = actor.userData.fauna;
-      // startPhase phải tra theo ID, không theo index. Bảng phase co lại theo số
-      // ảnh (mục 13.11), nên galaxy 3 ảnh chỉ có 3 phase — index 4-5 không tồn
-      // tại. Phase vắng mặt nghĩa là actor đó không thuộc hành trình này.
-      const startIndex = phaseTable.findIndex(entry => entry.id === meta.startPhaseId);
+      const startIndex = resolveStartIndex(phaseTable, meta);
       if (startIndex < 0) { actor.visible = false; return; }
       // Cross-fade thay vì bật/tắt: hỏi director về ĐÚNG biên mà actor này
       // xuất hiện. blendInto liên tục 0->1 quanh biên đó bất kể phase hiện tại,
@@ -129,6 +129,19 @@ export function createFauna(theme, tier, reducedMotion, plan) {
       if (meta.type === 'silhouette') actor.material.opacity = meta.baseOpacity * reveal;
       if (meta.type === 'memoryPool') actor.material.opacity = 0.08 * reveal;
     });
+  }
+
+  // startPhase phải tra theo ID, không theo index. Bảng phase co lại theo số ảnh
+  // (mục 13.11), nên galaxy 3 ảnh chỉ có 3 phase — index 4-5 không tồn tại.
+  // Với fauna thường, phase vắng mặt nghĩa là actor đó không thuộc hành trình
+  // này và bị ẩn hẳn: galaxy 3 ảnh thật sự không có Living Ocean nên thật sự
+  // không có đàn cá. Actor `essential` thì ngược lại — nó lùi về phase cuối
+  // trước release để vẫn có một chỗ đứng ở cuối rãnh dù bảng phase ngắn tới đâu.
+  function resolveStartIndex(phaseTable, meta) {
+    const preferred = phaseTable.findIndex(entry => entry.id === meta.startPhaseId);
+    if (preferred >= 0 || !meta.essential) return preferred;
+    for (let i = phaseTable.length - 1; i >= 0; i--) if (phaseTable[i].id !== 'release') return i;
+    return -1;
   }
 
   // Mốc opacity phải cache trên VẬT LIỆU, không trên mesh: whale fall dùng chung
