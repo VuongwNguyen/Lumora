@@ -38,8 +38,11 @@ test('theme hồng chói không đổi được bất kỳ màu scene nào (mụ
   const { resolveSceneColors } = await import(modulePath);
   const baseline = resolveSceneColors();
   const poisoned = resolveSceneColors({ primary: '#FF00AA', secondary: '#FF00AA' });
+  // Spec 13.10 cho phép ngưỡng 2, nhưng resolveSceneColors trả về chuỗi
+  // byte-identical nên deltaE thật sự luôn là 0. Ghim sát để một thay đổi
+  // sau này lỡ tô màu scene lệch hơn 1 JND vẫn còn nằm dưới 2 sẽ bị bắt.
   for (const key of Object.keys(baseline)) {
-    assert.ok(deltaE(baseline[key], poisoned[key]) < 2, `${key} bị theme làm lệch`);
+    assert.ok(deltaE(baseline[key], poisoned[key]) < 1e-9, `${key} bị theme làm lệch`);
   }
 });
 
@@ -64,8 +67,19 @@ test('accent chỉ dịch 12% về phía theme, không thay thế hoàn toàn', 
   const neutral = resolveAccents({});
   const themed = resolveAccents({ primary: '#00FFFF' });
   assert.ok(deltaE(neutral.accent, ABYSS_PALETTE.bioluminescent) < 1);
-  assert.ok(deltaE(themed.accent, ABYSS_PALETTE.bioluminescent) < 12);
+  const shift = deltaE(themed.accent, ABYSS_PALETTE.bioluminescent);
+  // mix 0.12 -> dE 2.51; 0.25 -> dE 5.18. Dải này ghim mix vào khoảng 0.05-0.19.
+  assert.ok(shift > 1 && shift < 4, `accent lệch ${shift}, mix đã vượt 12%`);
   assert.notEqual(themed.accent, neutral.accent);
+});
+
+test('theme không màu không kéo accent ra khỏi palette', async () => {
+  const { resolveAccents, ABYSS_PALETTE } = await import(modulePath);
+  for (const grey of ['#000000', '#808080', '#FFFFFF']) {
+    const accents = resolveAccents({ primary: grey, secondary: grey });
+    assert.equal(accents.accent.toLowerCase(), ABYSS_PALETTE.bioluminescent.toLowerCase());
+    assert.equal(accents.accentSecondary.toLowerCase(), ABYSS_PALETTE.memoryGlow.toLowerCase());
+  }
 });
 
 test('theme rác hoặc thiếu không làm vỡ pipeline màu', async () => {

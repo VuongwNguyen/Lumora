@@ -26,7 +26,10 @@ export function hexToRgb(hex) {
 }
 
 export function rgbToHex({ r, g, b }) {
-  const channel = (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0');
+  const channel = (v) => {
+    const safe = Number.isFinite(v) ? v : 0;
+    return Math.round(Math.min(1, Math.max(0, safe)) * 255).toString(16).padStart(2, '0');
+  };
   return `#${channel(r)}${channel(g)}${channel(b)}`;
 }
 
@@ -83,7 +86,7 @@ function mixHex(fromHex, toHex, amount) {
 }
 
 // Màu scene KHÔNG nhận tham số theme một cách có chủ đích. Chữ ký vẫn nhận
-// đối số để chỗ gọi đọc tự nhiên, và để test chứng minh nó bị bỏ qua.
+// đối số chỉ để khớp cách gọi đối xứng với resolveAccents(userTheme) trong theme.js.
 export function resolveSceneColors(_userTheme) {
   return Object.freeze({
     background: ABYSS_PALETTE.deepWater,
@@ -98,10 +101,12 @@ export function resolveSceneColors(_userTheme) {
 }
 
 function accentFrom(candidate, base) {
-  const rgb = hexToRgb(candidate);
-  if (!rgb) return base;
-  const constrained = hslToHex(constrainAccentHsl(hexToHsl(candidate)));
-  return mixHex(base, constrained, ACCENT_MIX);
+  const hsl = hexToHsl(candidate);
+  if (!hexToRgb(candidate)) return rgbToHex(hexToRgb(base));
+  // Theme không màu (xám/đen/trắng) không nói lên sở thích accent nào:
+  // hslToHex sẽ vứt bỏ hue đã kẹp, kéo accent về phía xám thay vì teal.
+  if (hsl.s === 0) return rgbToHex(hexToRgb(base));
+  return mixHex(base, hslToHex(constrainAccentHsl(hsl)), ACCENT_MIX);
 }
 
 export function resolveAccents(userTheme) {

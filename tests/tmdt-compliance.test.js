@@ -845,7 +845,8 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   assert.match(palette, /ACCENT_HUE_MIN = 150 \/ 360/);
   assert.match(palette, /ACCENT_HUE_MAX = 210 \/ 360/);
   assert.match(palette, /Math\.min\(ACCENT_HUE_MAX, Math\.max\(ACCENT_HUE_MIN/);
-  assert.doesNotMatch(theme, /150 \/ 360/);
+  assert.doesNotMatch(theme, /150\s*\/\s*360/);
+  assert.match(theme, /from '\.\/palette\.js'/);
   assert.match(phases, /first_glow.*start: 120/s);
   assert.match(phases, /release.*start: 540/s);
   assert.match(water, /marineSnow/);
