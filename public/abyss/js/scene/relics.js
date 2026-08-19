@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { relicDistanceAt, relicSpawnRange } from '../core/layout.js';
+import { relicDistanceAt, relicWrapDistance } from '../core/layout.js';
 
 // Ảnh gốc từ ImageKit có thể vài nghìn pixel. Thu nhỏ trước khi lên GPU để
 // giữ ngân sách 48 MB texture ở mục 13.7.
@@ -49,7 +49,7 @@ function fieldOf(plan, index) {
 export async function createRelics(images, captions, theme, tier, reducedMotion, plan) {
   const group = new THREE.Group();
   const relics = [];
-  const { span } = relicSpawnRange(plan);
+  const span = relicWrapDistance(plan);
   // Stride của stream = số relic THỰC SỰ mang ảnh. Far field không có ảnh nên
   // plan.relicCount đếm thừa: với planContent(8, 6) stride sai thành 9 % 8 = 1,
   // mỗi lần cuộn lại hiện đúng tấm vừa đi qua và ảnh cuối không bao giờ xuất hiện.

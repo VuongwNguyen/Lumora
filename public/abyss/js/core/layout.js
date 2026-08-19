@@ -32,12 +32,16 @@ export function buildPhaseTable(phaseIds, startDepth, endDepth) {
   return table;
 }
 
+// Khoảng cách tối thiểu giữa hai relic liên tiếp. Dưới ngưỡng này chúng chồng
+// lên nhau trong sương và mất hẳn cảm giác từng tấm một.
+const MIN_RELIC_SPACING = 9;
+
 export function planContent(imageCount, tierRelics = MAX_POOL) {
   const n = Number.isFinite(imageCount) && imageCount > 0 ? Math.floor(imageCount) : 0;
 
   if (n === 0) {
     return frozen({
-      relicCount: 0, near: 0, mid: 0, far: 0, streamed: false, empty: true,
+      relicCount: 0, near: 0, mid: 0, far: 0, streamed: false, imageCount: n, empty: true,
       diveDistance: 200, phaseIds: ['descent', 'first_glow', 'release'],
     });
   }
@@ -46,7 +50,7 @@ export function planContent(imageCount, tierRelics = MAX_POOL) {
     // Không áp tierRelics ở đây một cách cố ý: tier thấp nhất vẫn cấp 6 relic
     // (core/tiers.js), lớn hơn 3, nên nhánh này không bao giờ bị tier bó hẹp.
     return frozen({
-      relicCount: n, near: n, mid: 0, far: 0, streamed: false, empty: false,
+      relicCount: n, near: n, mid: 0, far: 0, streamed: false, imageCount: n, empty: false,
       diveDistance: 180, phaseIds: ['descent', 'beacon_reveal', 'release'],
     });
   }
@@ -57,7 +61,7 @@ export function planContent(imageCount, tierRelics = MAX_POOL) {
     const mid = withImages - near;
     const far = SPARSE_FAR_SILHOUETTES;
     return frozen({
-      relicCount: near + mid + far, near, mid, far,
+      relicCount: near + mid + far, near, mid, far, imageCount: n,
       streamed: withImages < n, empty: false,
       diveDistance: 320,
       phaseIds: ['descent', 'first_glow', 'memory_trench', 'beacon_reveal', 'release'],
@@ -68,7 +72,7 @@ export function planContent(imageCount, tierRelics = MAX_POOL) {
   const near = Math.min(3, relicCount);
   const mid = Math.min(8, relicCount - near);
   return frozen({
-    relicCount, near, mid, far: relicCount - near - mid,
+    relicCount, near, mid, far: relicCount - near - mid, imageCount: n,
     streamed: n > relicCount, empty: false,
     // Trần 620 m khớp công thức clamp(180, 40×N, 620) của mục 13.11 — pool
     // relic vẫn chặn ở MAX_POOL nên thêm quãng đường sau đó chỉ kéo dài thời
@@ -88,13 +92,31 @@ export function relicSpawnRange(plan) {
 
 // Chỉ số 0..near-1 là near field, near..near+mid-1 là mid field, phần còn
 // lại là far field (mục 4.4) — Task 6 phải map mesh theo đúng thứ tự này.
+// Khoảng cách giữa hai relic. Trải đều trên spawn range là sai khi galaxy có
+// nhiều ảnh hơn pool: 59 ảnh / 16 relic cho 30.6 m một tấm, và vì mỗi relic chỉ
+// vòng lại được một lần trong quãng lặn nên CHỈ 18 trên 59 tấm từng hiện ra.
+// Lấy theo số ảnh để cả album đi qua được camera đúng một lượt.
+export function relicSpacing(plan) {
+  const { span } = relicSpawnRange(plan);
+  const spread = plan.relicCount > 1 ? span / (plan.relicCount - 1) : span;
+  if (!plan.imageCount) return spread;
+  const needed = plan.diveDistance / plan.imageCount;
+  return Math.max(MIN_RELIC_SPACING, Math.min(spread, needed));
+}
+
+// Quãng đường một relic lùi lại khi bị camera bỏ qua: đúng chiều dài đoàn relic,
+// nên chúng tạo thành băng chuyền liên tục thay vì tái xuất hiện thành cụm.
+export function relicWrapDistance(plan) {
+  return relicSpacing(plan) * plan.relicCount;
+}
+
 export function relicDistanceAt(plan, index) {
-  const { first, span } = relicSpawnRange(plan);
+  const { first } = relicSpawnRange(plan);
   if (plan.relicCount <= 1) return first;
   // Kẹp index để một pool mesh cố định lớn hơn relicCount không ngoại suy
   // quá "last" hay quá diveDistance.
   const clampedIndex = Math.min(Math.max(index, 0), plan.relicCount - 1);
-  return first + span * (clampedIndex / (plan.relicCount - 1));
+  return first + relicSpacing(plan) * clampedIndex;
 }
 
 function frozen(plan) {

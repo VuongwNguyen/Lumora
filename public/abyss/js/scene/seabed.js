@@ -8,6 +8,18 @@ function makeRockGeometry(scale = 1) {
     position.setXYZ(i, position.getX(i) * n, position.getY(i) * (.65 + Math.random() * .45), position.getZ(i) * n);
   }
   geometry.computeVertexNormals();
+  // Scene là unlit (mục 13.5, 0 dynamic light) nên khối đá không có bóng, và ở
+  // opacity .19 nó nhìn xuyên qua mặt sau thành nét vẽ chồng chéo. Nướng sẵn số
+  // hạng lambert theo ánh sáng rọi từ mặt nước xuống vào vertex color để đá có
+  // khối mà vẫn không cần đèn.
+  const normal = geometry.attributes.normal;
+  const colors = new Float32Array(position.count * 3);
+  for (let i = 0; i < position.count; i++) {
+    const lit = Math.max(0, normal.getY(i)) ** 1.4;
+    const shade = .12 + lit * .42;
+    colors[i * 3] = shade; colors[i * 3 + 1] = shade; colors[i * 3 + 2] = shade;
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   return geometry;
 }
 
@@ -31,7 +43,10 @@ export function createSeabed(theme, tier, plan) {
   const scale = floorEnd / REFERENCE_FLOOR;
   const floorLength = floorEnd + FLOOR_START;
   const group = new THREE.Group();
-  const floorGeometry = new THREE.PlaneGeometry(90, floorLength, 30, Math.max(24, Math.round(floorLength / 4)));
+  // Rộng 90 nghĩa là mép hai bên chỉ cách trục 45; với FOV ngang ~103 độ camera
+  // thấy tới +-1.26*d nên từ 36 m trở đi MÉP SÀN lọt vào khung hình thành một
+  // đường cong rõ. 240 đẩy mép ra 95 m, xa hơn D90 của fog ở mọi dải độ sâu.
+  const floorGeometry = new THREE.PlaneGeometry(240, floorLength, 30, Math.max(24, Math.round(floorLength / 4)));
   const floorPosition = floorGeometry.attributes.position;
   for (let i = 0; i < floorPosition.count; i++) {
     const x = floorPosition.getX(i); const y = floorPosition.getY(i);
@@ -41,7 +56,8 @@ export function createSeabed(theme, tier, plan) {
   const floor = new THREE.Mesh(floorGeometry, new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: .96, side: THREE.DoubleSide }));
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, -8.5, FLOOR_START - floorLength / 2); group.add(floor);
 
-  const rockMaterial = new THREE.MeshBasicMaterial({ color: theme.coldTeal, transparent: true, opacity: .19 });
+  // Đục, không transparent: nhìn xuyên qua đá là thứ tạo ra cảm giác nét vẽ.
+  const rockMaterial = new THREE.MeshBasicMaterial({ color: theme.coldTeal, vertexColors: true });
   const rockGeometry = makeRockGeometry(1);
   // Không kẹp theo tier.rocks: giữ mật độ mới là yêu cầu, và đá là MỘT
   // InstancedMesh nên thêm 20% instance ở quãng 620 m chỉ là thêm đỉnh, không

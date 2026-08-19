@@ -147,3 +147,39 @@ test('số ảnh âm hoặc không phải số được coi như rỗng', async 
     assert.equal(planContent(bad, 16).empty, true);
   }
 });
+
+test('khoảng cách relic suy từ số ảnh để cả album đi qua được camera', async () => {
+  const { planContent, relicSpacing, relicWrapDistance, relicDistanceAt } = await import(modulePath);
+  // 59 ảnh: trải đều trên spawn range cho 30.6 m một tấm, và vì mỗi relic chỉ
+  // vòng lại được một lần trong quãng lặn nên chỉ 18/59 tấm từng hiện ra.
+  const plan = planContent(59, 16);
+  assert.ok(relicSpacing(plan) < 12, `spacing ${relicSpacing(plan)} vẫn quá thưa`);
+
+  const wrap = relicWrapDistance(plan);
+  const travel = plan.diveDistance + 7.2;
+  let shown = 0;
+  for (let i = 0; i < plan.relicCount; i++) {
+    for (let d = relicDistanceAt(plan, i); d < travel; d += wrap) shown += 1;
+  }
+  assert.ok(shown >= 45, `chỉ ${shown}/59 ảnh hiện ra`);
+});
+
+test('galaxy vừa pool giữ nguyên cách trải đều như cũ', async () => {
+  const { planContent, relicSpacing, relicSpawnRange, relicDistanceAt } = await import(modulePath);
+  const plan = planContent(14, 16);
+  const { first, last, span } = relicSpawnRange(plan);
+  assert.ok(Math.abs(relicSpacing(plan) - span / (plan.relicCount - 1)) < 1e-9);
+  assert.equal(relicDistanceAt(plan, 0), first);
+  assert.ok(Math.abs(relicDistanceAt(plan, plan.relicCount - 1) - last) < 1e-9);
+});
+
+test('spacing không bao giờ nhỏ hơn sàn, dù galaxy khổng lồ', async () => {
+  const { planContent, relicSpacing, relicDistanceAt } = await import(modulePath);
+  for (const n of [59, 200, 5000]) {
+    const plan = planContent(n, 16);
+    assert.ok(relicSpacing(plan) >= 9, `n=${n} cho spacing ${relicSpacing(plan)}`);
+    // relic sâu nhất vẫn phải nằm trong quãng lặn
+    const deepest = relicDistanceAt(plan, plan.relicCount - 1);
+    assert.ok(deepest < plan.diveDistance, `n=${n}: relic sâu nhất ${deepest} > lặn ${plan.diveDistance}`);
+  }
+});
