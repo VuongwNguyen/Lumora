@@ -154,7 +154,7 @@ async function init() {
   const renderTheme = { ...theme.scene, accent: theme.accent, accentSecondary: theme.accentSecondary };
   scene.background = theme.scene.background;
   scene.fog = new THREE.FogExp2(theme.scene.background, densityForDepth(D0));
-  waterFX = createWaterFX(renderTheme, adaptiveTier.config, reducedMotion); root.add(waterFX.group);
+  waterFX = createWaterFX(renderTheme, adaptiveTier.config, reducedMotion, plan); root.add(waterFX.group);
   seabed = createSeabed(renderTheme, adaptiveTier.config, plan); root.add(seabed.group);
   beacon = createMemoryBeacon(renderTheme, plan); root.add(beacon.group);
   fauna = createFauna(renderTheme, adaptiveTier.config, reducedMotion, plan); root.add(fauna.group);
