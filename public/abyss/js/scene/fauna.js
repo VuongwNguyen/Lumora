@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { easeTowards } from '../core/depth.js';
 import { BEACON_DIVE_FRACTION } from './beacon.js';
+import { loadTexture } from './relics.js';
 
 // Vị trí sinh vật đo theo PHẦN của quãng đường lặn, không phải z tuyệt đối.
 // plan.diveDistance chạy từ 180 m tới 620 m theo số ảnh (mục 13.11), nên hằng
@@ -285,15 +286,15 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     );
     plane.position.set(0, 2.6, 0.4);
     plane.rotation.x = -0.18;
-    new THREE.TextureLoader().load(memory.url, texture => {
-      texture.colorSpace = THREE.SRGBColorSpace;
-      plane.material.map = texture;
-      plane.material.needsUpdate = true;
-    }, undefined, () => {});
-    plane.userData.relic = true;
-    plane.userData.url = memory.url;
-    plane.userData.caption = memory.caption || 'Ký ức đầu tiên';
-    plane.userData.index = -1;
+    // Dùng chung đường thu nhỏ với relic: TextureLoader thô nạp ảnh gốc nguyên
+    // cỡ, một tấm 4032x3024 tốn 65 MB — nhiều hơn cả trần 48 MB của mục 13.7,
+    // và tính trên mọi tier kể cả low.
+    loadTexture(memory.url, tier.texture).then(texture => {
+      if (texture) { plane.material.map = texture; plane.material.needsUpdate = true; }
+    });
+    // Ảnh này CỐ Ý chỉ để nhìn, không mở được: mục 14.3 nói "không giải thích
+    // bằng chữ, cứ để nó ở đó". raycastRelic chỉ quét relics.getRelics() nên
+    // plane không nằm trong danh sách — đừng thêm userData.relic/url vào đây.
     whaleFall.add(plane);
     whaleFall.userData.memoryPlane = plane;
   }

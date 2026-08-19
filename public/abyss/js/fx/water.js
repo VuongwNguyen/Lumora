@@ -328,5 +328,13 @@ export function createWaterFX(theme, tier, reducedMotion, plan) {
     for (const material of timedMaterials) material.uniforms.uTime.value += dt;
   }
 
-  return { group, update, triggerAlarm, getCausticShafts, setCausticsEnabled };
+  // Sau khi hạ tier, framebuffer nhỏ lại nhưng uPixelRatio vẫn là giá trị cũ,
+  // nên gl_PointSize tính thừa: hạt TO RA đúng lúc GPU đang đuối.
+  function setPixelRatio(ratio) {
+    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    const next = Math.min(window.devicePixelRatio || 1, ratio);
+    for (const layer of [near, far]) layer.material.uniforms.uPixelRatio.value = next;
+  }
+
+  return { group, update, triggerAlarm, getCausticShafts, setCausticsEnabled, setPixelRatio };
 }

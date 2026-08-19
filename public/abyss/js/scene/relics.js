@@ -3,7 +3,7 @@ import { relicDistanceAt, relicSpawnRange } from '../core/layout.js';
 
 // Ảnh gốc từ ImageKit có thể vài nghìn pixel. Thu nhỏ trước khi lên GPU để
 // giữ ngân sách 48 MB texture ở mục 13.7.
-function loadTexture(url, maxSize) {
+export function loadTexture(url, maxSize) {
   return new Promise(resolve => {
     if (!url) return resolve(null);
     const image = new Image();
@@ -109,6 +109,10 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
   await Promise.all(pending);
 
   let visibleCount = relics.length;
+  // Trần texture phải đọc được lúc chạy: module giữ tham chiếu `tier` từ lúc
+  // dựng, nên sau khi hạ tier đường stream vẫn nạp ảnh thay thế ở cỡ tier cũ.
+  let textureCap = tier.texture;
+  function setTextureCap(size) { if (Number.isFinite(size) && size > 0) textureCap = size; }
 
   function update(dt, elapsed, camera) {
     relics.forEach((frame, i) => {
@@ -137,7 +141,7 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
           data.url = images[data.sequence];
           data.caption = captions[data.sequence] || '';
           const mesh = data.imageMesh;
-          loadTexture(data.url, tier.texture).then(texture => {
+          loadTexture(data.url, textureCap).then(texture => {
             // three không tự giải phóng texture bị thay: không dispose là rò
             // đúng thứ ngân sách 48 MB ở mục 13.7 đang cố giữ.
             if (texture) { mesh.material.map?.dispose(); mesh.material.map = texture; mesh.material.needsUpdate = true; }
@@ -167,5 +171,5 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
     relics.forEach((frame, i) => { frame.visible = i < visibleCount; });
   }
 
-  return { group, update, getRelics, setVisibleCount, reset };
+  return { group, update, getRelics, setVisibleCount, setTextureCap, reset };
 }

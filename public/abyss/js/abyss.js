@@ -181,6 +181,11 @@ intro.addEventListener('click', () => { intro.classList.add('hidden'); window.mu
 // Hạ tier không dựng lại scene (quá tốn) — nó cắt bớt thứ đang vẽ.
 function applyTier(config) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, config.pixelRatio));
+  // Các module scene giữ tham chiếu config từ lúc dựng. Hai giá trị này còn được
+  // đọc sau khi dựng nên phải đẩy xuống, phần còn lại đành đóng băng vì hạ tier
+  // cố ý KHÔNG dựng lại scene.
+  relics?.setTextureCap?.(config.texture);
+  waterFX?.setPixelRatio?.(config.pixelRatio);
   // config.relics là NGÂN SÁCH của tier, không phải số relic đã dựng: plan được
   // lập theo tier ban đầu nên relicCount có thể lớn hơn (far silhouette) hoặc
   // nhỏ hơn ngân sách. Cắt thẳng theo ngân sách sẽ giấu luôn ẢNH: galaxy 20 ảnh
