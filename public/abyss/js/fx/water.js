@@ -165,9 +165,13 @@ export function createWaterFX(theme, tier, reducedMotion, plan) {
   // lần, nên vệt burglar-alarm (mục 14.4) mới đủ hạt để nhìn ra là một VỆT.
   // Lớp far giữ nguyên 70x48 làm phông rộng — bóp nó lại thì nước thành hành lang.
   const near = planktonLayer(count(tier.near), { x: 20, y: 14 }, layerSpan(dive, 180), theme.memoryGlow, .16, pixelRatio);
-  const far = planktonLayer(count(tier.far), { x: 70, y: 48 }, layerSpan(dive, 500), theme.bioluminescent, .10, pixelRatio);
+  // y 48 -> 26: trải quá cao thì lớp xa nằm trên đầu người xem và đọc thành
+  // BẦU TRỜI SAO, đúng thứ mục 11 cấm đầu tiên. Giữ nó trong hành lang lặn.
+  const far = planktonLayer(count(tier.far), { x: 70, y: 26 }, layerSpan(dive, 500), theme.bioluminescent, .10, pixelRatio);
   // Mục 13.9: reduced motion chỉ hạ TỐC ĐỘ tuyết xuống ×0.25, số hạt đã giảm ở trên.
-  const snow = marineSnowLayer(count(tier.snow), { x: 44, y: 30 }, layerSpan(dive, 260), theme.memoryGlow, .06, .18, reducedMotion ? .25 : 1);
+  // size .06 -> .10 và opacity .18 -> .30: mục 14.1 muốn tuyết biển là hình ảnh
+  // đặc trưng nhất của cảnh, nhưng ở cỡ cũ nó lẫn hẳn vào plankton dạng chấm.
+  const snow = marineSnowLayer(count(tier.snow), { x: 44, y: 30 }, layerSpan(dive, 260), theme.memoryGlow, .10, .30, reducedMotion ? .25 : 1);
   const planktonLayers = [near, far];
   group.add(far, snow, near);
 

@@ -29,10 +29,15 @@ export function loadTexture(url, maxSize) {
   });
 }
 
+// radius = khoảng cách từ trục camera ra tâm relic. Phải đủ lớn để camera đi
+// NGANG QUA chứ không xuyên thẳng vào: FOV ngang ~103 độ nên relic chỉ lọt khung
+// khi radius/dz < 1.26, tức nó lớn dần khi tiến tới rồi trượt ra rìa. Với
+// radius 5.2 và khung rộng 4.9, mép trong chỉ cách trục 2.75 — camera bay sát
+// bên và tấm ảnh chiếm 156% chiều cao khung hình.
 const FIELD_SIZE = {
-  near: { frame: [4.9, 6.3], image: [4.45, 5.75], radius: [5.2, 1.5], spread: 2.6 },
-  mid: { frame: [2.5, 3.25], image: [2.18, 2.85], radius: [7, 5], spread: 4 },
-  far: { frame: [1.4, 1.85], image: [1.2, 1.6], radius: [11, 7], spread: 6 },
+  near: { frame: [4.9, 6.3], image: [4.45, 5.75], radius: [8.5, 3], spread: 2.6 },
+  mid: { frame: [2.5, 3.25], image: [2.18, 2.85], radius: [13, 6], spread: 4 },
+  far: { frame: [1.4, 1.85], image: [1.2, 1.6], radius: [22, 10], spread: 6 },
 };
 
 function fieldOf(plan, index) {
