@@ -85,6 +85,12 @@ let lookX = 0; let lookY = 0; let dragging = false; let didMove = false; let las
 let focusedRelic = null; let pausedForReading = false; let finished = false; let elapsed = 0; let lastFrame = performance.now();
 let releaseElapsed = 0;
 let averageFrame = 60;
+// Cột caustic bị ẩn khi hạ tier vẫn nằm nguyên trong getCausticShafts(), mà mục
+// 14.5 dùng chính danh sách đó để quyết định bóng sinh vật có lộ diện hay không.
+// Không theo dõi cờ này thì sau khi hạ tier, silhouette sáng lên vì "cắt ngang"
+// một cột sáng KHÔNG CÒN ĐƯỢC VẼ. Danh sách rỗng đưa fauna về nhánh dự phòng
+// (lộ diện theo lúc camera đi ngang) — đúng thứ tier low vốn dùng.
+let causticsVisible = adaptiveTier.config.caustics > 0;
 
 function currentDepth() { return depthFromZ(camera.position.z, START_Z, D0); }
 
@@ -172,6 +178,27 @@ async function init() {
 
 intro.addEventListener('click', () => { intro.classList.add('hidden'); window.musicManager?.play?.().catch?.(() => {}); activity?.log({ action: 'Viewer Universe Enter', feature: 'viewer', galaxyId, description: { template: 'abyss' } }); });
 
+// Hạ tier không dựng lại scene (quá tốn) — nó cắt bớt thứ đang vẽ.
+function applyTier(config) {
+  renderer.setPixelRatio(Math.min(devicePixelRatio, config.pixelRatio));
+  // config.relics là NGÂN SÁCH của tier, không phải số relic đã dựng: plan được
+  // lập theo tier ban đầu nên relicCount có thể lớn hơn (far silhouette) hoặc
+  // nhỏ hơn ngân sách. Cắt thẳng theo ngân sách sẽ giấu luôn ẢNH: galaxy 20 ảnh
+  // rơi xuống low chỉ còn 6 ô trong khi 11 ô đầu đều mang ảnh — mất 5 tấm.
+  // Sàn là số relic mang ảnh, nên hạ tier chỉ bao giờ bỏ bớt far silhouette.
+  const imageRelics = plan ? plan.near + plan.mid : config.relics;
+  relics?.setVisibleCount(Math.min(plan?.relicCount ?? config.relics, Math.max(config.relics, imageRelics)));
+  // Không dựng lại relicNav: với cái sàn ở trên, thứ duy nhất bị ẩn là far
+  // silhouette — vốn không có url nên nút của nó đằng nào cũng không mở được
+  // lightbox. Dựng lại chỉ để đồng bộ sẽ cướp focus của người đang tab qua nav.
+  causticsVisible = config.caustics > 0;
+  waterFX?.setCausticsEnabled(causticsVisible);
+  activity?.log({
+    action: 'Viewer Performance Downgrade', feature: 'viewer', galaxyId,
+    description: { template: 'abyss', tier: adaptiveTier.tier, fps: Math.round(averageFrame) },
+  });
+}
+
 function loop(now) {
   requestAnimationFrame(loop);
   const dt = Math.min((now - lastFrame) / 1000, 1 / 30); lastFrame = now; elapsed += dt; averageFrame = averageFrame * .95 + (1 / Math.max(dt, .001)) * .05;
@@ -188,10 +215,11 @@ function loop(now) {
   const targetYaw = Math.atan2(Math.sin(-lookX), Math.cos(-lookX)); const targetPitch = -lookY; const damping = 1 - Math.pow(1 - .12, dt * 60);
   camera.rotation.y += Math.atan2(Math.sin(targetYaw - camera.rotation.y), Math.cos(targetYaw - camera.rotation.y)) * damping;
   camera.rotation.x += (targetPitch - camera.rotation.x) * damping; camera.rotation.z += (0 - camera.rotation.z) * damping;
-  updateDepthAtmosphere(depth, dt); waterFX?.update(dt, camera, elapsed); seabed?.update(elapsed); beacon?.update(dt, elapsed, phase); fauna?.update(elapsed, phase, camera, index => phaseDirector.blendInto(index), phaseDirector.table, waterFX?.getCausticShafts?.() || []); relics?.update(dt, elapsed, camera);
+  updateDepthAtmosphere(depth, dt); waterFX?.update(dt, camera, elapsed); seabed?.update(elapsed); beacon?.update(dt, elapsed, phase); fauna?.update(elapsed, phase, camera, index => phaseDirector.blendInto(index), phaseDirector.table, causticsVisible ? waterFX?.getCausticShafts?.() || [] : []); relics?.update(dt, elapsed, camera);
   depthLabel.textContent = `DEPTH ${String(Math.round(depth)).padStart(3, '0')} M`;
   if (phase.id === 'release' && releaseElapsed >= 8 && !finished) { finished = true; resetButton.classList.add('visible'); manualDiveButton.classList.remove('visible'); beacon?.triggerPulse(); }
-  adaptiveTier.update(dt, averageFrame); renderer.render(scene, camera);
+  if (adaptiveTier.update(dt, averageFrame)) applyTier(adaptiveTier.config);
+  renderer.render(scene, camera);
 }
 
 init().catch(error => { console.error('[abyss] initialization failed:', error); activity?.log({ action: 'Viewer Universe Error', feature: 'viewer', galaxyId, level: 'error', description: { template: 'abyss', errorType: 'initialization' } }); });
