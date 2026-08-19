@@ -277,7 +277,26 @@ async function init() {
   requestAnimationFrame(loop);
 }
 
-intro.addEventListener('click', () => { intro.classList.add('hidden'); window.musicManager?.play?.().catch?.(() => {}); activity?.log({ action: 'Viewer Universe Enter', feature: 'viewer', galaxyId, description: { template: 'abyss' } }); });
+// Cổng vào phải mở được bằng bàn phím: trước đây #intro là div chỉ nghe click,
+// nên người dùng bàn phím không có cách nào vào trải nghiệm. role/tabindex nằm
+// trong index.html; ở đây xử lý Enter/Space và gỡ nó khỏi tab order sau khi mở.
+function enterUniverse() {
+  if (intro.classList.contains('hidden')) return;
+  intro.classList.add('hidden');
+  intro.tabIndex = -1;
+  intro.setAttribute('aria-hidden', 'true');
+  window.musicManager?.play?.().catch?.(() => {});
+  activity?.log({ action: 'Viewer Universe Enter', feature: 'viewer', galaxyId, description: { template: 'abyss' } });
+}
+intro.addEventListener('click', enterUniverse);
+intro.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault(); // Space cuộn trang nếu không chặn
+  enterUniverse();
+});
+// Autostart đã ẩn intro ngay trong index.html trước khi module này chạy.
+if (intro.classList.contains('hidden')) { intro.tabIndex = -1; intro.setAttribute('aria-hidden', 'true'); }
+else intro.focus({ preventScroll: true });
 
 // Hạ tier không dựng lại scene (quá tốn) — nó cắt bớt thứ đang vẽ.
 function applyTier(config) {

@@ -15,7 +15,8 @@
     #depth { position: absolute; right: 28px; bottom: calc(24px + env(safe-area-inset-bottom)); font: 11px system-ui, sans-serif; letter-spacing: .12em; color: rgba(190,255,239,.48); }
     #btn-audio { pointer-events: auto; position: absolute; top: calc(18px + env(safe-area-inset-top)); right: 20px; width: 42px; height: 42px; border: 1px solid rgba(151,246,218,.24); border-radius: 50%; background: rgba(1,12,16,.6); color: #c8fff1; cursor: pointer; }
     #intro { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: radial-gradient(circle at 50% 42%, rgba(17,92,101,.36), #010609 64%); transition: opacity .9s ease; cursor: pointer; }
-    #intro.hidden { opacity: 0; pointer-events: none; }
+    #intro.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+    #intro:focus-visible { outline: 2px solid #b8fff0; outline-offset: -8px; }
     #intro h1 { margin: 0; font-size: clamp(32px, 7vw, 76px); font-weight: 400; letter-spacing: .1em; color: #d8fff5; }
     #intro p { margin: 14px 0 44px; font: 11px system-ui, sans-serif; letter-spacing: .24em; text-transform: uppercase; color: rgba(207,255,243,.48); }
     .pulse { width: 58px; height: 58px; border: 1px solid rgba(147,255,220,.75); border-radius: 50%; animation: breathe 2.4s ease-out infinite; }
@@ -50,7 +51,7 @@
   <nav id="relic-nav" aria-label="Các ký ức dưới đáy biển"></nav>
   <div id="relic-focus-ring" aria-hidden="true"></div>
   <div id="empty-state">Rãnh biển này chưa có ký ức nào.<br />Hãy thả xuống đây tấm ảnh đầu tiên.</div>
-  <div id="intro"><h1>Abyss of Memories</h1><p>Lặn xuống nơi ký ức phát sáng</p><div class="pulse"></div></div>
+  <div id="intro" role="button" tabindex="0" aria-label="Bắt đầu lặn xuống Abyss of Memories"><h1>Abyss of Memories</h1><p>Lặn xuống nơi ký ức phát sáng</p><div class="pulse"></div></div>
   <div id="lightbox"><button id="lightbox-close" type="button" aria-label="Đóng">×</button><figure><img id="lightbox-image" alt="Ký ức" /><figcaption id="lightbox-caption"></figcaption></figure></div>
   <script>if (new URLSearchParams(location.search).get('autostart') === 'true') document.getElementById('intro').classList.add('hidden');</script>
   <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.152.2/build/three.module.js"}}</script>
@@ -63,6 +64,6 @@
   <script>
     window.musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio' });
   </script>
-  <script type="module" src="./js/abyss.js?v=20260818-abyss6"></script>
+  <script type="module" src="./js/abyss.js?v=20260819-abyss7"></script>
 </body>
 </html>
