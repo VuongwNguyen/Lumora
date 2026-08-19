@@ -26,7 +26,12 @@
     #lightbox img { display: block; max-width: 100%; max-height: 72vh; border: 7px solid rgba(219,255,245,.9); box-shadow: 0 0 50px rgba(54,231,195,.2); }
     #lightbox figcaption { margin-top: 14px; font: 14px system-ui, sans-serif; color: rgba(218,255,247,.78); }
     #lightbox button { position: absolute; top: 24px; right: 24px; width: 40px; height: 40px; border: 1px solid rgba(218,255,247,.3); border-radius: 50%; background: transparent; color: #d8fff5; font-size: 20px; cursor: pointer; }
-    #relic-nav { position: fixed; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+    #lightbox button:focus { outline: 2px solid #b8fff0; outline-offset: 3px; }
+    #relic-nav { position: fixed; left: 10px; bottom: 10px; z-index: 6; display: flex; gap: 6px; pointer-events: none; }
+    #relic-nav button { pointer-events: auto; width: 1px; height: 1px; padding: 0; overflow: hidden; white-space: nowrap; border: 0; clip-path: inset(50%); background: transparent; color: transparent; }
+    #relic-nav button:focus-visible { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); width: auto; height: auto; clip-path: none; padding: 8px 14px; border: 1px solid rgba(184,255,240,.5); border-radius: 999px; background: rgba(1,8,12,.86); color: #b8fff0; font: 12px system-ui, sans-serif; }
+    #relic-focus-ring { display: none; position: fixed; z-index: 7; pointer-events: none; border: 2px solid #b8fff0; border-radius: 4px; box-shadow: 0 0 0 1px rgba(1,8,12,.9), inset 0 0 0 1px rgba(1,8,12,.9), 0 0 18px rgba(184,255,240,.4); transition: opacity .2s ease; }
+    #relic-focus-ring.visible { display: block; }
     #reset-dive { display: none; pointer-events: auto; position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); border: 1px solid rgba(184,255,240,.42); border-radius: 999px; padding: 10px 16px; background: rgba(1,8,12,.72); color: #b8fff0; font: 12px system-ui, sans-serif; cursor: pointer; }
     #reset-dive.visible { display: block; }
     #manual-dive { display: none; pointer-events: auto; position: absolute; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%); border: 1px solid rgba(184,255,240,.42); border-radius: 999px; padding: 10px 16px; background: rgba(1,8,12,.72); color: #b8fff0; font: 12px system-ui, sans-serif; cursor: pointer; }
@@ -43,6 +48,7 @@
   <div id="canvas-container"></div>
   <div id="hud"><div id="title">LUMORA · ABYSS OF MEMORIES</div><div id="depth">DEPTH 040 M</div><button id="btn-audio" type="button" aria-label="Bật hoặc tắt âm thanh">🔇</button><button id="reset-dive" type="button">Trở lên mặt nước</button><button id="manual-dive" type="button">Lặn sâu hơn</button></div>
   <nav id="relic-nav" aria-label="Các ký ức dưới đáy biển"></nav>
+  <div id="relic-focus-ring" aria-hidden="true"></div>
   <div id="empty-state">Rãnh biển này chưa có ký ức nào.<br />Hãy thả xuống đây tấm ảnh đầu tiên.</div>
   <div id="intro"><h1>Abyss of Memories</h1><p>Lặn xuống nơi ký ức phát sáng</p><div class="pulse"></div></div>
   <div id="lightbox"><button id="lightbox-close" type="button" aria-label="Đóng">×</button><figure><img id="lightbox-image" alt="Ký ức" /><figcaption id="lightbox-caption"></figcaption></figure></div>
@@ -57,6 +63,6 @@
   <script>
     window.musicManager = window.LumoraSoundscape.createManager({ buttonId: 'btn-audio' });
   </script>
-  <script type="module" src="./js/abyss.js?v=20260818-abyss5"></script>
+  <script type="module" src="./js/abyss.js?v=20260818-abyss6"></script>
 </body>
 </html>

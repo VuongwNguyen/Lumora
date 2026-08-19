@@ -20,6 +20,8 @@ const lightbox = document.getElementById('lightbox');
 const lightboxImage = document.getElementById('lightbox-image');
 const lightboxCaption = document.getElementById('lightbox-caption');
 const relicNav = document.getElementById('relic-nav');
+const relicFocusRing = document.getElementById('relic-focus-ring');
+const lightboxClose = document.getElementById('lightbox-close');
 const resetButton = document.getElementById('reset-dive');
 const manualDiveButton = document.getElementById('manual-dive');
 const emptyState = document.getElementById('empty-state');
@@ -82,6 +84,10 @@ const root = new THREE.Group();
 scene.add(root);
 let waterFX; let seabed; let beacon; let fauna; let relics;
 let lookX = 0; let lookY = 0; let dragging = false; let didMove = false; let lastX = 0; let lastY = 0;
+// keyboardRelic = relic gắn với nút nav ĐANG giữ focus (nguồn của focus ring).
+// navReturnTarget = nút đã mở lightbox, giữ riêng vì focus rời nav ngay khi
+// lightbox mở nên không thể hỏi lại document.activeElement lúc đóng.
+let keyboardRelic = null; let navReturnTarget = null;
 let focusedRelic = null; let pausedForReading = false; let finished = false; let elapsed = 0; let lastFrame = performance.now();
 let releaseElapsed = 0;
 let averageFrame = 60;
@@ -119,30 +125,125 @@ renderer.domElement.addEventListener('click', event => { if (didMove) { didMove 
 const raycaster = new THREE.Raycaster();
 function raycastRelic(ndc) { if (!relics) return null; raycaster.setFromCamera(ndc, camera); const meshes = []; relics.getRelics().forEach(item => item.traverse(child => { if (child.isMesh) meshes.push(child); })); const hit = raycaster.intersectObjects(meshes)[0]?.object; let parent = hit; while (parent && !parent.userData?.relic) parent = parent.parent; return parent || null; }
 
+// Nhãn dự phòng đếm theo sequence chứ không theo index: index là Ô MESH, còn
+// sequence là tấm ảnh ô đó đang mang — với galaxy streamed hai số này tách nhau
+// sau vòng cuộn đầu tiên.
+function relicLabel(relic) { return relic.userData.caption || `Ký ức ${(relic.userData.sequence ?? relic.userData.index) + 1}`; }
+
 function renderRelicNav() {
   if (!relicNav || !relics) return;
   relicNav.replaceChildren();
-  relics.getRelics().forEach(item => { const button = document.createElement('button'); button.type = 'button'; button.textContent = item.userData.caption || `Ký ức ${item.userData.index + 1}`; button.dataset.index = String(item.userData.index); button.addEventListener('click', () => openRelic(item)); relicNav.appendChild(button); });
+  // Far silhouette vẫn mang userData.relic nhưng url = null (mục 4.4), nên
+  // openRelic bỏ qua chúng. Không lọc thì galaxy 4 ảnh có thêm ba điểm dừng Tab
+  // chết mang nhãn "Ký ức 5/6/7" — số vượt quá số ảnh thật.
+  const stops = relics.getRelics().filter(item => item.userData.url);
+  // Gần nhất trước: camera lặn theo -Z nên z LỚN hơn là gần hơn. Đọc spawn.z chứ
+  // không phải position.z vì relic bập bềnh mỗi frame. (Hiện thứ tự này trùng
+  // đúng thứ tự index vì relicDistanceAt tăng đơn điệu theo index — sort là để
+  // giữ đúng ý "nearest-first" nếu bố cục đổi, không phải để sửa thứ tự hôm nay.)
+  stops.sort((a, b) => (b.userData.spawn?.z ?? b.position.z) - (a.userData.spawn?.z ?? a.position.z));
+  stops.forEach(item => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = relicLabel(item);
+    button.dataset.index = String(item.userData.index);
+    button.addEventListener('click', () => openRelic(item, button));
+    // Nav KHÔNG được dựng lại khi relic cuộn về cuối rãnh hay khi hạ tier: thay
+    // node đang giữ focus sẽ ném focus về <body> giữa lúc người dùng đang Tab.
+    // Đổi lại, nhãn của galaxy streamed có thể lệch sau một vòng cuộn, nên cập
+    // nhật ngay tại chỗ lúc nút nhận focus — sửa chữ, không thay node.
+    button.addEventListener('focus', () => { keyboardRelic = item; button.textContent = relicLabel(item); });
+    button.addEventListener('blur', () => { if (keyboardRelic === item) keyboardRelic = null; });
+    relicNav.appendChild(button);
+  });
 }
 
-function openRelic(relic) {
+function openRelic(relic, trigger = null) {
   if (!relic?.userData?.url) return;
-  focusedRelic = relic; relic.userData.focused = true; pausedForReading = true; lightboxImage.src = relic.userData.url; lightboxCaption.textContent = relic.userData.caption || 'Một mảnh ký ức dưới đáy biển'; lightbox.classList.add('open');
-  document.getElementById('lightbox-close')?.focus();
+  navReturnTarget = trigger;
+  focusedRelic = relic; relic.userData.focused = true; pausedForReading = true; lightboxImage.src = relic.userData.url; lightboxCaption.textContent = relic.userData.caption || 'Một mảnh ký ức dưới đáy biển';
+  lightbox.setAttribute('role', 'dialog'); lightbox.setAttribute('aria-modal', 'true'); lightbox.setAttribute('aria-labelledby', 'lightbox-caption');
+  // Phải thêm .open TRƯỚC khi focus: lightbox đóng là display:none, phần tử trong
+  // cây display:none không nhận được focus.
+  lightbox.classList.add('open');
+  lightboxClose?.focus();
   beacon?.triggerPulse();
   activity?.log({ action: 'Viewer Photo Open', feature: 'viewer', galaxyId, description: { template: 'abyss', photoIndex: relic.userData.index } });
 }
 
 function closeRelic() {
-  lightbox.classList.remove('open'); lightboxImage.removeAttribute('src');
+  const wasOpen = lightbox.classList.contains('open');
+  lightbox.classList.remove('open'); lightbox.removeAttribute('aria-modal'); lightboxImage.removeAttribute('src');
   if (focusedRelic) focusedRelic.userData.focused = false;
   focusedRelic = null; pausedForReading = false;
+  const target = navReturnTarget; navReturnTarget = null;
+  // Trả focus về đúng nút đã mở. Mở bằng chuột (click relic 3D) thì không có nút
+  // nguồn — nút đóng vừa rơi vào cây display:none nên focus tự về <body>, ép đi
+  // đâu khác sẽ bật ra một focus ring mà người dùng chuột không hề gọi.
+  if (wasOpen && target?.isConnected) target.focus();
 }
-document.getElementById('lightbox-close')?.addEventListener('click', closeRelic);
+lightboxClose?.addEventListener('click', closeRelic);
 lightbox.addEventListener('click', event => { if (event.target === lightbox) closeRelic(); });
-document.addEventListener('keydown', event => { if (event.key === 'Escape' && lightbox.classList.contains('open')) closeRelic(); });
+// MỘT listener keydown duy nhất cho cả Escape lẫn bẫy Tab — hai listener cùng
+// bắt Escape sẽ gọi closeRelic hai lần và lần hai xoá mất navReturnTarget.
+document.addEventListener('keydown', event => {
+  if (!lightbox.classList.contains('open')) return;
+  if (event.key === 'Escape') { event.preventDefault(); closeRelic(); return; }
+  // Bên trong #lightbox chỉ có ĐÚNG MỘT control nhận focus: #lightbox-close.
+  // <img> và <figcaption> không focus được và không có tabindex. Nên bẫy Tab
+  // chỉ cần giữ nguyên focus tại nút đóng, cho cả Tab lẫn Shift+Tab.
+  if (event.key === 'Tab') { event.preventDefault(); lightboxClose?.focus(); }
+});
+
+// Kích thước thật của khung relic, đọc một lần từ PlaneGeometry rồi nhớ lại: ring
+// phải khớp bề ngang thật trên màn hình chứ không phải một hằng số đoán.
+const relicExtents = new WeakMap();
+function relicExtentOf(relic) {
+  let extent = relicExtents.get(relic);
+  if (!extent) {
+    extent = { width: 1, height: 1 };
+    relic.traverse(child => {
+      const size = child.geometry?.parameters;
+      if (size?.width > 0 && size?.height > 0) { extent.width = Math.max(extent.width, size.width); extent.height = Math.max(extent.height, size.height); }
+    });
+    relicExtents.set(relic, extent);
+  }
+  return extent;
+}
+
+const ringVector = new THREE.Vector3();
+// Gọi SAU renderer.render: chỉ render mới cập nhật camera.matrixWorldInverse và
+// matrixWorld của relic, gọi trước thì ring trễ đúng một frame so với ảnh.
+function updateFocusRing() {
+  if (!relicFocusRing) return;
+  if (!keyboardRelic || lightbox.classList.contains('open')) { relicFocusRing.classList.remove('visible'); return; }
+  keyboardRelic.getWorldPosition(ringVector).applyMatrix4(camera.matrixWorldInverse);
+  const viewDepth = -ringVector.z;
+  // Vector3.project chia cho (-z_view). Điểm SAU lưng camera cho z_ndc > 1 nên
+  // phép thử z > 1 bắt được, NHƯNG điểm nằm giữa camera và near plane cho
+  // z_ndc < -1 (lọt lưới) trong khi x_ndc bắn lên hàng chục nghìn px, và đúng
+  // mặt phẳng camera thì ra Infinity/NaN. Chặn thẳng bằng độ sâu view bắt cả ba.
+  if (!(viewDepth > camera.near)) { relicFocusRing.classList.remove('visible'); return; }
+  ringVector.applyMatrix4(camera.projectionMatrix);
+  if (Math.abs(ringVector.x) > 1.5 || Math.abs(ringVector.y) > 1.5) { relicFocusRing.classList.remove('visible'); return; }
+  const extent = relicExtentOf(keyboardRelic);
+  // e[5] = 1/tan(fov/2). Kích thước trên màn = kích thước thật * e[5] * H / (2*d)
+  // cho CẢ hai trục, vì e[0] = e[5]/aspect và aspect = W/H triệt tiêu nhau.
+  const scale = camera.projectionMatrix.elements[5] * innerHeight / (2 * viewDepth);
+  const width = Math.max(18, extent.width * scale + 14);
+  const height = Math.max(18, extent.height * scale + 14);
+  relicFocusRing.style.width = `${Math.round(width)}px`;
+  relicFocusRing.style.height = `${Math.round(height)}px`;
+  relicFocusRing.style.left = `${Math.round((ringVector.x * .5 + .5) * innerWidth - width / 2)}px`;
+  relicFocusRing.style.top = `${Math.round((-ringVector.y * .5 + .5) * innerHeight - height / 2)}px`;
+  relicFocusRing.classList.add('visible');
+}
 
 function resetDive() {
+  // relics.reset() xoá userData.focused của MỌI relic. Nếu lightbox đang mở thì
+  // focusedRelic và pausedForReading ở đây còn treo lại: camera đứng yên vĩnh
+  // viễn (speed = 0) và ảnh vẫn phủ màn hình. Đóng trước rồi mới reset.
+  if (lightbox.classList.contains('open')) closeRelic();
   camera.position.set(0, 0, START_Z); camera.rotation.set(0, 0, 0); lookX = 0; lookY = 0; phaseDirector?.reset(); finished = false; releaseElapsed = 0; resetButton.classList.remove('visible'); if (reducedMotion) manualDiveButton.classList.add('visible');
   relics?.reset();
 }
@@ -225,6 +326,7 @@ function loop(now) {
   if (phase.id === 'release' && releaseElapsed >= 8 && !finished) { finished = true; resetButton.classList.add('visible'); manualDiveButton.classList.remove('visible'); beacon?.triggerPulse(); }
   if (adaptiveTier.update(dt, averageFrame)) applyTier(adaptiveTier.config);
   renderer.render(scene, camera);
+  updateFocusRing();
 }
 
 init().catch(error => { console.error('[abyss] initialization failed:', error); activity?.log({ action: 'Viewer Universe Error', feature: 'viewer', galaxyId, level: 'error', description: { template: 'abyss', errorType: 'initialization' } }); });
