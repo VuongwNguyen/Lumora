@@ -268,5 +268,35 @@ export function createFauna(theme, tier, reducedMotion, plan) {
       child.material.opacity = child.material.userData.baseOpacity * reveal;
     });
   }
-  return { group, update, reset };
+  // Mục 14.3: cái đã mất vẫn tiếp tục nuôi. Ảnh cũ nhất trong galaxy được neo
+  // vào xác cá voi, không phải chọn ngẫu nhiên.
+  //
+  // Vật liệu RIÊNG cho tấm ảnh, không dùng chung boneMaterial: applyFade cache
+  // baseOpacity trên vật liệu nên dùng chung sẽ kéo ảnh về đúng .78 của xương.
+  // Thêm con sau khi dựng xong vẫn an toàn — cache là lazy theo từng vật liệu,
+  // traverse ở khung kế tiếp tự bắt được tấm mới với base .5 của chính nó.
+  function attachOldestMemory(memory) {
+    // Gọi lần hai không được treo thêm tấm nữa: hai plane trùng z sẽ z-fight và
+    // opacity cộng dồn thành ảnh đậm gấp đôi phần còn lại của landmark.
+    if (!memory?.url || !whaleFall || whaleFall.userData.memoryPlane) return;
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.2, 4.1),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, side: THREE.DoubleSide }),
+    );
+    plane.position.set(0, 2.6, 0.4);
+    plane.rotation.x = -0.18;
+    new THREE.TextureLoader().load(memory.url, texture => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      plane.material.map = texture;
+      plane.material.needsUpdate = true;
+    }, undefined, () => {});
+    plane.userData.relic = true;
+    plane.userData.url = memory.url;
+    plane.userData.caption = memory.caption || 'Ký ức đầu tiên';
+    plane.userData.index = -1;
+    whaleFall.add(plane);
+    whaleFall.userData.memoryPlane = plane;
+  }
+
+  return { group, update, reset, attachOldestMemory };
 }
