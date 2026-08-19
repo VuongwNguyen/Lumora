@@ -43,6 +43,26 @@ const SILHOUETTE_SIGHT = 120;   // camera phải ở trong tầm này mới coi 
 const SILHOUETTE_GLIMPSE = 45;  // cửa sổ dự phòng khi tier không có caustic
 const SILHOUETTE_TAU = 0.4;     // hằng số thời gian, tương đương lerp .04/khung 60fps
 const SILHOUETTE_DRIFT = 16;    // biên độ trôi ngang, đủ để cắt qua vài cột sáng
+// Task 8 đặt trôi ngang là sin(elapsed * 0.05): chu kỳ 126 s. Quãng lặn 180 m
+// chỉ kéo dài 100 s và cửa sổ mà silhouette CÓ THỂ lộ diện (inRange > 0.75, tức
+// camera cách nó dưới 30 m) chỉ dài 33 s — con vật có thể đứng nguyên ở một đầu
+// biên độ suốt cửa sổ đó và không cắt qua cột caustic nào, thế là mục 14.5 lại
+// chết đúng như trước Task 8. Chu kỳ phải co theo quãng lặn.
+//
+// Và tính theo QUÃNG ĐƯỜNG CAMERA ĐÃ ĐI, không theo elapsed: camera dừng hẳn
+// khi người xem mở ảnh đọc caption (abyss.js: pausedForReading) và chậm dần ở
+// phase release. Đo theo thời gian thì một lần dừng 30 s làm lệch pha ~1 rad ở
+// quãng 500 m, đủ để đẩy con vật ra rìa biên độ đúng lúc camera đi ngang. Đo
+// theo (camera.z - actor.z) thì pha tự khớp: sin = 0 đúng khi camera tới nơi,
+// tức là lúc đó nó đang lướt ngang NHANH NHẤT qua rừng cột sáng.
+// 2 vòng chứ không phải 1.5: ở tier mid chỉ có 3 cột sáng (x = -9, 0, 9) nên
+// trench (baseX = -16) phải trôi 7 m mới chạm mép cột gần nhất, và với 1.5 vòng
+// điểm chạm đó rơi vào lúc camera còn cách 30 m — inRange tụt xuống 0.75, tích
+// inShaft*inRange chỉ đạt 0.752 và opacity dừng ở 0.118, THIẾU 0.002 so với
+// ngưỡng tính một lần lộ diện. Đo trên cả 9 tổ hợp tier x quãng đường: 1.5 vòng
+// trượt 1 lần, 2 vòng đạt tối thiểu 0.813, 3 vòng tụt lại còn 0.782 và trôi
+// nhanh hơn (1.6 m/s so với 1.1 m/s).
+const SILHOUETTE_SWEEPS = 2;    // số vòng quét trọn trên cả quãng lặn
 const SHAFT_HALF_WIDTH = 5.5;   // PlaneGeometry(11, 52) -> cột sáng rộng 11 m
 
 // Memory pool là hình ảnh kết bài (mục 14.6): nó phải nằm PHÍA TRƯỚC chỗ camera
@@ -57,6 +77,10 @@ const DEFAULT_DIVE = 500;
 export function createFauna(theme, tier, reducedMotion, plan) {
   const dive = Number.isFinite(plan?.diveDistance) && plan.diveDistance > 0 ? plan.diveDistance : DEFAULT_DIVE;
   const at = fraction => -(dive * fraction);
+  // rad trên mỗi mét camera đi được: trọn SILHOUETTE_SWEEPS vòng trên cả quãng
+  // lặn, tức chu kỳ dive / 2 mét ~ (dive / 1.8) / 2 giây ở tốc độ lặn danh định
+  // 1.8 m/s — 90 s ở quãng 320 m và 172 s ở quãng 620 m.
+  const driftRate = (Math.PI * 2 * SILHOUETTE_SWEEPS) / dive;
   const group = new THREE.Group();
   const actors = [];
   let whaleFall;
@@ -93,7 +117,10 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     ].forEach((spot, index) => {
       const silhouette = new THREE.Mesh(new THREE.CapsuleGeometry(2.8 - index * .4, 12 + index * 4, 6, 12), new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: 0, side: THREE.DoubleSide }));
       const baseX = index ? 14 : -16;
-      silhouette.position.set(baseX, 5, at(spot.fraction)); silhouette.rotation.z = .35; silhouette.userData.fauna = { type: 'silhouette', phase: Math.random() * 6, startPhaseId: spot.startPhaseId, baseOpacity: .16, baseX }; actors.push(silhouette); group.add(silhouette);
+      // driftPhase KHÔNG ngẫu nhiên: 0 và pi cho hai con quét ngược chiều nhau
+      // (không đồng bộ), mà cả hai vẫn đi qua baseX đúng lúc camera tới nơi.
+      // Pha ngẫu nhiên biến mục 14.5 thành xổ số — đúng thứ Task 8 muốn bỏ.
+      silhouette.position.set(baseX, 5, at(spot.fraction)); silhouette.rotation.z = .35; silhouette.userData.fauna = { type: 'silhouette', phase: Math.random() * 6, driftPhase: index * Math.PI, startPhaseId: spot.startPhaseId, baseOpacity: .16, baseX }; actors.push(silhouette); group.add(silhouette);
     });
   }
   function driftRibbon() {
@@ -163,7 +190,7 @@ export function createFauna(theme, tier, reducedMotion, plan) {
         if (meta.type === 'anemone') actor.rotation.z = Math.sin(elapsed * 0.45 + meta.phase) * 0.08;
         // Silhouette phải TRÔI thì mới có chuyện "cắt ngang" cột sáng; đứng yên
         // thì khoảng cách tới cột là hằng số và hiệu ứng chỉ còn là bật/tắt.
-        if (meta.type === 'silhouette' && !meta.spent) actor.position.x = meta.baseX + Math.sin(elapsed * 0.05 + meta.phase) * SILHOUETTE_DRIFT;
+        if (meta.type === 'silhouette' && !meta.spent) actor.position.x = meta.baseX + Math.sin((camera.position.z - actor.position.z) * driftRate + meta.driftPhase) * SILHOUETTE_DRIFT;
         if (meta.type === 'ribbon') actor.rotation.y = Math.sin(elapsed * 0.08 + meta.phase) * 0.08;
       }
       if (meta.type === 'silhouette') updateSilhouette(actor, meta, camera, causticShafts, dt);

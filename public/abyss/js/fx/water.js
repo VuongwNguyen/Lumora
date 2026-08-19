@@ -161,7 +161,10 @@ export function createWaterFX(theme, tier, reducedMotion, plan) {
   const group = new THREE.Group();
   const count = value => (reducedMotion ? Math.floor(value * .25) : value);
 
-  const near = planktonLayer(count(tier.near), { x: 34, y: 24 }, layerSpan(dive, 180), theme.memoryGlow, .16, pixelRatio);
+  // Tiết diện lớp gần hẹp hơn hộp cũ 34x24: cùng số hạt, mật độ khối gấp ~2.9
+  // lần, nên vệt burglar-alarm (mục 14.4) mới đủ hạt để nhìn ra là một VỆT.
+  // Lớp far giữ nguyên 70x48 làm phông rộng — bóp nó lại thì nước thành hành lang.
+  const near = planktonLayer(count(tier.near), { x: 20, y: 14 }, layerSpan(dive, 180), theme.memoryGlow, .16, pixelRatio);
   const far = planktonLayer(count(tier.far), { x: 70, y: 48 }, layerSpan(dive, 500), theme.bioluminescent, .10, pixelRatio);
   // Mục 13.9: reduced motion chỉ hạ TỐC ĐỘ tuyết xuống ×0.25, số hạt đã giảm ở trên.
   const snow = marineSnowLayer(count(tier.snow), { x: 44, y: 30 }, layerSpan(dive, 260), theme.memoryGlow, .06, .18, reducedMotion ? .25 : 1);
