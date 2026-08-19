@@ -155,8 +155,8 @@ async function init() {
   scene.background = theme.scene.background;
   scene.fog = new THREE.FogExp2(theme.scene.background, densityForDepth(D0));
   waterFX = createWaterFX(renderTheme, adaptiveTier.config, reducedMotion); root.add(waterFX.group);
-  seabed = createSeabed(renderTheme, adaptiveTier.config); root.add(seabed.group);
-  beacon = createMemoryBeacon(renderTheme); root.add(beacon.group);
+  seabed = createSeabed(renderTheme, adaptiveTier.config, plan); root.add(seabed.group);
+  beacon = createMemoryBeacon(renderTheme, plan); root.add(beacon.group);
   fauna = createFauna(renderTheme, adaptiveTier.config, reducedMotion, plan); root.add(fauna.group);
   relics = await createRelics(data.images, data.captions, renderTheme, adaptiveTier.config, reducedMotion, plan);
   root.add(relics.group);

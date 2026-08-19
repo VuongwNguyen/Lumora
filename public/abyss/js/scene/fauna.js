@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { easeTowards } from '../core/depth.js';
+import { BEACON_DIVE_FRACTION } from './beacon.js';
 
 // Vị trí sinh vật đo theo PHẦN của quãng đường lặn, không phải z tuyệt đối.
 // plan.diveDistance chạy từ 180 m tới 620 m theo số ảnh (mục 13.11), nên hằng
@@ -18,9 +20,30 @@ const PLACEMENT = Object.freeze({
   silhouetteTrench: 0.53, silhouetteDeep: 0.82,
   fishSchool: 0.86,
   ribbon: [0.88, 0.9067, 0.9333, 0.96],
-  memoryShrimp: 0.90,
+  // MemoryShrimp là "sinh vật nhỏ gần beacon" (mục 5) nên nó phải đi theo beacon,
+  // không giữ phần số riêng: 0.90 làm nó ngồi NGOÀI cửa sổ beacon_reveal ở quãng
+  // 500 và 620 m. Không đẩy được beacon xuống 0.90 vì cửa sổ đó đóng ở 0.770,
+  // nên tôm phải về với beacon. Cùng phần số, chỉ lệch ngang: dải hợp lệ chỉ rộng
+  // 0.017 (~8.5 m ở quãng 500 m), không đủ chỗ xếp hai vật trước sau theo z mà
+  // cả hai còn kịp cross-fade.
+  memoryShrimp: BEACON_DIVE_FRACTION,
   whaleFall: 0.93,
 });
+
+// Tôm đứng cạnh beacon (x = 0, y = -2.2) chứ không chồng lên: 6.5 m ngang cộng
+// 3.6 m dưới là 7.4 m, ngoài quả aura bán kính 5.6 m. Trôi ngang +-2 m vẫn ngoài.
+const SHRIMP_BESIDE_BEACON = 6.5;
+
+// Mục 14.5 — counter-illumination. Sinh vật biển sâu tự phát sáng bụng để xoá
+// bóng của chính nó; ở đây bóng chỉ hiện ra khi cắt ngang một cột caustic, tối
+// đa 2 lần mỗi phiên, và KHÔNG BAO GIỜ hiện trọn hình.
+const SILHOUETTE_BUDGET = 2;
+const SILHOUETTE_PEAK = 0.75;   // đạt tới đây là tính một lần lộ diện rồi tắt dần
+const SILHOUETTE_SIGHT = 120;   // camera phải ở trong tầm này mới coi là "thấy"
+const SILHOUETTE_GLIMPSE = 45;  // cửa sổ dự phòng khi tier không có caustic
+const SILHOUETTE_TAU = 0.4;     // hằng số thời gian, tương đương lerp .04/khung 60fps
+const SILHOUETTE_DRIFT = 16;    // biên độ trôi ngang, đủ để cắt qua vài cột sáng
+const SHAFT_HALF_WIDTH = 5.5;   // PlaneGeometry(11, 52) -> cột sáng rộng 11 m
 
 // Memory pool là hình ảnh kết bài (mục 14.6): nó phải nằm PHÍA TRƯỚC chỗ camera
 // dừng hẳn, không phải chỗ camera bơi qua. Release bắt đầu ở đúng cuối quãng
@@ -57,11 +80,11 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     for (let i = 0; i < count; i++) { const g = new THREE.Group(); g.position.set((Math.random() - .5) * 30, -7.8, at(PLACEMENT.anemoneFirst + (i / (count - 1)) * (PLACEMENT.anemoneLast - PLACEMENT.anemoneFirst))); for (let j = 0; j < 7; j++) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(.025, .09, 1.1 + Math.random() * 1.6, 5), new THREE.MeshBasicMaterial({ color: theme.accent, transparent: true, opacity: .3, blending: THREE.AdditiveBlending })); arm.position.x = (Math.random() - .5) * .6; arm.position.y = .5; g.add(arm); } g.userData.fauna = { type: 'anemone', phase: Math.random() * 6, startPhaseId: 'first_glow' }; actors.push(g); group.add(g); }
   }
   function memoryShrimp() {
-    const shrimp = new THREE.Group(); shrimp.position.set(2.4, -5.8, at(PLACEMENT.memoryShrimp));
+    const shrimp = new THREE.Group(); shrimp.position.set(SHRIMP_BESIDE_BEACON, -5.8, at(PLACEMENT.memoryShrimp));
     const body = new THREE.Mesh(new THREE.SphereGeometry(.24, 8, 6), new THREE.MeshBasicMaterial({ color: theme.warmMemory, transparent: true, opacity: .65, blending: THREE.AdditiveBlending }));
     body.scale.set(1.8, .7, .7); shrimp.add(body);
     for (let i = 0; i < 3; i++) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(.018, .025, .5, 5), new THREE.MeshBasicMaterial({ color: theme.warmMemory, transparent: true, opacity: .5 })); leg.position.set((i - 1) * .18, -.18, .08); leg.rotation.z = .8; shrimp.add(leg); }
-    shrimp.userData.fauna = { type: 'shrimp', phase: Math.random() * 6, startPhaseId: 'beacon_reveal', baseX: 2.4 }; actors.push(shrimp); group.add(shrimp);
+    shrimp.userData.fauna = { type: 'shrimp', phase: Math.random() * 6, startPhaseId: 'beacon_reveal', baseX: SHRIMP_BESIDE_BEACON }; actors.push(shrimp); group.add(shrimp);
   }
   function deepSilhouettes() {
     [
@@ -69,7 +92,8 @@ export function createFauna(theme, tier, reducedMotion, plan) {
       { fraction: PLACEMENT.silhouetteDeep, startPhaseId: 'living_ocean' },
     ].forEach((spot, index) => {
       const silhouette = new THREE.Mesh(new THREE.CapsuleGeometry(2.8 - index * .4, 12 + index * 4, 6, 12), new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: 0, side: THREE.DoubleSide }));
-      silhouette.position.set(index ? 14 : -16, 5, at(spot.fraction)); silhouette.rotation.z = .35; silhouette.userData.fauna = { type: 'silhouette', phase: Math.random() * 6, startPhaseId: spot.startPhaseId, baseOpacity: .16 }; actors.push(silhouette); group.add(silhouette);
+      const baseX = index ? 14 : -16;
+      silhouette.position.set(baseX, 5, at(spot.fraction)); silhouette.rotation.z = .35; silhouette.userData.fauna = { type: 'silhouette', phase: Math.random() * 6, startPhaseId: spot.startPhaseId, baseOpacity: .16, baseX }; actors.push(silhouette); group.add(silhouette);
     });
   }
   function driftRibbon() {
@@ -103,7 +127,21 @@ export function createFauna(theme, tier, reducedMotion, plan) {
   if (tier.fauna >= 5) driftRibbon();
   whaleFallLandmark();
   brineMemoryPool();
+  let silhouetteReveals = 0;
+  let lastElapsed = 0;
+  let lastCameraZ = null;
+
   function update(elapsed, phase, camera, blendInto, phaseTable, causticShafts = []) {
+    // update() không nhận dt (abyss.js truyền elapsed), nhưng easing phải độc lập
+    // frame-rate như Task 1/5 đã chuẩn hoá. elapsed là tổng dt nên hiệu hai lần
+    // gọi chính là dt; abyss.js đã kẹp dt <= 1/30 nên không cần kẹp lại.
+    const dt = Math.max(0, elapsed - lastElapsed);
+    lastElapsed = elapsed;
+    // Camera chỉ đi theo -Z; nhảy ngược về START_Z nghĩa là người xem bấm "lặn
+    // lại". Lần lặn mới là một phiên mới nên ngân sách 2 lần lộ diện phải được
+    // trả lại, nếu không lần lặn thứ hai trở đi sẽ không còn silhouette nào.
+    if (lastCameraZ !== null && camera.position.z > lastCameraZ + 1) reset();
+    lastCameraZ = camera.position.z;
     actors.forEach(actor => {
       const meta = actor.userData.fauna;
       const startIndex = resolveStartIndex(phaseTable, meta);
@@ -123,10 +161,12 @@ export function createFauna(theme, tier, reducedMotion, plan) {
           actor.position.y += Math.sin(elapsed * 0.3 + meta.phase) * 0.0008;
         }
         if (meta.type === 'anemone') actor.rotation.z = Math.sin(elapsed * 0.45 + meta.phase) * 0.08;
+        // Silhouette phải TRÔI thì mới có chuyện "cắt ngang" cột sáng; đứng yên
+        // thì khoảng cách tới cột là hằng số và hiệu ứng chỉ còn là bật/tắt.
+        if (meta.type === 'silhouette' && !meta.spent) actor.position.x = meta.baseX + Math.sin(elapsed * 0.05 + meta.phase) * SILHOUETTE_DRIFT;
         if (meta.type === 'ribbon') actor.rotation.y = Math.sin(elapsed * 0.08 + meta.phase) * 0.08;
       }
-      // Task 8 thay dòng dưới bằng counter-illumination theo caustic.
-      if (meta.type === 'silhouette') actor.material.opacity = meta.baseOpacity * reveal;
+      if (meta.type === 'silhouette') updateSilhouette(actor, meta, camera, causticShafts, dt);
       if (meta.type === 'memoryPool') actor.material.opacity = 0.08 * reveal;
     });
   }
@@ -144,6 +184,50 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     return -1;
   }
 
+  // Mục 14.5: bóng sinh vật chỉ hiện khi cắt ngang một tia caustic, tối đa 2 lần
+  // mỗi phiên, và không bao giờ hiện trọn hình — người xem không chắc mình vừa
+  // thấy gì. Đó là mục tiêu.
+  //
+  // KHÔNG so khoảng cách theo cả (x, z) tới shaft: shaft đứng ở z = -25 - i*34,
+  // xa nhất -229 m ở tier high, còn silhouette nằm ở 53% và 82% quãng lặn — gần
+  // nhất là z = -169.6 (quãng 320 m), cách cột gần nhất 22 m, còn ở quãng 500 m
+  // thì cách 53 m. Với bán kính 14 m, phép đo hai chiều KHÔNG BAO GIỜ khớp ở bất
+  // kỳ tier hay quãng đường nào — silhouette sẽ vĩnh viễn opacity 0.
+  // Shaft là tấm rèm sáng đứng (cao 52 m, tâm y = 17): thứ đo được là silhouette
+  // có nằm trong CỘT sáng đó theo x hay không; z của tấm rèm chỉ là chỗ nó được
+  // vẽ, không phải giới hạn của cột sáng rọi xuống.
+  function updateSilhouette(actor, meta, camera, causticShafts, dt) {
+    if (meta.spent) { actor.visible = false; actor.material.opacity = 0; return; }
+    const distanceZ = Math.abs(actor.position.z - camera.position.z);
+    const inRange = Math.max(0, 1 - distanceZ / SILHOUETTE_SIGHT);
+    // Tier low và reduced motion đều có 0 shaft (fx/water.js). Im lặng không hiện
+    // gì là bỏ hẳn một sinh vật mục 5 yêu cầu, mà reduced motion là thiết lập trợ
+    // năng chứ không phải mức đồ hoạ — nên vẫn cho một thoáng lộ diện, chỉ là
+    // theo lúc camera đi ngang thay vì theo cột sáng.
+    let inShaft = Math.max(0, 1 - distanceZ / SILHOUETTE_GLIMPSE);
+    if (causticShafts.length) {
+      let nearest = Infinity;
+      for (const shaft of causticShafts) nearest = Math.min(nearest, Math.abs(actor.position.x - shaft.x));
+      inShaft = Math.max(0, 1 - nearest / SHAFT_HALF_WIDTH);
+    }
+    // Đã tính một lần lộ diện thì tắt hẳn: đó là thứ giữ cho hình không bao giờ
+    // sáng trọn vẹn (đỉnh ~0.75 * baseOpacity) và bảo đảm actor tự chuyển sang
+    // spent thay vì đứng sáng lờ mờ khi camera dừng gần nó.
+    const target = meta.counted || silhouetteReveals >= SILHOUETTE_BUDGET ? 0 : meta.baseOpacity * inShaft * inRange;
+    actor.material.opacity = easeTowards(actor.material.opacity, target, dt, SILHOUETTE_TAU);
+    if (!meta.counted && actor.material.opacity > meta.baseOpacity * SILHOUETTE_PEAK) { meta.counted = true; silhouetteReveals += 1; }
+    if (meta.counted && actor.material.opacity < 0.005) { meta.spent = true; actor.material.opacity = 0; actor.visible = false; }
+  }
+
+  function reset() {
+    silhouetteReveals = 0;
+    actors.forEach(actor => {
+      const meta = actor.userData.fauna;
+      if (meta.type !== 'silhouette') return;
+      meta.counted = false; meta.spent = false; actor.material.opacity = 0; actor.visible = false;
+    });
+  }
+
   // Mốc opacity phải cache trên VẬT LIỆU, không trên mesh: whale fall dùng chung
   // một boneMaterial cho cả 7 xương sườn nên traverse chạm đúng vật liệu đó 7
   // lần. Cache theo child thì lần chạm thứ hai ghi lại giá trị vừa bị nhân với
@@ -157,5 +241,5 @@ export function createFauna(theme, tier, reducedMotion, plan) {
       child.material.opacity = child.material.userData.baseOpacity * reveal;
     });
   }
-  return { group, update };
+  return { group, update, reset };
 }

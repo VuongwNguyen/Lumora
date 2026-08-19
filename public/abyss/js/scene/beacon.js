@@ -1,8 +1,32 @@
 import * as THREE from 'three';
+import { D0, START_Z } from '../core/depth.js';
 
-export function createMemoryBeacon(theme) {
+// Beacon là hình ảnh trung tâm của cả cảnh (mục 5), nhưng z = -292 cố định làm
+// nó nằm NGOÀI tầm với của mọi galaxy <= 3 ảnh: quãng lặn 180 m chỉ đưa camera
+// tới z = -175. Đặt theo PHẦN quãng đường như Task 7 đã làm với fauna.
+//
+// Dải hợp lệ hẹp hơn trực giác rất nhiều vì phải thoả đồng thời:
+//   • nằm trong cửa sổ phase beacon_reveal ở MỌI bảng phase — trần chặt nhất là
+//     bảng 6 phase quãng 500 m, cửa sổ đóng ở độ sâu 430 m  =>  F <= 0.770;
+//   • cross-fade 8 m phải xong TRƯỚC khi camera tới nơi — sàn chặt nhất là bảng
+//     5 phase quãng 320 m, biên phase ở độ sâu 277.9 m      =>  F >= 0.753.
+// Lưu ý độ sâu của vật ở z = -(dive*F) là 45 + dive*F chứ không phải 40 + dive*F:
+// camera xuất phát ở z = +5 nên đi thêm 5 m nữa mới tới vạch 0 (core/depth.js).
+export const BEACON_DIVE_FRACTION = 0.76;
+
+const DEFAULT_DIVE = 500;
+
+// Beacon phải sáng đủ trước khi camera tới nơi. 70 m ramp khớp tầm nhìn ở đáy
+// (D90 ≈ 50 m theo bảng 13.2): sáng sớm hơn nữa thì sương nuốt hết, chẳng ai thấy.
+const REVEAL_RAMP = 70;
+const REVEAL_LEAD = 10;
+
+export function createMemoryBeacon(theme, plan) {
+  const dive = Number.isFinite(plan?.diveDistance) && plan.diveDistance > 0 ? plan.diveDistance : DEFAULT_DIVE;
+  const distance = dive * BEACON_DIVE_FRACTION;
+  const arriveDepth = D0 + START_Z + distance;
   const group = new THREE.Group();
-  group.position.set(0, -2.2, -292);
+  group.position.set(0, -2.2, -distance);
   const base = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 4.6, 2.4, 8), new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: .95 }));
   base.position.y = -2; group.add(base);
   const branches = [];
@@ -37,7 +61,12 @@ export function createMemoryBeacon(theme) {
   function triggerPulse() { pulse = 1; }
   function update(dt, elapsed, phase) {
     pulse = Math.max(0, pulse - dt / 2.2);
-    const reveal = phase.id === 'release' ? 1 - (phase.releaseProgress || 0) : (phase.index >= 2 ? 1 : .35 + phase.progress * .65);
+    // Reveal không được bám vào phase.index: bảng phase co lại theo số ảnh (mục
+    // 13.11) nên index 2 là memory_trench ở galaxy lớn nhưng lại là 'release' ở
+    // galaxy <= 3 ảnh — beacon mới sáng 75% đúng lúc camera tới nơi. Ramp theo độ
+    // sâu của CHÍNH beacon, đủ 1.0 từ 10 m trước khi tới, ở mọi bảng phase.
+    const approach = Math.min(1, Math.max(0, (phase.depth - (arriveDepth - REVEAL_RAMP)) / (REVEAL_RAMP - REVEAL_LEAD)));
+    const reveal = phase.id === 'release' ? 1 - (phase.releaseProgress || 0) : .35 + approach * .65;
     core.material.opacity = (.55 + pulse * .28) * reveal;
     aura.material.opacity = (.04 + pulse * .08) * reveal;
     branches.forEach((branch, i) => { branch.material.opacity = (.3 + pulse * .3) * reveal; branch.rotation.z = Math.sin(elapsed * .35 + branch.userData.branch.phase) * .08; });

@@ -49,6 +49,11 @@ export function createWaterFX(theme, tier, reducedMotion) {
     causticGroup.add(shaft);
   }
   group.add(causticGroup);
+  // Task 8 cần biết các cột sáng nằm ở đâu để làm counter-illumination cho
+  // DeepSilhouette (mục 14.5); Task 11 cần tắt chúng khi đổi tier.
+  const causticShafts = causticGroup.children.map(shaft => ({ x: shaft.position.x, z: shaft.position.z }));
+  function getCausticShafts() { return causticShafts; }
+  function setCausticsEnabled(enabled) { causticGroup.visible = enabled; }
   const waterVeil = new THREE.Mesh(new THREE.PlaneGeometry(120, 100), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, depthTest: false,
     uniforms: { uColor: { value: theme.coldTeal }, uTime: { value: 0 } },
@@ -85,5 +90,5 @@ export function createWaterFX(theme, tier, reducedMotion) {
     const nearMaterial = near.material;
     nearMaterial.opacity = .16 + Math.min(.28, alarm * .18 + Math.abs(Math.sin(elapsed * .4)) * .04 + Math.max(0, -camera.position.y) * .002);
   }
-  return { group, update, triggerAlarm };
+  return { group, update, triggerAlarm, getCausticShafts, setCausticsEnabled };
 }
