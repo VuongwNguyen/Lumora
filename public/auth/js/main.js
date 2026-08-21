@@ -187,12 +187,15 @@ document.getElementById('form-auth').addEventListener('submit', async function(e
     });
     var data = await res.json();
 
-    if (res.status === 403 && data.message && data.message.includes('not verified')) {
+    // So MÃ, không so chuỗi: luồng này từng phụ thuộc message.includes('not
+    // verified') nên dịch message sang tiếng Việt là màn hình OTP không bao giờ
+    // hiện, hỏng âm thầm và không test nào bắt được.
+    if (window.LumoraErrors.is(data, 'EMAIL_NOT_VERIFIED')) {
       showOtpScreen(email);
       return;
     }
     if (!res.ok) {
-      setMsg('msg-auth', data.message || window.t.errGeneric, 'error');
+      setMsg('msg-auth', window.LumoraErrors.resolve(data, window.t), 'error');
       setLoading('submit-btn', false, label);
       return;
     }
@@ -230,7 +233,7 @@ document.getElementById('form-otp').addEventListener('submit', async function(e)
     });
     var data = await res.json();
     if (!res.ok) {
-      setMsg('msg-otp', data.message || window.t.errOtp, 'error');
+      setMsg('msg-otp', window.LumoraErrors.resolve(data, window.t, window.t.errOtp), 'error');
       setLoading('verify-btn', false, window.t.btnVerify);
       return;
     }
@@ -258,7 +261,7 @@ document.getElementById('btn-resend').addEventListener('click', async function()
     });
     var data = await res.json();
     if (!res.ok) {
-      setMsg('msg-otp', data.message || window.t.errOtpSend, 'error');
+      setMsg('msg-otp', window.LumoraErrors.resolve(data, window.t, window.t.errOtpSend), 'error');
       return;
     }
     setMsg('msg-otp', window.t.otpResent, 'success');
