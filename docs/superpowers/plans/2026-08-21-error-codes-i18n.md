@@ -550,6 +550,9 @@ Rồi thêm `code:` cho từng chỗ throw. Bảng ánh xạ đầy đủ — **
 | `Current password is incorrect` | `CURRENT_PASSWORD_INCORRECT` |
 | `Invalid or expired reset session` | `RESET_SESSION_INVALID` |
 | `User not found` | `USER_NOT_FOUND` |
+| `Session ID missing` (trong `logout`) | `INVALID_REQUEST` |
+
+Bảng này ban đầu thiếu dòng cuối — `logout()` ném `Session ID missing` mà bản draft không liệt kê. Dùng `INVALID_REQUEST` thay vì tạo mã riêng: cùng `statusCode` 400, cùng ngữ nghĩa "thiếu tham số bắt buộc", và đây là lỗi người dùng gần như không bao giờ thấy nên không đáng thêm một mã và hai chuỗi i18n.
 
 Ba chỗ dùng template phải chuyển tham số sang `details` (giữ nguyên `message` để log và fallback vẫn đọc được):
 
