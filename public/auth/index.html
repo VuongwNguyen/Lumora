@@ -717,7 +717,11 @@
       .auth-access .screen.active { animation: none; }
       .btn-primary, input { transition: none; }
     }
-  </style>
+      /* Trường sai được đánh dấu ngay tại chỗ, không chỉ báo bằng một dòng chữ
+       ở cuối form — người dùng phải biết ô NÀO sai. */
+    input[aria-invalid="true"] { border-color: #f87171; box-shadow: 0 0 0 1px rgba(248,113,113,.35); }
+    input[aria-invalid="true"]:focus { outline: 2px solid #f87171; outline-offset: 1px; }
+</style>
 </head>
 <body class="auth-page">
   <div class="auth-ambient" aria-hidden="true">

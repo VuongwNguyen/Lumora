@@ -16,6 +16,7 @@ const ActivityService = require('./services/activity.service');
 const app = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 3030;
+const { errorResponse } = require("./context/responseHandle");
 const isDev = process.env.NODE_ENV !== "production";
 
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is not set");
@@ -252,9 +253,15 @@ app.use((err, req, res, next) => {
     console.error("lỗi", err.stack);
   }
 
+  // Chỉ che message của lỗi KHÔNG lường trước. errorResponse là lỗi do chính
+  // app ném ra với message viết sẵn cho người dùng ("Email đã tồn tại", "Mật
+  // khẩu tối thiểu 8 ký tự") — che chúng lại thành "Internal server error" làm
+  // người dùng không biết mình sai gì, và khiến lỗi nhập liệu trông như sập
+  // server. Lỗi từ thư viện hoặc throw ngoài dự kiến vẫn bị che như cũ.
+  const safeMessage = err instanceof errorResponse ? err.message : "Internal server error";
   res.status(err.statusCode || 500).json({
     statusResponse: err.statusResponse || false,
-    message: isDev ? err.message : "Internal server error",
+    message: isDev ? err.message : safeMessage,
     statusCode: err.statusCode || 500,
   });
 });

@@ -98,12 +98,52 @@ document.getElementById('back-btn').addEventListener('click', function() {
   showScreen('auth');
 });
 
+// Cùng luật với services/auth.service.js — để lệch là FE cho qua rồi BE chặn,
+// người dùng nhận thông báo tiếng Anh từ server thay vì tiếng Việt tại chỗ.
+var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function markField(id, invalid, msgId) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (invalid) {
+    el.setAttribute('aria-invalid', 'true');
+    // Nối ô nhập với dòng thông báo: thiếu cái này thì screen reader đọc hai
+    // thứ rời rạc và người dùng không biết thông báo nói về ô nào.
+    if (msgId) el.setAttribute('aria-describedby', msgId);
+  } else {
+    el.removeAttribute('aria-invalid');
+    el.removeAttribute('aria-describedby');
+  }
+}
+
+// Chặn ngay ở FE các lỗi FE tự biết, để người dùng không phải chờ một vòng
+// mạng mới biết mật khẩu ngắn. KHÔNG thay thế validate ở backend: đó vẫn là
+// nơi quyết định, FE chỉ là lớp phản hồi nhanh.
+function validateAuthInput(email, password) {
+  if (!email) return { field: 'email', message: window.t.errEmailRequired };
+  if (!EMAIL_RE.test(email)) return { field: 'email', message: window.t.errEmailInvalid };
+  if (!password) return { field: 'password', message: window.t.errPasswordRequired };
+  if (password.length < 8) return { field: 'password', message: window.t.errPasswordShort };
+  return null;
+}
+
 document.getElementById('form-auth').addEventListener('submit', async function(e) {
   e.preventDefault();
   var email = document.getElementById('email').value;
   var password = document.getElementById('password').value;
   var label = mode === 'login' ? window.t.btnLogin : window.t.btnRegister;
   setMsg('msg-auth', '', '');
+  markField('email', false);
+  markField('password', false);
+
+  var invalid = validateAuthInput(email, password);
+  if (invalid) {
+    setMsg('msg-auth', invalid.message, 'error');
+    markField(invalid.field, true, 'msg-auth');
+    document.getElementById(invalid.field).focus();
+    return;
+  }
+
   setLoading('submit-btn', true, window.t.processing);
 
   try {
