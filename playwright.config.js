@@ -14,6 +14,10 @@ module.exports = defineConfig({
   outputDir: './tests/visual/.artifacts',
   timeout: 60_000,
   expect: { timeout: 10_000 },
+  // Texture ảnh tải từ ImageKit qua mạng thật, nên thỉnh thoảng chậm quá ngưỡng.
+  // Retry 1 lần ở local, 2 ở CI. Nếu một test đỏ ĐỀU ĐẶN thì đó là lỗi thật,
+  // không phải mạng.
+  retries: process.env.CI ? 2 : 1,
   fullyParallel: false, // scene WebGL đo FPS — chạy song song làm nhiễu số đo
   workers: 1,
   reporter: [['list'], ['html', { outputFolder: 'tests/visual/.report', open: 'never' }]],

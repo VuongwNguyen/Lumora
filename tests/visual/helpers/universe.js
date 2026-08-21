@@ -15,6 +15,9 @@ const VIEWPORTS = [
 const UNIVERSES = ['abyss', 'aurora', 'fall', 'galaxy-moon'];
 
 const TEST_GALAXY = process.env.LUMORA_TEST_GALAXY || '';
+// /view/ chọn template theo cấu hình của galaxy, không theo URL. Muốn test
+// universe khác thì cần galaxy được cấu hình universe đó.
+const TEST_TEMPLATE = process.env.LUMORA_TEST_TEMPLATE || 'abyss';
 
 // Điểm vào THẬT của Lumora là /view/?galaxyId=..., không phải /{template}/.
 // `/abyss/?galaxyId=X` trả 302 sang /view/ và nuốt luôn mọi query khác, nên test
@@ -123,10 +126,28 @@ async function horizontalOverflow(page) {
   });
 }
 
+// Canvas phải PHỦ HẾT viewport. Kiểm tràn ngang không bắt được lỗi ngược lại:
+// canvas nhỏ hơn viewport để lộ nền trắng quanh mép — chói gắt trên scene tối và
+// là dấu hiệu resize handler không chạy. Đã bắt được aurora theo cách này.
+async function canvasCoverage(page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      canvas: { w: Math.round(rect.width), h: Math.round(rect.height) },
+      viewport: { w: window.innerWidth, h: window.innerHeight },
+      gapX: Math.round(window.innerWidth - rect.width),
+      gapY: Math.round(window.innerHeight - rect.height),
+    };
+  });
+}
+
 module.exports = {
   VIEWPORTS,
   UNIVERSES,
   TEST_GALAXY,
+  TEST_TEMPLATE,
   universeUrl,
   shareUrl,
   dismissGates,
@@ -134,4 +155,5 @@ module.exports = {
   waitForScene,
   readTelemetry,
   horizontalOverflow,
+  canvasCoverage,
 };
