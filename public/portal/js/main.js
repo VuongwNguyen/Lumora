@@ -321,6 +321,10 @@ document.getElementById('btn-change-pw').addEventListener('click', async functio
   var confirmPw = document.getElementById('acc-confirm-pw').value;
   setAccMsg('msg-change-pw', '', false);
 
+  // Cùng luật với services/auth.service.js (changePassword, tối thiểu 8 ký tự).
+  // Thiếu kiểm ở đây thì server chặn và trả message TIẾNG ANH lên UI tiếng Việt.
+  if (!currentPw) { setAccMsg('msg-change-pw', window.t.errPasswordRequired, true); return; }
+  if (newPw.length < 8) { setAccMsg('msg-change-pw', window.t.errPasswordShort, true); return; }
   if (newPw !== confirmPw) { setAccMsg('msg-change-pw', window.t.errPasswordMismatch, true); return; }
 
   var btn = this;
@@ -432,7 +436,8 @@ document.getElementById('btn-logout-all').addEventListener('click', async functi
 document.getElementById('btn-delete-account').addEventListener('click', async function() {
   var pw = document.getElementById('acc-delete-pw').value;
   setAccMsg('msg-delete-account', '', false);
-  if (!pw) { setAccMsg('msg-delete-account', window.t.placeholderPassword, true); return; }
+  // placeholderPassword là nhãn ô nhập ("Mật khẩu"), không phải câu thông báo lỗi.
+  if (!pw) { setAccMsg('msg-delete-account', window.t.errPasswordRequired, true); return; }
 
   var btn = this;
   btn.disabled = true;
