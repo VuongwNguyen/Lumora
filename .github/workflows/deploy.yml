@@ -21,9 +21,32 @@ jobs:
             source ~/.nvm/nvm.sh 2>/dev/null || true
             source ~/.profile 2>/dev/null || true
             cd ${{ secrets.VPS_APP_PATH }}
-            # ${{ github.repository }} tự đổi theo tên repo, nên đổi tên trên
-            # GitHub không cần sửa file này và không phụ thuộc redirect tên cũ.
-            git pull https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git main
+
+            # Deploy target là BẢN SAO của main, không phải working copy.
+            # `git pull` abort khi có file bị sửa cục bộ, mà `yarn install` tự
+            # ghi lại yarn.lock ngay trên server nên chuyện đó xảy ra thường
+            # xuyên — deploy 21/08 đứt đúng vì vậy. reset --hard làm deploy tất
+            # định. KHÔNG thêm `git clean`: public/uploads không được track và
+            # cũng không ignore, clean sẽ xoá file người dùng.
+            # ${{ github.repository }} tự đổi theo tên repo nên đổi tên không
+            # cần sửa file này và không phụ thuộc redirect tên cũ.
+            git fetch https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git main
+            git reset --hard FETCH_HEAD
+
             yarn install --frozen-lockfile
             pm2 restart galaxy
-            sleep 3 && curl -sf http://localhost:3030/ping > /dev/null
+
+            # Healthcheck phải CHỜ app bind port chứ không đoán bằng sleep cố
+            # định: deploy 15/08 fail đúng vì 3 giây chưa đủ (curl exit 7) dù
+            # app khởi động bình thường ngay sau đó.
+            for attempt in $(seq 1 30); do
+              if curl -sf --max-time 2 http://localhost:3030/ping > /dev/null; then
+                echo "healthcheck OK sau ${attempt}s"
+                exit 0
+              fi
+              sleep 1
+            done
+
+            echo "healthcheck FAIL sau 30s — log gần nhất:"
+            pm2 logs galaxy --lines 40 --nostream || true
+            exit 1
