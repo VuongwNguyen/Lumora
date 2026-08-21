@@ -225,6 +225,21 @@ Mục tiêu là tracking toàn diện mọi bề mặt end-user; admin UI đư�
 - Không dùng màu nền mặc định của browser cho button/card trong dark UI.
 - Không thay thế i18n hiện có bằng chuỗi hardcode nếu bề mặt đó hỗ trợ đa ngôn ngữ.
 
+### Kiểm chứng thị giác là bắt buộc
+
+Việc chạm UI hoặc scene 3D **chưa xong** khi mới có test logic xanh. Phải mở trong browser thật, chụp màn hình và **nhìn vào ảnh đó**.
+
+```bash
+npm run dev
+npm run test:visual          # Playwright, Firefox + Chromium, 4 viewport
+```
+
+- Điểm vào thật là `/view/?galaxyId=...`, không phải `/{template}/` — đường sau bị 302 và nuốt query.
+- Thêm `?debug=1` để đọc telemetry renderer (`window.__lumora`): draw call, tam giác, fps, texture MB.
+- Không được coi những thứ này là bằng chứng UI đã xong: `node --test` xanh, không lỗi console, "code đọc thì đúng", hoặc đã chụp ảnh mà không xem.
+
+Chi tiết workflow, ngưỡng chất lượng 3D và các bẫy `three@0.152.2` đã gặp: xem `CLAUDE.md`.
+
 ## 12. Security và dữ liệu
 
 - Không commit `.env`, token, secret, credential thật, dump database hoặc dữ liệu người dùng.
