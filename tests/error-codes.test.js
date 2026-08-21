@@ -116,3 +116,17 @@ test('mã lạ hoặc thiếu chuỗi thì vẫn fallback, không ra undefined',
   assert.equal(resolve(null, dict), 'Có lỗi xảy ra');
   assert.equal(resolve(undefined, dict), 'Có lỗi xảy ra');
 });
+
+test('errorCode trùng tên thuộc tính Object.prototype không lấy nhầm từ prototype', () => {
+  const resolve = loadBrowserGlobal('../public/shared/js/errorMessages.js', 'LumoraErrors').resolve;
+  const dict = { errors: { OTP_EXPIRED: 'Hết hạn' }, errGeneric: 'Có lỗi xảy ra' };
+  // Trước khi có guard: 'toString' cho chuỗi "[object Undefined]" hiển thị thẳng
+  // cho người dùng, 'constructor' cho một object thay vì chuỗi.
+  for (const code of ['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf']) {
+    const out = resolve({ errorCode: code, message: 'msg thô' }, dict);
+    assert.equal(out, 'msg thô', `${code} lấy nhầm từ prototype: ${JSON.stringify(out)}`);
+  }
+  assert.equal(resolve({ errorCode: 'toString' }, dict), 'Có lỗi xảy ra');
+  // Mã hợp lệ vẫn phải tra được bình thường.
+  assert.equal(resolve({ errorCode: 'OTP_EXPIRED', message: 'x' }, dict), 'Hết hạn');
+});

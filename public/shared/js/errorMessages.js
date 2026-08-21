@@ -15,7 +15,13 @@
     var generic = fallback || dictionary.errGeneric || 'Error';
     if (!data) return generic;
 
-    var entry = data.errorCode && dictionary.errors ? dictionary.errors[data.errorCode] : null;
+    // hasOwnProperty, không tra thẳng: errors là object literal nên `errorCode`
+    // trùng tên thuộc tính của Object.prototype sẽ lấy nhầm từ prototype chain.
+    // 'toString' cho ra chuỗi "[object Undefined]" và hiển thị thẳng cho người
+    // dùng như một thông báo lỗi; 'constructor' cho ra một object.
+    var entry = data.errorCode && dictionary.errors
+      && Object.prototype.hasOwnProperty.call(dictionary.errors, data.errorCode)
+      ? dictionary.errors[data.errorCode] : null;
     // Chuỗi dạng hàm nhận details, ví dụ (d) => `Đợi ${d.wait} giây`.
     if (typeof entry === 'function') return entry(data.errorDetails || {});
     if (typeof entry === 'string') return entry;
