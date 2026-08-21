@@ -62,6 +62,11 @@ async function main() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.getElementById("container").appendChild(renderer.domElement);
 
+  // Telemetry cho QA tự động — chỉ bật khi ?debug=1 (public/shared/js/lumoraDebug.js).
+  // renderer nằm trong scope hàm này nên hook phải gắn ở đây, không gắn được ở
+  // top-level như aurora/fall.
+  window.LumoraDebug?.attach({ template: 'galaxy-moon', scene, camera, renderer });
+
   // ---- KHỞI TẠO CONTROLS ----
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -190,30 +195,56 @@ async function main() {
 
   // ---- TẠO CÁC THÀNH PHẦN CỦA SCENE ----
 
+  const themeColors = galaxyView?.theme?.colors || {};
+  const validThemeColor = value => typeof value === 'string' && /^#[\da-f]{6}$/i.test(value.trim());
+  const hasTheme = ['primary', 'secondary', 'background'].some(key => validThemeColor(themeColors[key]));
+  const themePalette = {
+    primary: new THREE.Color(validThemeColor(themeColors.primary) ? themeColors.primary : 0xd63ed6),
+    secondary: new THREE.Color(validThemeColor(themeColors.secondary) ? themeColors.secondary : 0x48b8b8),
+    background: new THREE.Color(validThemeColor(themeColors.background) ? themeColors.background : 0x000000),
+  };
+  themePalette.highlight = themePalette.secondary.clone().lerp(new THREE.Color(0xffffff), 0.58);
+  themePalette.ambientPrimary = themePalette.primary.clone().lerp(themePalette.background, 0.24);
+  themePalette.ambientSecondary = themePalette.secondary.clone().lerp(themePalette.background, 0.24);
+
+  const canvasColor = (color, alpha = 1) => {
+    const display = color.clone().convertLinearToSRGB();
+    const channel = value => Math.round(THREE.MathUtils.clamp(value, 0, 1) * 255);
+    return `rgba(${channel(display.r)}, ${channel(display.g)}, ${channel(display.b)}, ${alpha})`;
+  };
+
+  if (hasTheme) {
+    scene.background = themePalette.background;
+    scene.fog = new THREE.FogExp2(themePalette.background.getHex(), 0.0017);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.82;
+  }
+
   // Glow trung tâm
-  const centralGlow = createGlowMaterial("rgba(255,255,255,0.8)", 156, 0.25);
+  const centralGlowColor = hasTheme
+    ? canvasColor(themePalette.highlight.clone().lerp(themePalette.background, 0.22), 0.72)
+    : "rgba(255,255,255,0.8)";
+  const centralGlow = createGlowMaterial(centralGlowColor, 156, hasTheme ? 0.2 : 0.25);
   centralGlow.scale.set(8, 8, 1);
   scene.add(centralGlow);
 
-  // Các đám mây tinh vân (Nebula) ngẫu nhiên
+  // Các đám mây tinh vân giữ hình dạng Universe nhưng nhận visual identity từ theme.
   for (let i = 0; i < 15; i++) {
-    const hue = Math.random() * 360;
-    const color = `hsla(${hue}, 80%, 50%, 0.6)`;
-    const nebula = createGlowMaterial(color, 256);
-    nebula.scale.set(100, 100, 1);
+    const color = hasTheme
+      ? canvasColor(
+        themePalette.ambientPrimary.clone().lerp(themePalette.ambientSecondary, (i + Math.random()) / 15),
+        0.46,
+      )
+      : `hsla(${Math.random() * 360}, 80%, 50%, 0.6)`;
+    const nebula = createGlowMaterial(color, 256, hasTheme ? 0.22 : 0.55);
+    const nebulaScale = hasTheme ? 88 : 100;
+    nebula.scale.set(nebulaScale, nebulaScale, 1);
     nebula.position.set(
       (Math.random() - 0.5) * 175,
       (Math.random() - 0.5) * 175,
       (Math.random() - 0.5) * 175
     );
     scene.add(nebula);
-  }
-
-  // Apply theme colors to fog/background
-  if (galaxyView?.theme?.colors?.background) {
-    const bgColor = new THREE.Color(galaxyView.theme.colors.background);
-    scene.background = bgColor;
-    scene.fog = new THREE.FogExp2(bgColor.getHex(), 0.0015);
   }
 
   // ---- TẠO THIÊN HÀ (GALAXY) ----
@@ -224,8 +255,8 @@ async function main() {
     spin: 0.5,
     randomness: 0.2,
     randomnessPower: 20,
-    insideColor: new THREE.Color(galaxyView?.theme?.colors?.primary || 0xd63ed6),
-    outsideColor: new THREE.Color(galaxyView?.theme?.colors?.secondary || 0x48b8b8),
+    insideColor: themePalette.primary,
+    outsideColor: themePalette.secondary,
   };
 
   // Danh sách hình ảnh trái tim, kết hợp dữ liệu từ subdomain và mặc định
@@ -288,12 +319,14 @@ async function main() {
     positions[i3 + 1] = randomY;
     positions[i3 + 2] = Math.sin(totalAngle) * radius + randomZ;
 
-    const mixedColor = new THREE.Color(0xff66ff);
+    const mixedColor = hasTheme
+      ? themePalette.ambientPrimary.clone()
+      : new THREE.Color(0xff66ff);
     mixedColor.lerp(
-      new THREE.Color(0x66ffff),
+      hasTheme ? themePalette.ambientSecondary : new THREE.Color(0x66ffff),
       radius / galaxyParameters.radius
     );
-    mixedColor.multiplyScalar(0.7 + 0.3 * Math.random());
+    mixedColor.multiplyScalar(hasTheme ? 0.42 + 0.24 * Math.random() : 0.7 + 0.3 * Math.random());
     colors[i3] = mixedColor.r;
     colors[i3 + 1] = mixedColor.g;
     colors[i3 + 2] = mixedColor.b;
@@ -582,7 +615,7 @@ async function main() {
   );
 
   const starMaterial = new THREE.PointsMaterial({
-    color: 0xffffff,
+    color: hasTheme ? themePalette.highlight : 0xffffff,
     size: 0.7,
     transparent: true,
     opacity: 0.7,
@@ -642,7 +675,7 @@ async function main() {
     );
     const atmosphereMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        glowColor: { value: new THREE.Color(0xe0b3ff) },
+        glowColor: { value: hasTheme ? themePalette.secondary : new THREE.Color(0xe0b3ff) },
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -676,7 +709,7 @@ async function main() {
     }
     const trailGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
     const trailMaterial = new THREE.LineBasicMaterial({
-      color: 0x99eaff,
+      color: hasTheme ? themePalette.secondary : 0x99eaff,
       transparent: true,
       opacity: 0.7,
       linewidth: 2,
@@ -736,7 +769,7 @@ async function main() {
   // ---- TẠO HÀNH TINH TRUNG TÂM ----
 
   // Hàm tạo texture cho hành tinh
-  function createPlanetTexture(size = 512) {
+  function createPlanetTexture(size = 512, palette = null) {
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = size;
     const ctx = canvas.getContext("2d");
@@ -750,19 +783,29 @@ async function main() {
       size / 2,
       size / 2
     );
-    gradient.addColorStop(0.0, "#f8bbd0");
-    gradient.addColorStop(0.12, "#f48fb1");
-    gradient.addColorStop(0.22, "#f06292");
-    gradient.addColorStop(0.35, "#ffffff");
-    gradient.addColorStop(0.5, "#e1aaff");
-    gradient.addColorStop(0.62, "#a259f7");
-    gradient.addColorStop(0.75, "#b2ff59");
-    gradient.addColorStop(1.0, "#3fd8c7");
+    const planetStops = palette ? [
+      [0, canvasColor(palette.highlight)],
+      [0.16, canvasColor(palette.primary)],
+      [0.34, canvasColor(palette.secondary)],
+      [0.52, canvasColor(palette.highlight)],
+      [0.7, canvasColor(palette.primary.clone().lerp(palette.secondary, 0.45))],
+      [1, canvasColor(palette.background.clone().lerp(palette.secondary, 0.22))],
+    ] : [
+      [0.0, "#f8bbd0"], [0.12, "#f48fb1"], [0.22, "#f06292"],
+      [0.35, "#ffffff"], [0.5, "#e1aaff"], [0.62, "#a259f7"],
+      [0.75, "#b2ff59"], [1.0, "#3fd8c7"],
+    ];
+    planetStops.forEach(([stop, color]) => gradient.addColorStop(stop, color));
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
 
     // Các đốm màu ngẫu nhiên
-    const spotColors = [
+    const spotColors = palette ? [
+      palette.primary,
+      palette.secondary,
+      palette.highlight,
+      palette.primary.clone().lerp(palette.secondary, 0.5),
+    ] : [
       "#f8bbd0",
       "#f8bbd0",
       "#f48fb1",
@@ -780,8 +823,8 @@ async function main() {
       const radius = 30 + Math.random() * 120;
       const color = spotColors[Math.floor(Math.random() * spotColors.length)];
       const spotGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      spotGradient.addColorStop(0, color + "cc"); // 'cc' là alpha
-      spotGradient.addColorStop(1, color + "00");
+      spotGradient.addColorStop(0, palette ? canvasColor(color, 0.8) : color + "cc");
+      spotGradient.addColorStop(1, palette ? canvasColor(color, 0) : color + "00");
       ctx.fillStyle = spotGradient;
       ctx.fillRect(0, 0, size, size);
     }
@@ -798,8 +841,9 @@ async function main() {
         Math.random() * size,
         Math.random() * size
       );
-      ctx.strokeStyle =
-        "rgba(180, 120, 200, " + (0.12 + Math.random() * 0.18) + ")";
+      ctx.strokeStyle = palette
+        ? canvasColor(palette.secondary, 0.14 + Math.random() * 0.2)
+        : "rgba(180, 120, 200, " + (0.12 + Math.random() * 0.18) + ")";
       ctx.lineWidth = 8 + Math.random() * 18;
       ctx.stroke();
     }
@@ -819,6 +863,7 @@ async function main() {
     uniforms: {
       time: { value: 0.0 },
       baseTexture: { value: null },
+      stormColor: { value: themePalette.primary },
     },
     vertexShader: `
         varying vec2 vUv;
@@ -830,6 +875,7 @@ async function main() {
     fragmentShader: `
         uniform float time;
         uniform sampler2D baseTexture;
+        uniform vec3 stormColor;
         varying vec2 vUv;
         void main() {
             vec2 uv = vUv;
@@ -839,7 +885,7 @@ async function main() {
             uv.y += twist * cos(time * 0.5);
             vec4 texColor = texture2D(baseTexture, uv);
             float noise = sin(uv.x * 10.0 + time) * sin(uv.y * 10.0 + time) * 0.1;
-            texColor.rgb += noise * vec3(0.8, 0.4, 0.2);
+            texColor.rgb += noise * stormColor;
             gl_FragColor = texColor;
         }
     `,
@@ -848,11 +894,12 @@ async function main() {
   // Tạo vật thể hành tinh
   const planetRadius = 10;
   const planetGeometry = new THREE.SphereGeometry(planetRadius, 48, 48);
-  const planetTexture = createPlanetTexture();
+  const planetTexture = createPlanetTexture(512, hasTheme ? themePalette : null);
   const planetMaterial = new THREE.ShaderMaterial({
     uniforms: {
       time: { value: 0.0 },
       baseTexture: { value: planetTexture },
+      stormColor: { value: hasTheme ? themePalette.primary : new THREE.Color(0.8, 0.4, 0.2) },
     },
     vertexShader: stormShader.vertexShader,
     fragmentShader: stormShader.fragmentShader,
@@ -956,13 +1003,13 @@ async function main() {
       ctx.textBaseline = "alphabetic";
 
       // Hiệu ứng glow cho chữ
-      ctx.shadowColor = "#e0b3ff";
+      ctx.shadowColor = hasTheme ? canvasColor(themePalette.secondary) : "#e0b3ff";
       ctx.shadowBlur = 24;
       ctx.lineWidth = 6;
       ctx.strokeStyle = "#fff";
       ctx.strokeText(fullText, 0, textureHeight * 0.8);
 
-      ctx.shadowColor = "#ffb3de";
+      ctx.shadowColor = hasTheme ? canvasColor(themePalette.primary) : "#ffb3de";
       ctx.shadowBlur = 16;
       ctx.fillText(fullText, 0, textureHeight * 0.8);
 
@@ -1575,7 +1622,10 @@ async function main() {
         controls.target.set(0, 0, 0);
         controls.update();
         controls.enabled = true;
-        planet.visible = false;
+        // Preview skips the intro camera path, but it must still show the
+        // central memory sphere because it is part of the final Universe.
+        planet.visible = true;
+        centralGlow.visible = true;
         if (starField && starField.geometry) starField.geometry.setDrawRange(0, originalStarCount);
         document.body.classList.add('intro-started');
       }

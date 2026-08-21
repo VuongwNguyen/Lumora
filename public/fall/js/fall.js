@@ -33,11 +33,15 @@ async function fetchData() {
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 2000);
 camera.position.set(0, 0, 0);
+camera.rotation.order = 'YXZ';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+// Telemetry cho QA tự động — chỉ bật khi ?debug=1 (public/shared/js/lumoraDebug.js).
+window.LumoraDebug?.attach({ template: 'fall', scene, camera, renderer });
 
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -657,18 +661,30 @@ function playFallEmotionOpening() {
 let lookX = 0, lookY = 0;
 let _lastPX = 0, _lastPY = 0, _dragging = false;
 const LOOK_SENS_X = 0.004, LOOK_SENS_Y = 0.003;
+const MAX_LOOK_PITCH = Math.PI * 0.36;
+
+function applyLookDelta(deltaX, deltaY) {
+  lookX += deltaX * LOOK_SENS_X;
+  lookY = THREE.MathUtils.clamp(
+    lookY + deltaY * LOOK_SENS_Y,
+    -MAX_LOOK_PITCH,
+    MAX_LOOK_PITCH,
+  );
+}
+
+function normalizeLookAngle(angle) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
+}
 
 renderer.domElement.addEventListener('mousemove', e => {
   if (!started || !_dragging) return;
-  lookX += (e.clientX - _lastPX) * LOOK_SENS_X;
-  lookY += (e.clientY - _lastPY) * LOOK_SENS_Y;
+  applyLookDelta(e.clientX - _lastPX, e.clientY - _lastPY);
   _lastPX = e.clientX; _lastPY = e.clientY;
 });
 renderer.domElement.addEventListener('touchmove', e => {
   if (!started) return;
   const t = e.touches[0];
-  lookX += (t.clientX - _lastPX) * LOOK_SENS_X;
-  lookY += (t.clientY - _lastPY) * LOOK_SENS_Y;
+  applyLookDelta(t.clientX - _lastPX, t.clientY - _lastPY);
   _lastPX = t.clientX; _lastPY = t.clientY;
 }, { passive: true });
 
@@ -734,8 +750,8 @@ async function init() {
 
   // Apply theme colors to visual elements
   if (data.theme) {
-    const primary   = new THREE.Color(data.theme?.colors?.primary   || '#00e699');
-    const secondary = new THREE.Color(data.theme?.colors?.secondary || '#8019e5');
+    const primary   = new THREE.Color(data.theme.primary   || '#00e699');
+    const secondary = new THREE.Color(data.theme.secondary || '#8019e5');
 
     auroraMesh.material.uniforms.uColor1.value.copy(primary);
     auroraMesh.material.uniforms.uColor2.value.copy(secondary);
@@ -763,6 +779,13 @@ async function init() {
       );
     }
     dustCol.needsUpdate = true;
+
+    upperNebula.children.forEach((sprite, index) => {
+      if (!sprite.material?.color) return;
+      const themedCloud = primary.clone().lerp(secondary, (index % 5) / 4);
+      if (index === upperNebula.children.length - 1) themedCloud.lerp(new THREE.Color(0xffffff), 0.7);
+      sprite.material.color.copy(themedCloud);
+    });
   }
 
   // Build polaroids — infinite pool, pre-spawn ahead of camera
@@ -1045,9 +1068,18 @@ function animate() {
       camera.position.y += (0 - camera.position.y) * 0.02;
     }
 
-    // Look-around theo drag — luôn hoạt động kể cả khi frozen
-    camera.rotation.y += (-lookX - camera.rotation.y) * 0.18;
-    camera.rotation.x += (-lookY - camera.rotation.x) * 0.18;
+    // Look-around theo drag — khi quay về nửa sau, đảo trục trên/dưới để
+    // chuyển động camera tiếp nối tự nhiên thay vì lộn cả khung hình.
+    const targetYaw = normalizeLookAngle(-lookX);
+    const rearPitchSign = Math.cos(targetYaw) < 0 ? -1 : 1;
+    const targetPitch = THREE.MathUtils.clamp(
+      -lookY * rearPitchSign,
+      -MAX_LOOK_PITCH,
+      MAX_LOOK_PITCH,
+    );
+    camera.rotation.y += normalizeLookAngle(targetYaw - camera.rotation.y) * 0.18;
+    camera.rotation.x += (targetPitch - camera.rotation.x) * 0.18;
+    camera.rotation.z += (0 - camera.rotation.z) * 0.18;
   } else {
     // Idle: gentle float
     camera.position.y = Math.sin(t * 0.3) * 0.3;

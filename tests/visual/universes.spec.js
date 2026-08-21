@@ -41,6 +41,14 @@ async function verify(page, testInfo, { template, url, label, expectTelemetry })
     expect(telemetry.template, 'render nhầm template').toBe(template);
     expect(telemetry.calls, 'renderer không phát draw call nào').toBeGreaterThan(0);
     expect(telemetry.triangles, 'scene không có tam giác nào').toBeGreaterThan(0);
+
+    // Chốt chặn THOÁI LUI, không phải ngân sách mong muốn. Mục 13.7 của spec đặt
+    // draw call <= 60, nhưng đo thật trên abyss với galaxy 59 ảnh cho 93-204 —
+    // vượt 3.4 lần, dù fps vẫn 60 trên máy dev. Ngưỡng dưới đây bắt "tệ đi",
+    // không hợp thức hoá con số hiện tại. Thu hẹp dần khi tối ưu.
+    expect(telemetry.calls, 'draw call tăng vọt so với mức đã đo').toBeLessThan(280);
+    expect(telemetry.triangles, 'số tam giác tăng vọt').toBeLessThan(90_000);
+    expect(telemetry.textureBytes, 'vượt trần 48 MB texture của mục 13.7').toBeLessThanOrEqual(48);
   } else if (expectTelemetry) {
     throw new Error(`${template} bật ?debug=1 nhưng không expose window.__lumora`);
   }
@@ -59,7 +67,8 @@ test.describe('empty state', () => {
           template,
           url: universeUrl(template, { galaxyId: '' }),
           label: `${template}-empty-${viewport.name}`,
-          expectTelemetry: false,
+          // Cả 4 universe đều đã gắn LumoraDebug — thiếu hook là lỗi thật.
+          expectTelemetry: true,
         });
       });
     }
@@ -78,7 +87,7 @@ test.describe('galaxy thật', () => {
         template: TEST_TEMPLATE,
         url: universeUrl(TEST_TEMPLATE),
         label: `${TEST_TEMPLATE}-${viewport.name}`,
-        expectTelemetry: TEST_TEMPLATE === 'abyss',
+        expectTelemetry: true,
       });
     });
   }

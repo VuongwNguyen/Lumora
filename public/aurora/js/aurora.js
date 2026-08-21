@@ -229,6 +229,16 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&lb.classList.contai
 let cameraZ=0, fallSpd=0, boost=0, started=false;
 let lookX=0, lookY=0;
 let panels=[], capSprites=[], textures=[], captions=[];
+
+// Telemetry cho QA tự động — chỉ bật khi ?debug=1 (public/shared/js/lumoraDebug.js).
+window.LumoraDebug?.attach({
+  template: 'aurora', scene, camera, renderer,
+  extra: {
+    get cameraZ() { return Math.round(cameraZ); },
+    get started() { return started; },
+    get panels() { return panels.length; },
+  },
+});
 let pIdx=0, cIdx=0, nextZ=-22;
 const clock=new THREE.Clock(), ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
 

@@ -99,24 +99,43 @@ Galaxy để test: `LUMORA_TEST_GALAXY=<id> npm run test:visual`
 
 ## 5. Telemetry — biến "trông ổn" thành số đọc được
 
-Thêm `?debug=1` để bật `window.__lumora` (chỉ khi có query đó, production không lộ gì):
+`public/shared/js/lumoraDebug.js` là module dùng chung, nạp trong cả 4 universe. Thêm `?debug=1` để bật `window.__lumora`:
 
 ```js
 window.__lumora = {
   template,              // universe nào ĐANG render — assert cái này
   scene, camera, renderer,
-  info,                  // renderer.info: draw call, tam giác, texture
-  fps, depth, phase, plan,
-  textureBytes,          // tổng MB texture đang giữ
-  seek(depth),           // nhảy tới độ sâu để chụp mốc cụ thể
+  info,                  // renderer.info: draw call, tam giác, geometry, texture
+  fps,                   // tự đếm bằng rAF riêng, không cần universe tự đo
+  textureBytes,          // ước lượng VRAM texture (MB)
+  canvas,                // { css, buffer } — bắt lỗi canvas không phủ viewport
+  // + `extra` riêng của từng universe
 }
 ```
 
-Hiện mới có ở `abyss`. Khi làm universe khác, thêm hook tương tự — harness tự degrade nếu thiếu.
+Universe nào cũng gắn được:
+
+```js
+window.LumoraDebug?.attach({ template: 'aurora', scene, camera, renderer, extra: { ... } });
+```
+
+`abyss` có thêm `depth`, `phase`, `plan` và `seek(depth)` để nhảy tới độ sâu bất kỳ mà chụp.
 
 **Assert `template` khớp universe mong đợi.** `draw calls > 0` không chứng minh đang xem đúng thứ cần xem.
 
----
+**Bẫy đã cắn:** `extra` phải gắn bằng `Object.defineProperties(handle, Object.getOwnPropertyDescriptors(extra))`, **không** dùng `...extra` — object spread **gọi** getter rồi copy giá trị, không copy accessor, nên mọi getter bị đóng băng ở thời điểm attach.
+
+### Số đã đo (abyss, galaxy 59 ảnh, Firefox, 1440×900)
+
+| depth | phase | draw calls | tam giác | texture | MB | fps |
+|---|---|---|---|---|---|---|
+| 63 | descent | 149 | 49 369 | 12 | 26 | 61 |
+| 203 | first_glow | **204** | 50 743 | 12 | 26 | 60 |
+| 353 | memory_trench | 169 | 51 313 | 12 | 25 | 60 |
+| 503 | beacon_reveal | 135 | 49 153 | 12 | 27 | 60 |
+| 623 | living_ocean | 93 | 47 616 | 12 | 25 | 60 |
+
+**Draw call vượt ngân sách ≤60 của mục 13.7 tới 3.4 lần.** fps vẫn 60 trên máy dev, nhưng chưa đo trên thiết bị yếu. Nghi phạm chính: anemone (10 cụm × 7 tua = 70 mesh) và bubble (34 mesh) — cả hai đều gộp được. Assertion trong `tests/visual` là chốt chặn **thoái lui** (`< 280`), không phải hợp thức hoá con số hiện tại.
 
 ## 6. Ngưỡng chất lượng 3D
 
