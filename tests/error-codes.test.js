@@ -38,3 +38,29 @@ test('có đủ mã cho mọi lỗi auth đang tồn tại', () => {
     assert.ok(ERROR_CODES[code], `thiếu mã ${code}`);
   }
 });
+
+test('errorResponse giữ code và details, mặc định là undefined', () => {
+  const { errorResponse } = require('../context/responseHandle');
+  const { ERROR_CODES } = require('../context/errorCodes');
+
+  const plain = new errorResponse({ message: 'x', statusCode: 400 });
+  assert.equal(plain.code, undefined);
+  assert.equal(plain.details, undefined);
+
+  const coded = new errorResponse({
+    message: 'OTP expired', statusCode: 400,
+    code: ERROR_CODES.OTP_EXPIRED, details: { wait: 30 },
+  });
+  assert.equal(coded.code, 'OTP_EXPIRED');
+  assert.deepEqual(coded.details, { wait: 30 });
+  assert.equal(coded.message, 'OTP expired');
+  assert.ok(coded instanceof Error);
+});
+
+test('errorResponse từ chối mã không có trong danh sách', () => {
+  const { errorResponse } = require('../context/responseHandle');
+  assert.throws(
+    () => new errorResponse({ message: 'x', statusCode: 400, code: 'BIA_RA' }),
+    /mã lỗi không hợp lệ/i,
+  );
+});

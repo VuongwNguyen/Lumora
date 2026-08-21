@@ -259,11 +259,19 @@ app.use((err, req, res, next) => {
   // người dùng không biết mình sai gì, và khiến lỗi nhập liệu trông như sập
   // server. Lỗi từ thư viện hoặc throw ngoài dự kiến vẫn bị che như cũ.
   const safeMessage = err instanceof errorResponse ? err.message : "Internal server error";
-  res.status(err.statusCode || 500).json({
+  const payload = {
     statusResponse: err.statusResponse || false,
     message: isDev ? err.message : safeMessage,
     statusCode: err.statusCode || 500,
-  });
+  };
+  // Chỉ gắn code/details khi lỗi thực sự là errorResponse do app tự ném — lỗi
+  // thư viện (fs, mongoose,...) có thể tình cờ mang thuộc tính `code` trùng tên
+  // (vd ENOENT, 11000) và không được rò rỉ ra response cho client.
+  if (err instanceof errorResponse) {
+    if (err.code) payload.errorCode = err.code;
+    if (err.details) payload.errorDetails = err.details;
+  }
+  res.status(err.statusCode || 500).json(payload);
 });
 
 app.listen(port, '0.0.0.0', () => {
