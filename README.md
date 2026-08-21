@@ -150,7 +150,7 @@ Thông tin định danh và cam kết vận hành được lấy từ environmen
 ## Kiến trúc repository
 
 ```text
-BE-Moon/
+Lumora/
 ├── config/          # Plan, compliance, tracking và runtime access mode
 ├── context/         # Async handler và response chuẩn
 ├── controllers/     # HTTP orchestration
@@ -192,8 +192,8 @@ PayOS không bắt buộc để phát triển các tính năng không liên quan
 ### Cài đặt
 
 ```bash
-git clone https://github.com/VuongwNguyen/BE-Moon.git
-cd BE-Moon
+git clone https://github.com/VuongwNguyen/Lumora.git
+cd Lumora
 npm install
 cp .env.example .env
 ```

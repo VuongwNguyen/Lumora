@@ -20,7 +20,8 @@ for command in git gh codex jq flock node yarn systemctl visudo install; do
   }
 done
 
-readonly REPO="/home/saasbot/work/BE-Moon"
+# Xem ghi chú trong scripts/ai-bug-review-worker về việc đổi tên.
+readonly REPO="${LUMORA_REPO_DIR:-/home/saasbot/work/BE-Moon}"
 readonly AUTOMATION_DIR="/home/saasbot/automation"
 
 install -d -o saasbot -g saasbot -m 0750 "$AUTOMATION_DIR"
@@ -31,7 +32,7 @@ install -o root -g root -m 0750 \
 
 install -o root -g root -m 0644 /dev/stdin /etc/systemd/system/be-moon-worker.service <<'UNIT'
 [Unit]
-Description=BE-Moon event-driven AI bug review worker
+Description=Lumora event-driven AI bug review worker
 After=network-online.target
 Wants=network-online.target
 

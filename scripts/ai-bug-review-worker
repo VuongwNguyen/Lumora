@@ -2,7 +2,12 @@
 set -Eeuo pipefail
 
 readonly HOME_DIR="/home/saasbot"
-readonly REPO="$HOME_DIR/work/BE-Moon"
+# Đổi tên dự án sang lumora: đường dẫn này nằm trên host automation, không
+# phải repo GitHub, nên phải rename thủ công bên đó rồi set LUMORA_REPO_DIR.
+readonly REPO="${LUMORA_REPO_DIR:-$HOME_DIR/work/BE-Moon}"
+# Tên repo trên GitHub, gom về một chỗ để đổi tên chỉ phải sửa một dòng thay
+# vì 7 lệnh gh rải rác — và không phải dựa vào redirect tên cũ của GitHub.
+readonly GH_REPO="${LUMORA_GH_REPO:-VuongwNguyen/BE-Moon}"
 readonly AUTOMATION_DIR="$HOME_DIR/automation"
 readonly TRIGGER_FILE="$AUTOMATION_DIR/be-moon-trigger.sha"
 readonly STATE_FILE="$AUTOMATION_DIR/be-moon-last-reviewed.sha"
@@ -78,7 +83,7 @@ cat > "$TMP_DIR/audit-schema.json" <<'JSON'
 JSON
 
 cat > "$TMP_DIR/audit-prompt" <<EOF
-Audit commit $DEPLOYED_SHA in repository VuongwNguyen/BE-Moon.
+Audit commit $DEPLOYED_SHA in repository $GH_REPO.
 Review primarily the exact diff: git diff $DIFF_BASE..$DEPLOYED_SHA.
 
 This is a read-only audit. Do not edit any file, create commits, use GitHub, deploy,
@@ -104,7 +109,7 @@ if [[ "$(jq -r '.found' "$TMP_DIR/audit-result.json")" == "true" ]]; then
     "$TMP_DIR/audit-result.json" >/dev/null || stop "audit finding is incomplete"
 
   TITLE="$(jq -r '.title' "$TMP_DIR/audit-result.json")"
-  gh issue list --repo VuongwNguyen/BE-Moon --state open --label ai-ready --limit 100 \
+  gh issue list --repo "$GH_REPO" --state open --label ai-ready --limit 100 \
     --json number,title,body,url > "$TMP_DIR/open-issues.json"
   ISSUE_NUMBER="$(jq -r --arg marker "Reviewed commit: \`$DEPLOYED_SHA\`" --arg title "$TITLE" \
     '[.[] | select(((.body // "") | contains($marker)) or ((.title | ascii_downcase) == ($title | ascii_downcase)))][0].number // empty' \
@@ -120,7 +125,7 @@ if [[ "$(jq -r '.found' "$TMP_DIR/audit-result.json")" == "true" ]]; then
       printf '## Acceptance criteria\n%s\n\n' "$(jq -r '.acceptance_criteria' "$TMP_DIR/audit-result.json")"
       printf '## Rủi ro\n%s\n' "$(jq -r '.risk' "$TMP_DIR/audit-result.json")"
     } > "$TMP_DIR/issue-body.md"
-    ISSUE_URL="$(gh issue create --repo VuongwNguyen/BE-Moon --label ai-ready \
+    ISSUE_URL="$(gh issue create --repo "$GH_REPO" --label ai-ready \
       --title "$TITLE" --body-file "$TMP_DIR/issue-body.md")"
     ISSUE_NUMBER="${ISSUE_URL##*/}"
     [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]] || stop "could not determine created Issue number"
@@ -138,7 +143,7 @@ log "Recorded successfully reviewed SHA $DEPLOYED_SHA"
 fi
 
 if [[ -z "$ISSUE_NUMBER" ]]; then
-  gh issue list --repo VuongwNguyen/BE-Moon --label ai-ready --state open --limit 100 \
+  gh issue list --repo "$GH_REPO" --label ai-ready --state open --limit 100 \
     --json number,title,body,url > "$TMP_DIR/open-issues.json"
   ISSUE_NUMBER="$(jq -r --arg marker "Reviewed commit: \`$DEPLOYED_SHA\`" \
     '[.[] | select((.body // "") | contains($marker))][0].number // .[0].number // empty' \
@@ -150,7 +155,7 @@ if [[ -z "$ISSUE_NUMBER" ]]; then
   log "Using existing open ai-ready Issue #$ISSUE_NUMBER"
 fi
 
-OPEN_PR="$(gh pr list --repo VuongwNguyen/BE-Moon --head "$FIX_BRANCH" \
+OPEN_PR="$(gh pr list --repo "$GH_REPO" --head "$FIX_BRANCH" \
   --base "$BASE_BRANCH" --state open --limit 1 --json number --jq '.[0].number // empty')"
 if [[ -n "$OPEN_PR" ]]; then
   log "WAIT: PR #$OPEN_PR is awaiting human review"
@@ -172,7 +177,7 @@ This is a minimal automated fix produced after the successful deployment of
 - \`node --check\` for changed JavaScript files
 - \`yarn install --frozen-lockfile\`
 EOF
-  gh pr create --repo VuongwNguyen/BE-Moon --base "$BASE_BRANCH" --head "$FIX_BRANCH" \
+  gh pr create --repo "$GH_REPO" --base "$BASE_BRANCH" --head "$FIX_BRANCH" \
     --draft --title "Fix issue #$ISSUE_NUMBER" --body-file "$TMP_DIR/pr-body.md"
 }
 
@@ -194,7 +199,7 @@ if git log "origin/$BASE_BRANCH..HEAD" --format=%s |
   exit 0
 fi
 
-gh issue view "$ISSUE_NUMBER" --repo VuongwNguyen/BE-Moon \
+gh issue view "$ISSUE_NUMBER" --repo "$GH_REPO" \
   --json number,title,body,url,labels > "$TMP_DIR/issue.json"
 cat > "$TMP_DIR/fix-prompt" <<'EOF'
 Fix exactly the high-confidence bug described in the GitHub Issue JSON appended below.

@@ -1,4 +1,4 @@
-# AGENTS.md — Quy tắc làm việc trong BE-Moon
+# AGENTS.md — Quy tắc làm việc trong Lumora
 
 Tài liệu này áp dụng cho mọi AI agent, coding assistant và automation làm việc trong repository này. Mục tiêu là giữ Lumora nhất quán, an toàn và không làm lệch các quyết định sản phẩm đã được chốt.
 
