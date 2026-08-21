@@ -16,7 +16,7 @@ function makeRockGeometry(scale = 1) {
   const colors = new Float32Array(position.count * 3);
   for (let i = 0; i < position.count; i++) {
     const lit = Math.max(0, normal.getY(i)) ** 1.4;
-    const shade = .12 + lit * .42;
+    const shade = .30 + lit * .70;
     colors[i * 3] = shade; colors[i * 3 + 1] = shade; colors[i * 3 + 2] = shade;
   }
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -57,7 +57,14 @@ export function createSeabed(theme, tier, plan) {
   floor.rotation.x = -Math.PI / 2; floor.position.set(0, -8.5, FLOOR_START - floorLength / 2); group.add(floor);
 
   // Đục, không transparent: nhìn xuyên qua đá là thứ tạo ra cảm giác nét vẽ.
-  const rockMaterial = new THREE.MeshBasicMaterial({ color: theme.coldTeal, vertexColors: true });
+  // Màu là basalt TỐI, không phải coldTeal thuần: mục 4.2 gọi đây là đá basalt,
+  // và ở coldTeal đục nó thành vật sáng nhất khung hình, sáng hơn cả ảnh.
+  // Đặt hex tường minh, KHÔNG lerp từ theme: ColorManagement bật mặc định từ
+  // three r152 nên THREE.Color giữ giá trị ở linear space, và lerp trong linear
+  // rồi xuất ra sRGB cho kết quả sáng hơn nhiều so với tính nhẩm trong sRGB —
+  // lerp .35 trench->coldTeal ra #196260 chứ không phải #113c3e.
+  const rockColor = new THREE.Color('#0f2e2b');
+  const rockMaterial = new THREE.MeshBasicMaterial({ color: rockColor, vertexColors: true });
   const rockGeometry = makeRockGeometry(1);
   // Không kẹp theo tier.rocks: giữ mật độ mới là yêu cầu, và đá là MỘT
   // InstancedMesh nên thêm 20% instance ở quãng 620 m chỉ là thêm đỉnh, không
@@ -88,7 +95,8 @@ export function createSeabed(theme, tier, plan) {
   const ridge = new THREE.Mesh(ridgeGeometry, ridgeMaterial); group.add(ridge);
 
   const kelp = [];
-  const kelpMaterial = new THREE.MeshBasicMaterial({ color: theme.coldTeal, transparent: true, opacity: .38 });
+  // Cùng lý do: coldTeal thuần ở .38 cho những vệt dọc sáng chói giữa cảnh tối.
+  const kelpMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color('#164742'), transparent: true, opacity: .34 });
   const kelpCount = Math.max(2, Math.round(Math.min(18, tier.rocks / 5) * scale));
   for (let i = 0; i < kelpCount; i++) {
     const height = 3 + Math.random() * 8;

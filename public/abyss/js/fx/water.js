@@ -133,6 +133,26 @@ function planktonLayer(count, spread, span, color, base, pixelRatio) {
 // biển trôi LÊN cùng tốc độ, cùng hướng với plankton: không phân biệt nổi. Tuyết
 // phải rơi xuống 0.05–0.12 m/s, trôi ngang ~0.3 m, và ngược chiều bubble — mục
 // 6.4 và mục 11 nói thẳng bubble không được thay thế lớp này.
+// PointsMaterial không có map thì mỗi hạt là một Ô VUÔNG sắc cạnh — thấy rõ
+// trong screenshot QA và trái hẳn mô tả "sprite mờ" của mục 14.1. Sinh sẵn một
+// sprite gradient tròn để tuyết biển ra mảnh vụn mềm thay vì pixel vuông.
+let snowSprite = null;
+function softSprite() {
+  if (snowSprite) return snowSprite;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  gradient.addColorStop(0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(.45, 'rgba(255,255,255,.5)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 32, 32);
+  snowSprite = new THREE.CanvasTexture(canvas);
+  snowSprite.colorSpace = THREE.SRGBColorSpace;
+  return snowSprite;
+}
+
 function marineSnowLayer(count, spread, span, color, size, opacity, speedScale) {
   const positions = new Float32Array(count * 3);
   const fall = new Float32Array(count);
@@ -148,7 +168,7 @@ function marineSnowLayer(count, spread, span, color, size, opacity, speedScale) 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   // Giữ PointsMaterial: sizeAttenuation cho ra đúng "gần 3–6 px, xa 1–2 px" của
   // mục 14.1 mà không cần lớp thứ hai.
-  const points = new THREE.Points(geometry, new THREE.PointsMaterial({ color, size, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: softSprite(), alphaTest: .01, color, size, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending }));
   points.frustumCulled = false;
   points.userData.layerName = 'marineSnow';
   points.userData.marineSnow = { count, fall, phase, span, spread };

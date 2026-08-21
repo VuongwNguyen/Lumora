@@ -273,6 +273,29 @@ async function init() {
   window.musicManager?.init(data.soundscape || null);
   document.getElementById('title').textContent = `LUMORA · ${data.name || 'ABYSS OF MEMORIES'}`;
   try { window.parent.postMessage({ type: 'lumora:universe-ready', galaxyId, template: 'abyss' }, location.origin); } catch {}
+  // Cổng telemetry cho QA tự động (tests/visual). Chỉ bật khi có ?debug=1 nên
+  // production không lộ gì thêm. Trả số liệu renderer thay vì để agent đoán
+  // "scene trông ổn" — draw call, tam giác và fps là bằng chứng đọc được.
+  if (params.get('debug') === '1') {
+    window.__lumora = {
+      template: 'abyss',
+      scene, camera, renderer,
+      get info() { return renderer.info; },
+      get fps() { return Math.round(averageFrame); },
+      get depth() { return Math.round(currentDepth()); },
+      get phase() { return phaseDirector?.update(currentDepth())?.id ?? null; },
+      get plan() { return plan; },
+      get textureBytes() {
+        let bytes = 0;
+        scene.traverse(object => {
+          const image = object.material?.map?.image;
+          if (image?.width) bytes += image.width * image.height * 4 * 4 / 3;
+        });
+        return Math.round(bytes / 1e6);
+      },
+      seek(depth) { camera.position.z = START_Z - (depth - D0); },
+    };
+  }
   activity?.log({ action: 'Viewer Universe Start', feature: 'viewer', galaxyId, description: { template: 'abyss', photoCount: data.images.length, tier: initialTier, diveDistance: plan.diveDistance, reducedMotion } });
   requestAnimationFrame(loop);
 }

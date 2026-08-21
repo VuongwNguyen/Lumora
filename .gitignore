@@ -28,3 +28,9 @@ dist-ssr
 .claude/worktrees/
 .superpowers/
 
+
+# Playwright visual QA
+tests/visual/.shots/
+tests/visual/.report/
+tests/visual/.artifacts/
+tests/visual/.scratch/
