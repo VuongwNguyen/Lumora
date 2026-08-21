@@ -61,7 +61,7 @@ const galaxySchema = new Schema({
   },
   template: {
     type: String,
-    enum: ["galaxy", "fall"],
+    enum: ["galaxy", "fall", "abyss"],
     default: "galaxy",
   },
   seEffect: {

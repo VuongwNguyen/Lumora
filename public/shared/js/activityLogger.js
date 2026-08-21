@@ -198,7 +198,7 @@
     if (path.indexOf('/portal/story-setup') === 0) return 'story_setup';
     if (path.indexOf('/portal/galaxy-setup') === 0) return 'galaxy_setup';
     if (path.indexOf('/portal') === 0) return 'portal';
-    if (/^\/(view|story|fall|aurora|galaxy-moon)/.test(path)) return 'public_view';
+    if (/^\/(view|story|fall|abyss|aurora|galaxy-moon)/.test(path)) return 'public_view';
     if (path.indexOf('/privacy') === 0) return 'privacy';
     if (path.indexOf('/terms') === 0) return 'terms';
     if (path.indexOf('/admin') === 0) return 'admin';

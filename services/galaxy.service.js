@@ -179,8 +179,12 @@ class GalaxyService {
       }
     }
 
-    if (data.template !== undefined && !['galaxy', 'fall'].includes(data.template)) {
+    if (data.template !== undefined && !['galaxy', 'fall', 'abyss'].includes(data.template)) {
       throw new errorResponse({ message: 'Invalid galaxy template', statusCode: 400 });
+    }
+
+    if (data.template === 'abyss' && user.role !== 'admin') {
+      throw new errorResponse({ message: 'Abyss universe is currently available to admins only', statusCode: 403 });
     }
 
     if (data.soundscape !== undefined) {

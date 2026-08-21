@@ -24,6 +24,7 @@
     story_setup: ['View Story Setup Page', 'Story Setup Leave', 'story'],
     viewer_story: ['Viewer Load Submit', 'Viewer Leave', 'viewer'],
     viewer_fall: ['Viewer Load Submit', 'Viewer Leave', 'viewer'],
+    viewer_abyss: ['Viewer Load Submit', 'Viewer Leave', 'viewer'],
     viewer_aurora: ['Viewer Load Submit', 'Viewer Leave', 'viewer'],
     viewer_galaxy: ['Viewer Load Submit', 'Viewer Leave', 'viewer'],
     galaxy_legacy: ['View Galaxy Setup Page', 'Galaxy Setup Leave', 'galaxy'],
@@ -41,6 +42,7 @@
     if (/^\/portal(?:\/|$)/.test(value)) return 'portal';
     if (/^\/story(?:\/|$)/.test(value)) return 'viewer_story';
     if (/^\/fall(?:\/|$)/.test(value)) return 'viewer_fall';
+    if (/^\/abyss(?:\/|$)/.test(value)) return 'viewer_abyss';
     if (/^\/aurora(?:\/|$)/.test(value)) return 'viewer_aurora';
     if (/^\/(view|galaxy-moon)(?:\/|$)/.test(value)) return 'viewer_galaxy';
     if (/^\/privacy(?:\/|$)/.test(value)) return 'privacy';
@@ -50,9 +52,10 @@
 
   function templateName() {
     const declared = doc.querySelector('[data-lumora-template]')?.getAttribute('data-lumora-template');
-    if (declared && /^(story|fall|aurora|galaxy)$/.test(declared)) return declared;
+    if (declared && /^(story|fall|abyss|aurora|galaxy)$/.test(declared)) return declared;
     if (page === 'viewer_story') return 'story';
     if (page === 'viewer_fall') return 'fall';
+    if (page === 'viewer_abyss') return 'abyss';
     if (page === 'viewer_aurora') return 'aurora';
     if (page === 'viewer_galaxy') return 'galaxy';
     return null;

@@ -108,6 +108,8 @@ const TEMPLATE_HTML = {
     .replace(/\.\/js\//g, "/galaxy-moon/js/"),
   fall: fs.readFileSync(path.join(__dirname, "public/fall/index.html"), "utf8")
     .replace(/\.\/js\//g, "/fall/js/"),
+  abyss: fs.readFileSync(path.join(__dirname, "public/abyss/index.html"), "utf8")
+    .replace(/\.\/js\//g, "/abyss/js/"),
   story: fs.readFileSync(path.join(__dirname, "public/story/index.html"), "utf8")
     .replace(/\.\/js\//g, "/story/js/"),
 };
@@ -176,6 +178,12 @@ app.get("/galaxy-moon/", (req, res, next) => {
 });
 
 app.get("/fall/", (req, res, next) => {
+  const { galaxyId } = req.query;
+  if (galaxyId) return res.redirect(`/view/?galaxyId=${encodeURIComponent(galaxyId)}`);
+  next();
+});
+
+app.get("/abyss/", (req, res, next) => {
   const { galaxyId } = req.query;
   if (galaxyId) return res.redirect(`/view/?galaxyId=${encodeURIComponent(galaxyId)}`);
   next();

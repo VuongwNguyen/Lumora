@@ -526,6 +526,8 @@ test('portal uses the responsive memory workspace without dropping existing work
   assert.match(portal, /class="portal-main"/);
   assert.match(portal, /class="panel-hero"/);
   assert.match(portal, /class="account-grid"/);
+  assert.match(portal, /\.account-column\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);[^}]*min-width:\s*0;/s);
+  assert.match(portal, /\.portal-page \.account-card\s*\{\s*min-width:\s*0;/);
   for (const tab of ['galaxies', 'subscription', 'account']) {
     assert.match(portal, new RegExp(`class="tab-btn(?: active)?"[^>]*data-tab="${tab}"`));
     assert.match(portal, new RegExp(`id="panel-${tab}"`));
@@ -595,6 +597,16 @@ test('galaxy setup uses the responsive Lumora workspace while retaining every se
   assert.doesNotMatch(setupScript, /function refreshPreview/);
   assert.match(setupPage, /id="galaxy-frame" src="about:blank"/);
   assert.match(setupScript, /setupSoundscapeCustomTitle/);
+  assert.match(setupScript, /id: 'abyss'.*comingSoon: true, adminOnly: true/s);
+  assert.match(setupScript, /template === 'abyss'/);
+  assert.match(setupScript, /accessMode === 'admin'/);
+  assert.match(setupScript, /COMING SOON/);
+  assert.match(setupScript, /function createThemePreview\(theme\)/);
+  assert.match(setupScript, /safeThemeColor\(colors\.primary/);
+  assert.match(setupScript, /card\.appendChild\(createThemePreview\(th\)\)/);
+  assert.doesNotMatch(setupScript, /th\.previewUrl|ph\.textContent = '🎨'/);
+  assert.match(setupPage, /class="theme-preview-memory"|\.theme-preview-memory \{/);
+  assert.match(setupPage, /data-i18n="setupThemeTitle">Phong cách màu sắc</);
   assert.match(setupScript, /Soundscape Instrument Change/);
   assert.match(setupScript, /resetSoundscapeControls/);
   assert.match(setupPage, /\.soundscape-controls-actions/);
@@ -603,7 +615,7 @@ test('galaxy setup uses the responsive Lumora workspace while retaining every se
 
 test('soundscape engine is shared by public viewers and uses generated Web Audio only', () => {
   const engine = fs.readFileSync(path.join(__dirname, '../public/shared/js/soundscapeEngine.js'), 'utf8');
-  for (const page of ['galaxy-moon/index.html', 'story/index.html', 'fall/index.html', 'aurora/index.html']) {
+  for (const page of ['galaxy-moon/index.html', 'story/index.html', 'fall/index.html', 'abyss/index.html', 'aurora/index.html']) {
     const html = fs.readFileSync(path.join(__dirname, '../public', page), 'utf8');
     assert.match(html, /\/shared\/js\/soundscapeEngine\.js/);
     assert.doesNotMatch(html, /sc-widget-audio\.js/);
@@ -644,6 +656,48 @@ test('soundscape engine is shared by public viewers and uses generated Web Audio
   assert.match(engine, /this\.config\.variation \/ 100/);
   assert.match(engine, /root\.addEventListener\('pagehide'/);
   assert.doesNotMatch(engine, /new Audio\(|fetch\(|soundcloud|\.mp3/);
+});
+
+test('color styles materially direct the visual identity of every supported universe', () => {
+  const galaxy = fs.readFileSync(path.join(__dirname, '../public/galaxy-moon/js/script.js'), 'utf8');
+  const fall = fs.readFileSync(path.join(__dirname, '../public/fall/js/fall.js'), 'utf8');
+
+  assert.match(galaxy, /const themePalette = \{/);
+  assert.match(galaxy, /themePalette\.ambientPrimary\.clone\(\)\.lerp\(themePalette\.ambientSecondary/);
+  assert.match(galaxy, /themePalette\.ambientPrimary = themePalette\.primary\.clone\(\)\.lerp\(themePalette\.background, 0\.24\)/);
+  assert.match(galaxy, /renderer\.toneMappingExposure = 0\.82/);
+  assert.match(galaxy, /createGlowMaterial\(color, 256, hasTheme \? 0\.22 : 0\.55\)/);
+  assert.match(galaxy, /hasTheme \? 0\.42 \+ 0\.24 \* Math\.random\(\)/);
+  assert.match(galaxy, /createPlanetTexture\(512, hasTheme \? themePalette : null\)/);
+  assert.match(galaxy, /color: hasTheme \? themePalette\.secondary : 0x99eaff/);
+  assert.doesNotMatch(galaxy, /const mixedColor = new THREE\.Color\(0xff66ff\);/);
+  assert.match(fall, /new THREE\.Color\(data\.theme\.primary\s+\|\| '#00e699'\)/);
+  assert.match(fall, /upperNebula\.children\.forEach/);
+  assert.doesNotMatch(fall, /data\.theme\?\.colors\?\.(?:primary|secondary)/);
+});
+
+test('Galaxy Classic preview keeps the central memory sphere visible after autostart', () => {
+  const galaxy = fs.readFileSync(path.join(__dirname, '../public/galaxy-moon/js/script.js'), 'utf8');
+  const start = galaxy.indexOf("if (new URLSearchParams(location.search).get('autostart') === 'true')");
+  const end = galaxy.indexOf('\n  if (handoff)', start);
+  const previewAutostart = galaxy.slice(start, end);
+
+  assert.ok(start >= 0 && end > start);
+  assert.match(previewAutostart, /planet\.visible = true/);
+  assert.match(previewAutostart, /centralGlow\.visible = true/);
+  assert.doesNotMatch(previewAutostart, /planet\.visible = false/);
+});
+
+test('Fall camera reverses vertical look in the rear hemisphere without rolling over', () => {
+  const fall = fs.readFileSync(path.join(__dirname, '../public/fall/js/fall.js'), 'utf8');
+
+  assert.match(fall, /camera\.rotation\.order = 'YXZ'/);
+  assert.match(fall, /const MAX_LOOK_PITCH = Math\.PI \* 0\.36/);
+  assert.match(fall, /lookY = THREE\.MathUtils\.clamp\(/);
+  assert.match(fall, /const rearPitchSign = Math\.cos\(targetYaw\) < 0 \? -1 : 1/);
+  assert.match(fall, /-lookY \* rearPitchSign/);
+  assert.match(fall, /normalizeLookAngle\(targetYaw - camera\.rotation\.y\)/);
+  assert.match(fall, /camera\.rotation\.z \+= \(0 - camera\.rotation\.z\)/);
 });
 
 test('soundscape playback is unlocked inside mobile gestures after viewer data is ready', () => {
@@ -818,6 +872,29 @@ test('admin bypasses backend galaxy feature checks without a subscription lookup
     });
     assert.equal(updated.template, 'fall');
     assert.deepEqual(updated.caption, ['Admin preview']);
+  } finally {
+    GalaxyModel.findOne = originalGalaxyFind;
+    GalaxyModel.findByIdAndUpdate = originalUpdate;
+    SubscriptionModel.findOne = originalSubFind;
+  }
+});
+
+test('Abyss universe is admin-only and persists for the underwater preview', async () => {
+  const originalGalaxyFind = GalaxyModel.findOne;
+  const originalUpdate = GalaxyModel.findByIdAndUpdate;
+  const originalSubFind = SubscriptionModel.findOne;
+  GalaxyModel.findOne = async () => ({ _id: 'galaxy-abyss', userId: 'owner-a', template: 'galaxy' });
+  GalaxyModel.findByIdAndUpdate = async (id, update) => ({ _id: id, ...update });
+  SubscriptionModel.findOne = async () => ({ plan: 'pro', status: 'active', expiredAt: new Date(Date.now() + 86400000) });
+  try {
+    await assert.rejects(
+      GalaxyService.updateGalaxy({ galaxyId: 'galaxy-abyss', userId: 'owner-a', user: { role: 'user' }, data: { template: 'abyss' } }),
+      error => error.statusCode === 403 && /admins only/.test(error.message),
+    );
+    const updated = await GalaxyService.updateGalaxy({
+      galaxyId: 'galaxy-abyss', userId: 'owner-a', user: { role: 'admin' }, data: { template: 'abyss' },
+    });
+    assert.equal(updated.template, 'abyss');
   } finally {
     GalaxyModel.findOne = originalGalaxyFind;
     GalaxyModel.findByIdAndUpdate = originalUpdate;

@@ -14,6 +14,13 @@
   resolved "https://registry.npmjs.org/@payos/node/-/node-2.0.5.tgz"
   integrity sha512-y2dRfqVMerbBr0gapFqNA+QwzJmhC0Hi0+IaXhOsXEOBRjIe9ZgeFqI3JBF3mXSM3YSf5HAjTAAk2XYtCvMpBQ==
 
+"@playwright/test@^1.62.1":
+  version "1.62.1"
+  resolved "https://registry.npmjs.org/@playwright/test/-/test-1.62.1.tgz"
+  integrity sha512-DTcUc8qii+cpHvtOwggMtBRMjKZHXYWdw8syRYu2vtzuq4Wxphqq4NfCs5Zt44L6mA8rfDfj+PHnxFc/FeK6mQ==
+  dependencies:
+    playwright "1.62.1"
+
 "@types/webidl-conversions@*":
   version "7.0.3"
   resolved "https://registry.npmjs.org/@types/webidl-conversions/-/webidl-conversions-7.0.3.tgz"
@@ -880,6 +887,20 @@ picomatch@^2.0.4, picomatch@^2.2.1:
   version "2.3.2"
   resolved "https://registry.npmjs.org/picomatch/-/picomatch-2.3.2.tgz"
   integrity sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==
+
+playwright-core@1.62.1:
+  version "1.62.1"
+  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.62.1.tgz"
+  integrity sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==
+
+playwright@1.62.1:
+  version "1.62.1"
+  resolved "https://registry.npmjs.org/playwright/-/playwright-1.62.1.tgz"
+  integrity sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==
+  dependencies:
+    playwright-core "1.62.1"
+  optionalDependencies:
+    fsevents "2.3.2"
 
 process@^0.11.1:
   version "0.11.10"

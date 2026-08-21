@@ -23,6 +23,7 @@ let currentAudio = null;
 let previewTake  = 0;
 let userPlan     = 'free'; // 'free' | 'plus' | 'pro'
 let userFeatures = new Set();
+let isAdmin      = false;
 let soundscapeInstruments = [];
 let imageUploadPolicy = null;
 let gallerySelectionMode = false;
@@ -491,13 +492,35 @@ function handleUpload(fileList) {
 
 // ── Theme ──────────────────────────────────────────────────
 
+function safeThemeColor(value, fallback) {
+  return typeof value === 'string' && /^#[\da-f]{6}$/i.test(value.trim())
+    ? value.trim()
+    : fallback;
+}
+
+function createThemePreview(theme) {
+  const colors = theme?.colors || {};
+  const preview = el('div', 'theme-preview');
+  preview.setAttribute('aria-hidden', 'true');
+  preview.style.setProperty('--theme-primary', safeThemeColor(colors.primary, '#8b5cf6'));
+  preview.style.setProperty('--theme-secondary', safeThemeColor(colors.secondary, '#c4b5fd'));
+  preview.style.setProperty('--theme-background', safeThemeColor(colors.background, '#090712'));
+  preview.appendChild(el('div', 'theme-preview-orbit'));
+  preview.appendChild(el('div', 'theme-preview-memory'));
+  const copy = el('div', 'theme-preview-copy');
+  copy.appendChild(el('span'));
+  copy.appendChild(el('span'));
+  preview.appendChild(copy);
+  return preview;
+}
+
 function renderThemes() {
   const wrap = document.getElementById('theme-content');
   clear(wrap);
 
   if (!themes.length) {
     const empty = el('div', 'empty-state');
-    empty.appendChild(el('div', 'empty-state-icon', '🎨'));
+    empty.appendChild(el('div', 'empty-state-icon', '◐'));
     empty.appendChild(el('div', null, tr('setupNoThemes')));
     wrap.appendChild(empty);
     return;
@@ -505,11 +528,16 @@ function renderThemes() {
 
   const grid = el('div', 'theme-grid');
 
-  const noTheme = el('button', 'theme-no' + (!galaxy.themeId ? ' selected' : ''), tr('setupNoTheme'));
+  const noTheme = el('button', 'theme-no' + (!galaxy.themeId ? ' selected' : ''));
   noTheme.type = 'button';
   noTheme.dataset.trackAction = 'Galaxy Theme Select';
   noTheme.dataset.trackId = 'theme_none';
   noTheme.onclick = () => applyTheme(null);
+  const noThemePreview = el('div', 'theme-preview theme-preview-none');
+  noThemePreview.setAttribute('aria-hidden', 'true');
+  noThemePreview.appendChild(el('span', 'theme-preview-none-mark', '—'));
+  noTheme.appendChild(noThemePreview);
+  noTheme.appendChild(el('div', 'theme-name', tr('setupNoTheme')));
   grid.appendChild(noTheme);
 
   themes.forEach(th => {
@@ -517,15 +545,7 @@ function renderThemes() {
     card.type = 'button';
     card.dataset.trackAction = 'Galaxy Theme Select';
     card.dataset.trackId = 'theme_option';
-    if (th.previewUrl) {
-      const img = el('img'); img.src = th.previewUrl; img.alt = th.name;
-      card.appendChild(img);
-    } else {
-      const ph = el('div');
-      ph.style.cssText = 'aspect-ratio:16/9;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;font-size:24px;';
-      ph.textContent = '🎨';
-      card.appendChild(ph);
-    }
+    card.appendChild(createThemePreview(th));
     card.appendChild(el('div', 'theme-name', th.name));
     card.onclick = () => applyTheme(th._id, th.name);
     grid.appendChild(card);
@@ -889,13 +909,17 @@ function renderUniverses() {
   const options = [
     { id: 'galaxy', icon: '🌌', name: 'Galaxy Classic', desc: tr('setupGalaxyClassicDescription'), tier: 0 },
     { id: 'fall', icon: '🎞', name: 'Fall Through Memories', desc: tr('setupFallDescription'), feature: 'fall_universe', requiredPlan: 'Pro', tier: 2 },
+    { id: 'abyss', icon: '🌊', name: 'Abyss of Memories', desc: tr('setupAbyssDescription'), comingSoon: true, adminOnly: true, tier: 3 },
   ].sort((left, right) => {
     const leftLocked = left.feature && !canUseFeature(left.feature) ? 1 : 0;
     const rightLocked = right.feature && !canUseFeature(right.feature) ? 1 : 0;
     return leftLocked - rightLocked || left.tier - right.tier;
   });
   options.forEach(option => {
-    const locked = Boolean(option.feature && !canUseFeature(option.feature));
+    const locked = Boolean(
+      (option.feature && !canUseFeature(option.feature))
+      || (option.adminOnly && !isAdmin),
+    );
     const selected = (galaxy.template || 'galaxy') === option.id;
     const button = el('button', 'theme-card universe-card' + (selected ? ' selected' : '') + (locked ? ' locked' : ''));
     button.type = 'button';
@@ -905,6 +929,7 @@ function renderUniverses() {
     const header = el('div', 'universe-card-header');
     header.appendChild(el('span', 'universe-card-name', option.icon + ' ' + option.name));
     if (option.requiredPlan) header.appendChild(el('span', 'universe-plan-badge', (locked ? '🔒 ' : '') + option.requiredPlan));
+    if (option.comingSoon) header.appendChild(el('span', 'universe-plan-badge', 'COMING SOON'));
     button.appendChild(header);
     button.appendChild(el('div', 'universe-card-desc', option.desc));
     button.onclick = () => applyUniverse(option.id);
@@ -913,6 +938,13 @@ function renderUniverses() {
 }
 
 async function applyUniverse(template) {
+  if (template === 'abyss') {
+    if (!isAdmin) {
+      activity?.logBlocked('Galaxy Universe Change Blocked', 'admin_only', { template }, { galaxyId });
+      showToast(tr('setupAbyssComingSoon'));
+      return;
+    }
+  }
   if (template === 'fall' && !canUseFeature('fall_universe')) {
     activity?.logBlocked('Galaxy Universe Change Blocked', 'plan_required', { template }, { galaxyId });
     showToast(tr('setupFallRequiresPro'));
@@ -1077,6 +1109,7 @@ async function init() {
     soundscapeInstruments = instrumentsData.meta || [];
     userPlan     = subData.meta?.plan || 'free';
     userFeatures = new Set(subData.meta?.features || []);
+    isAdmin      = subData.meta?.accessMode === 'admin';
     imageUploadPolicy = uploadPolicyData.meta || null;
     if (imageUploadPolicy) {
       const maxSizeMb = imageUploadPolicy.maxTotalSize / 1024 / 1024;

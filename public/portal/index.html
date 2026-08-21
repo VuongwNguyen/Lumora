@@ -1262,8 +1262,14 @@
     .portal-page .history-table-wrap { border-radius: 12px; }
 
     .account-grid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(300px, .92fr); gap: 16px; align-items: start; }
-    .account-column { display: grid; gap: 16px; }
-    .portal-page .account-card { padding: 22px; }
+    .account-column {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      min-width: 0;
+      gap: 16px;
+    }
+    .portal-page .account-card { min-width: 0; padding: 22px; }
+    #sessions-list { min-width: 0; }
     .portal-page .account-input { min-height: 46px; border-radius: 10px; background: rgba(255,255,255,.035); }
     .portal-page .account-input:focus { box-shadow: 0 0 0 4px rgba(139,92,246,.08); }
     .portal-page .account-section-title { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 500; }
