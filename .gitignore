@@ -34,3 +34,8 @@ tests/visual/.shots/
 tests/visual/.report/
 tests/visual/.artifacts/
 tests/visual/.scratch/
+
+# Lumora dùng yarn (deploy chạy `yarn install --frozen-lockfile`).
+# Một lockfile duy nhất — package-lock.json từng tồn tại song song và làm
+# nguồn sự thật mơ hồ.
+package-lock.json

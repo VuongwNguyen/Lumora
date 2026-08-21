@@ -213,7 +213,8 @@ Không thêm: UI library ngẫu nhiên, animation library trùng chức năng, t
 
 ## 11. Vệ sinh thao tác
 
-- Repo có **cả `package-lock.json` lẫn `yarn.lock`** — nguồn sự thật mơ hồ, cần dọn. Trong lúc chưa dọn, dùng `npm`.
+- **Lockfile là `yarn.lock`, dùng `yarn` để thêm/xoá dependency.** Deploy chạy `yarn install --frozen-lockfile`, nên cài bằng `npm` sẽ cập nhật `package-lock.json` mà bỏ quên `yarn.lock` — lệnh deploy fail và production đứt. `package-lock.json` đã bị xoá và cho vào `.gitignore`.
+- `npm run <script>` vẫn dùng bình thường; chỉ việc **cài package** mới phải qua `yarn`.
 - Working tree thường có việc dở dang của người khác. **Chỉ stage đúng file mình sửa**, không `git add -A`.
 - `tests/tmdt-compliance.test.js` là guard test dùng regex trên source. Đổi tên hàm hoặc chuyển logic sang file khác sẽ làm nó đỏ — **sửa assertion trỏ sang bất biến mới trong cùng commit**, đừng xoá.
 - Mutation test trên code **chưa commit** thì dùng `cp` để sao lưu, **không dùng `git checkout --`** — nó reset về HEAD và xoá mất việc đang làm.
