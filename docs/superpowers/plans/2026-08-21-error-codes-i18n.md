@@ -287,8 +287,14 @@ Trong `index.js`, thay khối `res.status(...).json({...})` cuối handler lỗi
     statusCode: err.statusCode || 500,
   };
   // Chỉ gắn khi có, để response của endpoint chưa migrate không đổi một byte nào.
-  if (err.code) payload.errorCode = err.code;
-  if (err.details) payload.errorDetails = err.details;
+  // Và CHỈ cho errorResponse: lỗi thư viện cũng mang .code (fs cho 'ENOENT',
+  // MongoDB cho 11000 khi trùng khoá) và chúng đi thẳng vào handler này khi
+  // không được bọc. Thiếu guard là rò rỉ chi tiết nội bộ ra client — đúng thứ
+  // safeMessage sinh ra để chặn.
+  if (err instanceof errorResponse) {
+    if (err.code) payload.errorCode = err.code;
+    if (err.details) payload.errorDetails = err.details;
+  }
   res.status(err.statusCode || 500).json(payload);
 ```
 
