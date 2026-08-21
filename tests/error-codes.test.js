@@ -130,3 +130,12 @@ test('errorCode trùng tên thuộc tính Object.prototype không lấy nhầm t
   // Mã hợp lệ vẫn phải tra được bình thường.
   assert.equal(resolve({ errorCode: 'OTP_EXPIRED', message: 'x' }, dict), 'Hết hạn');
 });
+
+test('mọi errorResponse trong auth.service.js đều có code', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../services/auth.service.js'), 'utf8');
+  // Bắt từng lời gọi `new errorResponse({ ... })`, kể cả xuống dòng.
+  const calls = source.match(/new errorResponse\(\{[\s\S]*?\}\)/g) || [];
+  assert.ok(calls.length >= 25, `chỉ tìm thấy ${calls.length} lời gọi, nghi regex sai`);
+  const missing = calls.filter(call => !/\bcode:\s*ERROR_CODES\./.test(call));
+  assert.deepEqual(missing, [], `còn ${missing.length} chỗ chưa gắn code`);
+});
