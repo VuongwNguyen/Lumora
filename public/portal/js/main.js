@@ -291,7 +291,7 @@ document.getElementById('btn-create').addEventListener('click', async function()
     });
     const data = await res.json();
     if (!res.ok) {
-      msg.textContent = data.message || window.t.errGeneric;
+      msg.textContent = window.LumoraErrors.resolve(data, window.t);
       btn.disabled = false;
       btn.textContent = window.t.btnCreate;
       return;
@@ -337,7 +337,7 @@ document.getElementById('btn-change-pw').addEventListener('click', async functio
       body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
     });
     var data = await res.json();
-    if (!res.ok) { setAccMsg('msg-change-pw', data.message || window.t.errGeneric, true); return; }
+    if (!res.ok) { setAccMsg('msg-change-pw', window.LumoraErrors.resolve(data, window.t), true); return; }
     setAccMsg('msg-change-pw', window.t.changePasswordSuccess, false);
     document.getElementById('acc-current-pw').value = '';
     document.getElementById('acc-new-pw').value = '';
@@ -448,7 +448,7 @@ document.getElementById('btn-delete-account').addEventListener('click', async fu
       body: JSON.stringify({ password: pw }),
     });
     var data = await res.json();
-    if (!res.ok) { setAccMsg('msg-delete-account', data.message || window.t.errGeneric, true); return; }
+    if (!res.ok) { setAccMsg('msg-delete-account', window.LumoraErrors.resolve(data, window.t), true); return; }
     setAccMsg('msg-delete-account', window.t.deleteAccountSuccess, false);
     setTimeout(logout, 1500);
   } catch { setAccMsg('msg-delete-account', window.t.errConnect, true); }
