@@ -7,7 +7,7 @@ readonly HOME_DIR="/home/saasbot"
 readonly REPO="${LUMORA_REPO_DIR:-$HOME_DIR/work/BE-Moon}"
 # Tên repo trên GitHub, gom về một chỗ để đổi tên chỉ phải sửa một dòng thay
 # vì 7 lệnh gh rải rác — và không phải dựa vào redirect tên cũ của GitHub.
-readonly GH_REPO="${LUMORA_GH_REPO:-VuongwNguyen/BE-Moon}"
+readonly GH_REPO="${LUMORA_GH_REPO:-VuongwNguyen/Lumora}"
 readonly AUTOMATION_DIR="$HOME_DIR/automation"
 readonly TRIGGER_FILE="$AUTOMATION_DIR/be-moon-trigger.sha"
 readonly STATE_FILE="$AUTOMATION_DIR/be-moon-last-reviewed.sha"
