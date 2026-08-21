@@ -683,8 +683,10 @@ const { firefox } = require('@playwright/test');
     const p = await b.newPage({ viewport: { width: 1440, height: 900 }, locale: loc });
     await p.goto('http://localhost:3030/auth/');
     await p.waitForTimeout(900);
-    const tab = p.locator('text=Đăng ký').first();
-    if (await tab.count()) await tab.click().catch(() => {});
+    // Bấm theo ID, KHÔNG theo text: `text=Đăng ký` chỉ khớp tiếng Việt nên với
+    // locale en-US (tab hiện "Register") nó im lặng không bấm được và probe
+    // chạy nhánh login thay vì register — xanh nhưng test sai luồng.
+    await p.click('#tab-register');
     await p.waitForTimeout(400);
     await p.fill('#email', 'test@galaxy.com');
     await p.fill('#password', 'abcdefgh');
@@ -699,6 +701,8 @@ const { firefox } = require('@playwright/test');
 
 Run: `node tests/visual/.errprobe.js`
 Expected: `vi-VN -> Email này đã được đăng ký` và `en-US -> This email is already registered`. Trước thay đổi này cả hai đều ra `Email already exists`.
+
+**Kiểm luồng OTP — rủi ro lớn nhất của task này.** Lưu ý `/auth/register` với email chưa xác thực **gửi lại OTP và trả 200/201**, KHÔNG phải 403. Mã `EMAIL_NOT_VERIFIED` chỉ phát sinh khi **login** (`services/auth.service.js:156`). Nên phải: đăng ký email mới → quay lại tab login → đăng nhập cùng email đó → màn hình OTP phải hiện ra. Cho `waitForTimeout` ít nhất 4000ms ở bước đăng ký: nó gọi SMTP thật nên mất ~3s.
 
 - [ ] **Step 5: Xoá probe và chạy test**
 
