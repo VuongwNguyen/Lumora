@@ -774,7 +774,10 @@
             <button type="button" class="tab active" id="tab-login" role="tab" aria-selected="true">Đăng nhập</button>
             <button type="button" class="tab" id="tab-register" role="tab" aria-selected="false">Đăng ký</button>
           </div>
-          <form id="form-auth">
+          <!-- novalidate: JS lo toàn bộ validate (public/auth/js/main.js) để thông báo
+     lỗi theo ngôn ngữ và style của Lumora, thay vì tooltip mặc định của
+     trình duyệt. Mọi form ở đây PHẢI có validate JS trước khi bỏ required. -->
+          <form id="form-auth" novalidate>
             <div class="input-group">
               <label class="field-label" for="email" data-vi="Email" data-en="Email">Email</label>
               <input type="email" id="email" placeholder="Email" autocomplete="email" required />
@@ -809,7 +812,7 @@
             <h2 class="screen-heading" data-vi="Kiểm tra email của bạn" data-en="Check your email">Kiểm tra email của bạn</h2>
             <p class="otp-hint"><span data-vi="Nhập mã OTP 6 số đã gửi tới" data-en="Enter the 6-digit OTP sent to">Nhập mã OTP 6 số đã gửi tới</span><br><strong id="otp-email-display"></strong></p>
           </div>
-          <form id="form-otp">
+          <form id="form-otp" novalidate>
             <div class="input-group">
               <label class="field-label" for="otp">OTP</label>
               <input type="text" class="otp-input" id="otp" placeholder="______"
@@ -829,7 +832,7 @@
             <h2 class="screen-heading" data-vi="Quên mật khẩu?" data-en="Forgot your password?">Quên mật khẩu?</h2>
             <p class="screen-description" id="forgot-hint">Nhập email để nhận mã OTP đặt lại mật khẩu</p>
           </div>
-          <form id="form-forgot">
+          <form id="form-forgot" novalidate>
             <div class="input-group">
               <label class="field-label" for="forgot-email" data-vi="Email tài khoản" data-en="Account email">Email tài khoản</label>
               <input type="email" id="forgot-email" placeholder="Email" autocomplete="email" required />
@@ -847,7 +850,7 @@
             <h2 class="screen-heading" data-vi="Tạo mật khẩu mới" data-en="Create a new password">Tạo mật khẩu mới</h2>
             <p class="otp-hint"><span data-vi="Nhập mã OTP đã gửi tới" data-en="Enter the OTP sent to">Nhập mã OTP đã gửi tới</span><br><strong id="reset-email-display"></strong></p>
           </div>
-          <form id="form-reset">
+          <form id="form-reset" novalidate>
             <div class="input-group">
               <label class="field-label" for="reset-otp">OTP</label>
               <input type="text" class="otp-input" id="reset-otp" placeholder="______"

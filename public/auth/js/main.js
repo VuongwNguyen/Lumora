@@ -25,6 +25,11 @@ function showScreen(name) {
     s.classList.remove('active');
   });
   document.getElementById('screen-' + name).classList.add('active');
+  // Dọn trạng thái lỗi của màn hình vừa rời: nếu không, quay lại sẽ thấy ô viền
+  // đỏ kèm thông báo cũ đã mất ngữ cảnh.
+  document.querySelectorAll('[aria-invalid="true"]').forEach(function(el) {
+    markField(el.id, false);
+  });
 }
 
 function setMsg(id, text, type) {
@@ -101,6 +106,8 @@ document.getElementById('back-btn').addEventListener('click', function() {
 // Cùng luật với services/auth.service.js — để lệch là FE cho qua rồi BE chặn,
 // người dùng nhận thông báo tiếng Anh từ server thay vì tiếng Việt tại chỗ.
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+var OTP_RE = /^\d{6}$/;
+var MIN_PASSWORD = 8;
 
 function markField(id, invalid, msgId) {
   var el = document.getElementById(id);
@@ -116,15 +123,49 @@ function markField(id, invalid, msgId) {
   }
 }
 
-// Chặn ngay ở FE các lỗi FE tự biết, để người dùng không phải chờ một vòng
-// mạng mới biết mật khẩu ngắn. KHÔNG thay thế validate ở backend: đó vẫn là
-// nơi quyết định, FE chỉ là lớp phản hồi nhanh.
-function validateAuthInput(email, password) {
-  if (!email) return { field: 'email', message: window.t.errEmailRequired };
-  if (!EMAIL_RE.test(email)) return { field: 'email', message: window.t.errEmailInvalid };
-  if (!password) return { field: 'password', message: window.t.errPasswordRequired };
-  if (password.length < 8) return { field: 'password', message: window.t.errPasswordShort };
-  return null;
+function clearFields() {
+  for (var i = 0; i < arguments.length; i++) markField(arguments[i], false);
+}
+
+// Trả về true nếu HỢP LỆ. Nếu sai thì hiện thông báo, tô ô sai và focus vào nó.
+// Mọi form auth đều dùng novalidate nên đây là nơi DUY NHẤT chặn dữ liệu xấu ở
+// FE — bỏ sót một nhánh là mất luôn kiểm tra, không còn tooltip trình duyệt đỡ.
+function checkFields(msgId, formName, rules) {
+  for (var i = 0; i < rules.length; i++) {
+    var rule = rules[i];
+    if (rule.ok) continue;
+    // Giữ đúng convention tracking sẵn có của form-reset (AGENTS.md mục 9):
+    // submit bị chặn ở FE vẫn phải được ghi nhận, nếu không việc chuyển validate
+    // từ server về client sẽ làm mất luôn số liệu lỗi nhập liệu.
+    window.LumoraActivity?.logBlocked('Auth Submit Blocked', 'invalid_input', { form: formName, fields: [rule.field] });
+    setMsg(msgId, rule.message, 'error');
+    markField(rule.field, true, msgId);
+    var el = document.getElementById(rule.field);
+    if (el) el.focus();
+    return false;
+  }
+  return true;
+}
+
+function emailRules(field, value) {
+  return [
+    { field: field, ok: !!value, message: window.t.errEmailRequired },
+    { field: field, ok: EMAIL_RE.test(value), message: window.t.errEmailInvalid },
+  ];
+}
+
+function passwordRules(field, value) {
+  return [
+    { field: field, ok: !!value, message: window.t.errPasswordRequired },
+    { field: field, ok: value.length >= MIN_PASSWORD, message: window.t.errPasswordShort },
+  ];
+}
+
+function otpRules(field, value) {
+  return [
+    { field: field, ok: !!value, message: window.t.errOtpRequired },
+    { field: field, ok: OTP_RE.test(value), message: window.t.errOtpFormat },
+  ];
 }
 
 document.getElementById('form-auth').addEventListener('submit', async function(e) {
@@ -133,16 +174,8 @@ document.getElementById('form-auth').addEventListener('submit', async function(e
   var password = document.getElementById('password').value;
   var label = mode === 'login' ? window.t.btnLogin : window.t.btnRegister;
   setMsg('msg-auth', '', '');
-  markField('email', false);
-  markField('password', false);
-
-  var invalid = validateAuthInput(email, password);
-  if (invalid) {
-    setMsg('msg-auth', invalid.message, 'error');
-    markField(invalid.field, true, 'msg-auth');
-    document.getElementById(invalid.field).focus();
-    return;
-  }
+  clearFields('email', 'password');
+  if (!checkFields('msg-auth', mode, emailRules('email', email).concat(passwordRules('password', password)))) return;
 
   setLoading('submit-btn', true, window.t.processing);
 
@@ -185,6 +218,8 @@ document.getElementById('form-otp').addEventListener('submit', async function(e)
   e.preventDefault();
   var otp = document.getElementById('otp').value;
   setMsg('msg-otp', '', '');
+  clearFields('otp');
+  if (!checkFields('msg-otp', 'verify_otp', otpRules('otp', otp))) return;
   setLoading('verify-btn', true, window.t.verifying);
 
   try {
@@ -273,6 +308,8 @@ document.getElementById('form-forgot').addEventListener('submit', async function
   e.preventDefault();
   var email = document.getElementById('forgot-email').value;
   setMsg('msg-forgot', '', '');
+  clearFields('forgot-email');
+  if (!checkFields('msg-forgot', 'forgot_password', emailRules('forgot-email', email))) return;
   setLoading('forgot-send-btn', true, window.t.processing);
 
   try {
@@ -305,13 +342,13 @@ document.getElementById('form-reset').addEventListener('submit', async function(
   var newPassword = document.getElementById('new-password').value;
   var confirmPassword = document.getElementById('confirm-password').value;
 
-  if (newPassword !== confirmPassword) {
-    window.LumoraActivity?.logBlocked('Auth Submit Blocked', 'invalid_input', { form: 'reset_password', fields: ['new_password', 'confirm_password'] });
-    setMsg('msg-reset', window.t.errPasswordMismatch, 'error');
-    return;
-  }
-
   setMsg('msg-reset', '', '');
+  clearFields('reset-otp', 'new-password', 'confirm-password');
+  if (!checkFields('msg-reset', 'reset_password',
+      otpRules('reset-otp', otp)
+        .concat(passwordRules('new-password', newPassword))
+        .concat([{ field: 'confirm-password', ok: newPassword === confirmPassword, message: window.t.errPasswordMismatch }]))) return;
+
   setLoading('reset-btn', true, window.t.processing);
 
   try {
