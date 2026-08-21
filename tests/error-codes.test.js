@@ -64,3 +64,55 @@ test('errorResponse từ chối mã không có trong danh sách', () => {
     /mã lỗi không hợp lệ/i,
   );
 });
+
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+
+function loadBrowserGlobal(relativePath, globalName, context = {}) {
+  const source = fs.readFileSync(path.join(__dirname, relativePath), 'utf8');
+  const sandbox = { window: {}, navigator: { languages: ['vi'] }, localStorage: { getItem: () => null }, ...context };
+  sandbox.window = sandbox.window || {};
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  return sandbox.window[globalName] ?? sandbox[globalName];
+}
+
+test('mọi mã lỗi đều có chuỗi ở CẢ vi lẫn en', () => {
+  const { ERROR_CODES } = require('../context/errorCodes');
+  const source = fs.readFileSync(path.join(__dirname, '../public/shared/js/i18n.js'), 'utf8');
+  const viBlock = source.slice(source.indexOf('vi: {'), source.indexOf('en: {'));
+  const enBlock = source.slice(source.indexOf('en: {'));
+  for (const code of Object.keys(ERROR_CODES)) {
+    assert.ok(viBlock.includes(code + ':'), `vi thiếu chuỗi cho ${code}`);
+    assert.ok(enBlock.includes(code + ':'), `en thiếu chuỗi cho ${code}`);
+  }
+});
+
+test('resolver tra mã ra chuỗi đã dịch', () => {
+  const resolve = loadBrowserGlobal('../public/shared/js/errorMessages.js', 'LumoraErrors').resolve;
+  const dict = { errors: { OTP_EXPIRED: 'Mã OTP đã hết hạn' }, errGeneric: 'Có lỗi xảy ra' };
+  assert.equal(resolve({ errorCode: 'OTP_EXPIRED', message: 'OTP expired' }, dict), 'Mã OTP đã hết hạn');
+});
+
+test('resolver truyền details vào chuỗi dạng hàm', () => {
+  const resolve = loadBrowserGlobal('../public/shared/js/errorMessages.js', 'LumoraErrors').resolve;
+  const dict = { errors: { OTP_RESEND_COOLDOWN: (d) => `Vui lòng đợi ${d.wait} giây` }, errGeneric: 'x' };
+  const out = resolve({ errorCode: 'OTP_RESEND_COOLDOWN', errorDetails: { wait: 30 }, message: 'Please wait 30 seconds' }, dict);
+  assert.equal(out, 'Vui lòng đợi 30 giây');
+});
+
+test('không có mã thì fallback về message của server', () => {
+  const resolve = loadBrowserGlobal('../public/shared/js/errorMessages.js', 'LumoraErrors').resolve;
+  const dict = { errors: {}, errGeneric: 'Có lỗi xảy ra' };
+  assert.equal(resolve({ message: 'Email already exists' }, dict), 'Email already exists');
+});
+
+test('mã lạ hoặc thiếu chuỗi thì vẫn fallback, không ra undefined', () => {
+  const resolve = loadBrowserGlobal('../public/shared/js/errorMessages.js', 'LumoraErrors').resolve;
+  const dict = { errors: {}, errGeneric: 'Có lỗi xảy ra' };
+  assert.equal(resolve({ errorCode: 'MA_LA', message: 'raw' }, dict), 'raw');
+  assert.equal(resolve({ errorCode: 'MA_LA' }, dict), 'Có lỗi xảy ra');
+  assert.equal(resolve(null, dict), 'Có lỗi xảy ra');
+  assert.equal(resolve(undefined, dict), 'Có lỗi xảy ra');
+});
