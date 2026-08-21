@@ -201,6 +201,24 @@ Không đưa toàn bộ UI vào canvas. Không viết WebGL thuần khi Three.js
 
 ---
 
+## Lỗi trả về người dùng
+
+Backend ném `errorResponse` kèm `code` lấy từ `context/errorCodes.js`; frontend
+tra mã đó ra chuỗi đã dịch bằng `window.LumoraErrors.resolve(data, window.t)`.
+
+- **Thêm lỗi mới:** thêm mã vào `context/errorCodes.js`, thêm chuỗi vào **cả**
+  `LANG.vi.errors` và `LANG.en.errors` trong `public/shared/js/i18n.js`, rồi gắn
+  `code:` chỗ throw. `tests/error-codes.test.js` bắt nếu thiếu một trong ba.
+- **Message tiếng Anh ở backend giữ nguyên** — nó là fallback cho endpoint chưa
+  migrate, và là thứ hiện trong log server.
+- **Không rẽ nhánh bằng nội dung message.** Dùng `LumoraErrors.is(data, 'MÃ')`.
+  FE từng dùng `message.includes('not verified')`; dịch message là luồng đó hỏng
+  âm thầm, không lỗi, không test nào bắt.
+- Service chưa migrate vẫn chạy bình thường: không có `errorCode` thì resolver
+  fallback về `message` như cũ.
+
+---
+
 ## 10. Trước khi thêm dependency
 
 Kiểm theo thứ tự: đã có chưa → có thật sự cần không → tương thích không → còn được bảo trì không → tốn bao nhiêu runtime → license.

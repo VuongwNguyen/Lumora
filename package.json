@@ -18,7 +18,8 @@
     "test:visual:firefox": "playwright test --project=firefox",
     "test:visual:ui": "playwright test --ui",
     "test:visual:report": "playwright show-report tests/visual/.report",
-    "test": "npm run test:database && npm run test:soundscape && npm run test:story-emotion && npm run test:upload && npm run test:activity && npm run test:tmdt && npm run test:abyss",
+    "test:errors": "node --test tests/error-codes.test.js",
+    "test": "npm run test:database && npm run test:soundscape && npm run test:story-emotion && npm run test:upload && npm run test:activity && npm run test:tmdt && npm run test:abyss && npm run test:errors",
     "audit:activity": "node scripts/audit-activity-coverage.js",
     "deploy": "git push origin main",
     "redeploy": "gh workflow run deploy.yml --ref main"

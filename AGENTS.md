@@ -224,6 +224,7 @@ Mục tiêu là tracking toàn diện mọi bề mặt end-user; admin UI đư�
 - Responsive: kiểm tra panel hẹp/mobile và không tạo horizontal overflow vô lý.
 - Không dùng màu nền mặc định của browser cho button/card trong dark UI.
 - Không thay thế i18n hiện có bằng chuỗi hardcode nếu bề mặt đó hỗ trợ đa ngôn ngữ.
+- Lỗi từ server hiển thị qua `window.LumoraErrors.resolve(data, window.t)`, không đọc thẳng `data.message`. Chi tiết và cách thêm mã mới: xem `CLAUDE.md`.
 
 ### Kiểm chứng thị giác là bắt buộc
 
