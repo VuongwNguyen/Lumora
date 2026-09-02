@@ -28,16 +28,8 @@ const CHROME_FILES = [
 ];
 
 // Chưa di trú. Xoá dần theo các task sau. Khi rỗng là xong.
-const PENDING = new Set([
-  'public/terms/index.html',
-  'public/privacy/index.html',
-  'public/support/index.html',
-  'public/payment-policy/index.html',
-  'public/refund-policy/index.html',
-  'public/owner-info/index.html',
-  'public/shared/css/legal.css',
-  'public/shared/css/subscription.css',
-]);
+// Rỗng: mọi file vỏ đã di trú xong.
+const PENDING = new Set([]);
 
 // CỐ Ý giữ màu tím — đây là màu HIỂN THỊ CỦA GALAXY, không phải màu giao diện.
 // Liệt kê tường minh kèm lý do, KHÔNG trừ bằng pattern thư mục: để file mới thêm

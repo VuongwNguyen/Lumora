@@ -1,6 +1,6 @@
-.payment-disabled-notice { margin: 0 0 18px; padding: 12px 14px; border: 1px solid rgba(167,139,250,.25); border-radius: 9px; color: var(--text-sub); background: rgba(139,92,246,.08); }
+.payment-disabled-notice { margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--lum-vien-manh); border-radius: 9px; color: var(--text-sub); background: var(--lum-son-mo); }
 .admin-access-notice { margin: 0 0 18px; padding: 12px 14px; border: 1px solid rgba(110,231,183,.3); border-radius: 9px; color: var(--green); background: rgba(110,231,183,.07); font-size: 12px; letter-spacing: .02em; }
-.btn-subscribe.admin-test-action { border: 1px solid rgba(110,231,183,.45); background: linear-gradient(135deg, rgba(126,58,242,.92), rgba(16,185,129,.72)); }
+.btn-subscribe.admin-test-action { border: 1px solid var(--lum-vien-manh); background: var(--lum-ok); }
 .admin-payment-actions { display: grid; gap: 8px; }
 .admin-payment-actions .btn-subscribe { width: 100%; }
 .checkout-overlay { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.78); }

@@ -1,10 +1,15 @@
+/* Alias sang tokens.css — giữ nguyên tên biến để mọi chỗ dùng var() tự đúng.
+ * Sáu trang pháp lý dùng chung file này, nên đây là chỗ duy nhất phải sửa.
+ *
+ * --legal-bg cũ (#06060e) là xanh-đen LẠNH: nó tạo một vệt lạc màu ngay dưới
+ * trang chủ đã sang nền ấm. Chân trang legal xuất hiện trên mọi trang. */
 :root {
-  --legal-bg: #06060e;
-  --legal-surface: rgba(255, 255, 255, 0.045);
-  --legal-border: rgba(255, 255, 255, 0.1);
-  --legal-text: #ede9fe;
-  --legal-muted: rgba(255, 255, 255, 0.62);
-  --legal-accent: #a78bfa;
+  --legal-bg: var(--lum-nen);
+  --legal-surface: rgba(232, 220, 204, 0.045);
+  --legal-border: var(--lum-vien);
+  --legal-text: var(--lum-trung);
+  --legal-muted: var(--lum-trung-mo);
+  --legal-accent: var(--lum-son);
 }
 
 body.legal-page { margin: 0; background: var(--legal-bg); color: var(--legal-text); font-family: Jost, system-ui, sans-serif; line-height: 1.7; }
@@ -19,19 +24,19 @@ body.legal-page { margin: 0; background: var(--legal-bg); color: var(--legal-tex
 .legal-grid { display: grid; grid-template-columns: minmax(150px, .45fr) 1fr; gap: 12px 20px; }
 .legal-label { color: var(--legal-muted); }
 .legal-value { overflow-wrap: anywhere; }
-.legal-notice { padding: 14px 16px; border-left: 3px solid var(--legal-accent); background: rgba(139, 92, 246, .09); color: var(--legal-muted); }
+.legal-notice { padding: 14px 16px; border-left: 3px solid var(--legal-accent); background: var(--lum-son-mo); color: var(--legal-muted); }
 .legal-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
-.legal-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border: 1px solid #8b5cf6; border-radius: 9px; background: #8b5cf6; color: white !important; font: inherit; cursor: pointer; }
+.legal-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border: 1px solid var(--lum-son); border-radius: 9px; background: var(--lum-son); color: var(--lum-trung) !important; font: inherit; cursor: pointer; }
 .legal-button.secondary { background: transparent; color: var(--legal-accent) !important; }
 .legal-field { display: grid; gap: 7px; margin-bottom: 16px; }
 .legal-field label, .legal-field legend { color: var(--legal-text); }
 .legal-field input, .legal-field select, .legal-field textarea {
   width: 100%; padding: 11px 12px; border: 1px solid var(--legal-border); border-radius: 8px;
-  background: rgba(255,255,255,.05); color: var(--legal-text); font: inherit;
+  background: rgba(232,220,204,.05); color: var(--legal-text); font: inherit;
 }
 .legal-field select option { color: #111; }
 .legal-field textarea { min-height: 150px; resize: vertical; }
-.legal-field input:focus, .legal-field select:focus, .legal-field textarea:focus, .legal-button:focus-visible { outline: 3px solid rgba(167,139,250,.45); outline-offset: 2px; }
+.legal-field input:focus, .legal-field select:focus, .legal-field textarea:focus, .legal-button:focus-visible { outline: 3px solid var(--lum-dong); outline-offset: 2px; }
 .legal-checkbox { display: flex; gap: 10px; align-items: flex-start; color: var(--legal-muted); }
 .legal-checkbox input { width: auto; margin-top: 6px; }
 .legal-status { min-height: 26px; margin-top: 14px; }

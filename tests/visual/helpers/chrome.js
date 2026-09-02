@@ -88,6 +88,26 @@ async function seedSession(page) {
   });
   await page.route('**/galaxies**', json({ meta: [] }));
   await page.route('**/auth/sessions**', json({ meta: [] }));
+  // /payment/status trả 401 với phiên giả. Firefox nuốt êm, Chromium ghi thành
+  // lỗi console — và thông điệp của Chromium KHÔNG kèm URL ("Failed to load
+  // resource: ... 401") nên bộ lọc IGNORED theo URL không với tới. Chặn tại
+  // nguồn thay vì nới bộ lọc: nới thì mọi 401 thật sau này cũng bị nuốt theo.
+  await page.route('**/payment/**', json({ meta: {} }));
+  // Ảnh của galaxy — trang setup nạp qua /gallary/ (đúng, chính tả gốc của
+  // codebase là 'gallary'). Cũng 401 với phiên giả.
+  //
+  // upload-policy phải trả ĐÚNG HÌNH DẠNG chứ không phải mảng rỗng: trang gọi
+  // `imageUploadPolicy.mimeTypes.join(',')` ngay lúc khởi tạo, nên stub sai hình
+  // làm cả trang chết với "Cannot read properties of undefined (reading 'join')".
+  // Stub trả sai hình còn tệ hơn không stub — nó biến lỗi hạ tầng test thành
+  // thứ trông y như lỗi ứng dụng.
+  await page.route('**/gallary/upload-policy**', json({ meta: {
+    mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    maxFileSize: 10 * 1024 * 1024,
+    maxFiles: 60,
+    maxBulkDeleteItems: 50,
+  } }));
+  await page.route('**/gallary/**', json({ meta: [] }));
   // KHÔNG chặn '**/subscription**': không có endpoint API nào tên vậy trong
   // codebase (subscription.js thật ra gọi /compliance/public, /payment/status,
   // /payment/history — cả hai 401 đều bị nuốt êm, không console.error). Glob đó
