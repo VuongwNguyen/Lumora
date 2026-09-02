@@ -7,7 +7,7 @@ import { D0, START_Z, densityForDepth, depthFromZ, easeTowards } from './core/de
 import { buildPhaseTable, planContent } from './core/layout.js';
 import { createWaterFX } from './fx/water.js';
 import { createSeabed } from './scene/seabed.js';
-import { createMemoryBeacon } from './scene/beacon.js';
+import { createMemoryBeacon } from './scene/lighthouse.js';
 import { createRelics } from './scene/relics.js';
 import { createFauna } from './scene/fauna.js';
 import { patchWaterFog } from './fx/waterFog.js';

@@ -910,7 +910,7 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   const layout = fs.readFileSync(path.join(__dirname, '../public/abyss/js/core/layout.js'), 'utf8');
   const water = fs.readFileSync(path.join(__dirname, '../public/abyss/js/fx/water.js'), 'utf8');
   const fauna = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/fauna.js'), 'utf8');
-  const beacon = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/beacon.js'), 'utf8');
+  const beacon = fs.readFileSync(path.join(__dirname, '../public/abyss/js/scene/lighthouse.js'), 'utf8');
 
   // D0 và toán độ sâu giờ đến từ core/depth.js; abyss.js không định nghĩa lại.
   assert.match(abyss, /import \{[^}]*D0[^}]*\} from '\.\/core\/depth\.js'/);
@@ -940,7 +940,7 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   assert.match(fauna, /memoryShrimp/);
   // Bất biến là "beacon có lồng đèn bán kính 3, cao 5.4", không phải "lồng đó
   // dựng bằng CylinderGeometry". Lưới giờ là LineSegments dựng tay để bỏ đường
-  // chéo của wireframe mặc định (scene/beacon.js), nên assertion trỏ sang kích
+  // chéo của wireframe mặc định (scene/lighthouse.js), nên assertion trỏ sang kích
   // thước — thứ thật sự phải giữ nguyên.
   assert.match(beacon, /MemoryLattice|CylinderGeometry\(3, 3, 5\.4|LATTICE_RADIUS = 3\b/);
   assert.match(beacon, /MemoryLattice|5\.4/, 'lồng đèn phải giữ chiều cao 5.4');

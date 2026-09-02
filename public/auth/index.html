@@ -12,20 +12,21 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared/css/tokens.css">
   <style>
     :root {
-      --bg: #06060e;
-      --surface: rgba(255,255,255,0.04);
-      --surface-2: rgba(255,255,255,0.07);
-      --border: rgba(255,255,255,0.08);
-      --border-accent: rgba(139,92,246,0.4);
-      --text: #ede9fe;
-      --text-sub: rgba(255,255,255,0.42);
-      --accent: #8b5cf6;
-      --accent-dark: #7c3aed;
-      --accent-light: #c4b5fd;
-      --red: #f87171;
-      --green: #6ee7b7;
+      --bg: var(--lum-nen);
+      --surface: rgba(232,220,204,0.04);
+      --surface-2: rgba(232,220,204,0.07);
+      --border: var(--lum-vien);
+      --border-accent: var(--lum-vien-manh);
+      --text: var(--lum-trung);
+      --text-sub: var(--lum-trung-mo);
+      --accent: var(--lum-son);
+      --accent-dark: var(--lum-son-tham);
+      --accent-light: var(--lum-dong);
+      --red: var(--lum-loi);
+      --green: var(--lum-ok);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,8 +35,8 @@
       min-height: 100vh;
       background: var(--bg);
       background-image:
-        radial-gradient(ellipse 70% 50% at 20% 10%, rgba(109,40,217,0.22) 0%, transparent 65%),
-        radial-gradient(ellipse 50% 60% at 80% 90%, rgba(79,25,175,0.15) 0%, transparent 65%);
+        radial-gradient(ellipse 70% 50% at 20% 10%, var(--lum-son-mo) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 60% at 80% 90%, var(--lum-dong-mo) 0%, transparent 65%);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -48,7 +49,7 @@
 
     /* ── Card ────────────────────────────────────── */
     .card {
-      background: rgba(255,255,255,0.04);
+      background: rgba(232,220,204,0.04);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 36px 32px;
@@ -112,7 +113,7 @@
     input {
       width: 100%;
       padding: 11px 14px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(232,220,204,0.05);
       border: 1px solid var(--border);
       border-radius: 9px;
       color: var(--text);
@@ -125,7 +126,7 @@
     input::placeholder { color: var(--text-sub); }
     input:focus {
       border-color: var(--border-accent);
-      background: rgba(139,92,246,0.06);
+      background: var(--lum-son-mo);
     }
     input:-webkit-autofill,
     input:-webkit-autofill:focus {
@@ -169,7 +170,7 @@
       background: var(--accent);
       border: none;
       border-radius: 9px;
-      color: #fff;
+      color: var(--lum-trung);
       font-size: 14px;
       font-family: 'Jost', sans-serif;
       font-weight: 500;
@@ -185,7 +186,6 @@
     .btn-primary:hover:not(:disabled) {
       background: var(--accent-dark);
       transform: translateY(-1px);
-      box-shadow: 0 4px 20px rgba(139,92,246,0.3);
     }
     .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
@@ -210,7 +210,7 @@
 
     .legal-note {
       margin-top: 14px;
-      color: rgba(255,255,255,0.62);
+      color: rgba(232,220,204,0.62);
       font-size: 12px;
       line-height: 1.5;
       text-align: center;
@@ -236,8 +236,8 @@
     /* ── Spinner ─────────────────────────────────── */
     .spinner {
       width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.25);
-      border-top-color: #fff;
+      border: 2px solid rgba(232,220,204,0.25);
+      border-top-color: var(--lum-trung);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       flex-shrink: 0;
@@ -302,9 +302,9 @@
       padding: 0;
       overflow-x: hidden;
       background:
-        radial-gradient(circle at 14% 8%, rgba(124,58,237,.22), transparent 31%),
-        radial-gradient(circle at 88% 92%, rgba(76,29,149,.19), transparent 34%),
-        #05050d;
+        radial-gradient(circle at 14% 8%, var(--lum-son-mo), transparent 31%),
+        radial-gradient(circle at 88% 92%, var(--lum-dong-mo), transparent 34%),
+        var(--lum-nen);
     }
     .auth-ambient {
       position: fixed;
@@ -319,10 +319,10 @@
       inset: 0;
       opacity: .28;
       background-image:
-        radial-gradient(circle at 15% 25%, rgba(255,255,255,.8) 0 1px, transparent 1.5px),
-        radial-gradient(circle at 78% 18%, rgba(196,181,253,.8) 0 1px, transparent 1.5px),
-        radial-gradient(circle at 46% 72%, rgba(255,255,255,.65) 0 1px, transparent 1.5px),
-        radial-gradient(circle at 92% 64%, rgba(167,139,250,.8) 0 1px, transparent 1.5px);
+        radial-gradient(circle at 15% 25%, rgba(232,220,204,.8) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 78% 18%, rgba(185,154,94,.8) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 46% 72%, rgba(232,220,204,.65) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 92% 64%, rgba(185,154,94,.8) 0 1px, transparent 1.5px);
       background-size: 210px 210px, 270px 270px, 330px 330px, 390px 390px;
     }
     .ambient-glow {
@@ -333,8 +333,8 @@
       filter: blur(100px);
       opacity: .11;
     }
-    .ambient-glow.one { left: -160px; top: 24%; background: #8b5cf6; }
-    .ambient-glow.two { right: -180px; bottom: -110px; background: #c084fc; }
+    .ambient-glow.one { left: -160px; top: 24%; background: var(--lum-son); }
+    .ambient-glow.two { right: -180px; bottom: -110px; background: var(--lum-dong); }
 
     .auth-shell {
       position: relative;
@@ -354,12 +354,12 @@
       min-height: min(760px, calc(100vh - 64px));
       padding: clamp(28px, 4vw, 52px);
       overflow: hidden;
-      border: 1px solid rgba(196,181,253,.12);
+      border: 1px solid var(--lum-vien-manh);
       border-radius: 30px;
       background:
-        linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.015)),
-        radial-gradient(circle at 70% 22%, rgba(139,92,246,.2), transparent 36%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 30px 100px rgba(0,0,0,.26);
+        linear-gradient(145deg, rgba(232,220,204,.055), rgba(232,220,204,.015)),
+        radial-gradient(circle at 70% 22%, var(--lum-son-mo), transparent 36%);
+      box-shadow: inset 0 1px 0 rgba(232,220,204,.06), 0 30px 100px rgba(0,0,0,.26);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -371,9 +371,8 @@
       height: 260px;
       right: -90px;
       top: -100px;
-      border: 1px solid rgba(196,181,253,.12);
+      border: 1px solid var(--lum-vien-manh);
       border-radius: 50%;
-      box-shadow: 0 0 0 38px rgba(196,181,253,.025), 0 0 0 82px rgba(196,181,253,.018);
     }
     .story-brand, .mobile-brand {
       display: inline-flex;
@@ -393,11 +392,10 @@
       place-items: center;
       width: 34px;
       height: 34px;
-      border: 1px solid rgba(196,181,253,.25);
+      border: 1px solid var(--lum-vien-manh);
       border-radius: 11px;
       color: var(--accent-light);
-      background: rgba(139,92,246,.09);
-      box-shadow: 0 0 24px rgba(139,92,246,.14);
+      background: var(--lum-son-mo);
     }
 
     .memory-stage {
@@ -411,7 +409,7 @@
     .memory-orbit {
       position: absolute;
       inset: 13%;
-      border: 1px solid rgba(196,181,253,.15);
+      border: 1px solid var(--lum-vien-manh);
       border-radius: 50%;
       transform: rotate(-16deg) scaleY(.72);
     }
@@ -423,7 +421,6 @@
       height: 7px;
       border-radius: 50%;
       background: var(--accent-light);
-      box-shadow: 0 0 18px rgba(196,181,253,.85);
     }
     .memory-orbit::before { left: 8%; top: 24%; }
     .memory-orbit::after { right: 5%; bottom: 29%; }
@@ -439,10 +436,9 @@
       display: grid;
       place-items: center;
       border-radius: 36px;
-      color: #f5f3ff;
+      color: var(--lum-trung);
       font-size: 30px;
-      background: radial-gradient(circle at 35% 28%, #a78bfa, #6d28d9 46%, #25114e 100%);
-      box-shadow: 0 0 0 12px rgba(139,92,246,.05), 0 0 70px rgba(139,92,246,.4);
+      background: radial-gradient(circle at 35% 28%, var(--lum-dong), var(--lum-son) 46%, var(--lum-mat-noi) 100%);
       transform: rotate(8deg);
     }
     .memory-core span { transform: rotate(-8deg); }
@@ -450,9 +446,9 @@
       position: absolute;
       width: 150px;
       padding: 13px 14px;
-      border: 1px solid rgba(255,255,255,.1);
+      border: 1px solid rgba(232,220,204,.1);
       border-radius: 14px;
-      background: rgba(10,9,24,.76);
+      background: rgba(35, 33, 32,.76);
       box-shadow: 0 18px 48px rgba(0,0,0,.32);
       backdrop-filter: blur(12px);
     }
@@ -465,7 +461,7 @@
       letter-spacing: .16em;
       text-transform: uppercase;
     }
-    .memory-card strong { font-size: 12px; line-height: 1.45; font-weight: 400; color: rgba(255,255,255,.72); }
+    .memory-card strong { font-size: 12px; line-height: 1.45; font-weight: 400; color: rgba(232,220,204,.72); }
     .memory-card.one { left: 0; top: 22%; transform: rotate(-5deg); }
     .memory-card.two { right: 0; bottom: 20%; transform: rotate(5deg); }
 
@@ -498,7 +494,7 @@
     }
     .story-copy > p {
       max-width: 520px;
-      color: rgba(255,255,255,.52);
+      color: rgba(232,220,204,.52);
       font-size: 15px;
       line-height: 1.75;
     }
@@ -510,10 +506,10 @@
     }
     .story-point {
       padding: 7px 11px;
-      border: 1px solid rgba(255,255,255,.08);
+      border: 1px solid rgba(232,220,204,.08);
       border-radius: 99px;
-      color: rgba(255,255,255,.52);
-      background: rgba(255,255,255,.025);
+      color: rgba(232,220,204,.52);
+      background: rgba(232,220,204,.025);
       font-size: 11px;
       letter-spacing: .03em;
     }
@@ -527,10 +523,10 @@
       width: min(100%, 480px);
       max-width: none;
       padding: clamp(28px, 4vw, 44px);
-      border: 1px solid rgba(255,255,255,.09);
+      border: 1px solid rgba(232,220,204,.09);
       border-radius: 24px;
-      background: rgba(13,12,25,.78);
-      box-shadow: 0 26px 80px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.045);
+      background: rgba(35, 33, 32,.78);
+      box-shadow: 0 26px 80px rgba(0,0,0,.34), inset 0 1px 0 rgba(232,220,204,.045);
       backdrop-filter: blur(20px);
     }
     .mobile-brand { display: none; margin-bottom: 28px; }
@@ -555,9 +551,9 @@
       gap: 7px;
       padding: 5px;
       margin-bottom: 24px;
-      border: 1px solid rgba(255,255,255,.07);
+      border: 1px solid rgba(232,220,204,.07);
       border-radius: 12px;
-      background: rgba(255,255,255,.025);
+      background: rgba(232,220,204,.025);
     }
     .auth-access .tab {
       min-height: 40px;
@@ -567,15 +563,14 @@
       border-radius: 8px;
     }
     .auth-access .tab.active {
-      color: #fff;
+      color: var(--lum-trung);
       border: 0;
-      background: rgba(139,92,246,.2);
-      box-shadow: inset 0 0 0 1px rgba(167,139,250,.22);
+      background: var(--lum-son-mo);
     }
     .field-label {
       display: block;
       margin: 0 0 7px 2px;
-      color: rgba(255,255,255,.68);
+      color: rgba(232,220,204,.68);
       font-size: 11px;
       font-weight: 500;
       letter-spacing: .08em;
@@ -585,16 +580,15 @@
     .auth-access input {
       min-height: 52px;
       padding: 13px 15px;
-      border-color: rgba(255,255,255,.09);
+      border-color: rgba(232,220,204,.09);
       border-radius: 12px;
-      background: rgba(255,255,255,.035);
+      background: rgba(232,220,204,.035);
       font-size: 14px;
     }
-    .auth-access input:hover { border-color: rgba(196,181,253,.2); }
+    .auth-access input:hover { border-color: var(--lum-dong); }
     .auth-access input:focus {
-      border-color: rgba(167,139,250,.65);
-      background: rgba(139,92,246,.055);
-      box-shadow: 0 0 0 4px rgba(139,92,246,.09);
+      border-color: var(--lum-dong);
+      background: var(--lum-son-mo);
     }
     .auth-access .eye-btn {
       right: 10px;
@@ -617,18 +611,16 @@
       min-height: 52px;
       margin-top: 4px;
       border-radius: 12px;
-      background: linear-gradient(135deg, #8b5cf6, #7c3aed 58%, #6d28d9);
-      box-shadow: 0 12px 28px rgba(109,40,217,.2);
+      background: var(--lum-son);
     }
     .auth-access .btn-primary:hover:not(:disabled) {
-      background: linear-gradient(135deg, #9d72fa, #8b5cf6 58%, #7c3aed);
-      box-shadow: 0 15px 34px rgba(109,40,217,.3);
+      background: var(--lum-son-tham);
     }
     .auth-access .btn-secondary {
       min-height: 42px;
-      border-color: rgba(255,255,255,.07);
+      border-color: rgba(232,220,204,.07);
       border-radius: 10px;
-      background: rgba(255,255,255,.02);
+      background: rgba(232,220,204,.02);
     }
     #btn-forgot {
       width: auto;
@@ -638,14 +630,14 @@
       display: block;
       border: 0;
       background: none;
-      color: rgba(196,181,253,.72);
+      color: rgba(185,154,94,.72);
     }
     #btn-forgot:hover { color: var(--accent-light); }
     .auth-access .legal-note {
       margin-top: 18px;
       padding-top: 17px;
-      border-top: 1px solid rgba(255,255,255,.06);
-      color: rgba(255,255,255,.38);
+      border-top: 1px solid rgba(232,220,204,.06);
+      color: rgba(232,220,204,.38);
       font-size: 11px;
       line-height: 1.65;
     }
@@ -658,7 +650,7 @@
       padding: 10px 12px;
       border: 1px solid currentColor;
       border-radius: 9px;
-      background: rgba(255,255,255,.025);
+      background: rgba(232,220,204,.025);
     }
     .auth-access .otp-input {
       min-height: 62px;
@@ -668,7 +660,7 @@
     .auth-access .back-btn {
       margin-bottom: 20px;
       padding: 5px 0;
-      color: rgba(255,255,255,.48);
+      color: rgba(232,220,204,.48);
     }
     .auth-access .screen.active { animation: authScreenIn .28s ease both; }
     @keyframes authScreenIn {
@@ -682,7 +674,7 @@
       width: min(1240px, calc(100% - 48px));
       margin: 0 auto;
       padding: 25px 0 32px;
-      border-top-color: rgba(255,255,255,.07);
+      border-top-color: rgba(232,220,204,.07);
       background: transparent;
     }
     body.auth-page > .lumora-legal-footer .legal-footer-inner { max-width: none; }
@@ -706,7 +698,7 @@
       .auth-access .card {
         padding: 28px 20px;
         border-radius: 20px;
-        background: rgba(10,9,20,.86);
+        background: rgba(35, 33, 32,.86);
       }
       .auth-access input { font-size: 16px; }
       .auth-intro h2, .screen-heading { font-size: 25px; }
@@ -719,9 +711,33 @@
     }
       /* Trường sai được đánh dấu ngay tại chỗ, không chỉ báo bằng một dòng chữ
        ở cuối form — người dùng phải biết ô NÀO sai. */
-    input[aria-invalid="true"] { border-color: #f87171; box-shadow: 0 0 0 1px rgba(248,113,113,.35); }
-    input[aria-invalid="true"]:focus { outline: 2px solid #f87171; outline-offset: 1px; }
+    input[aria-invalid="true"] { border-color: var(--lum-loi); box-shadow: 0 0 0 1px rgba(217,96,74,.35); }
+    input[aria-invalid="true"]:focus { outline: 2px solid var(--lum-loi); outline-offset: 1px; }
 </style>
+  <script>
+    // Bộ chặn quảng cáo nuốt được một tệp script trong khi server vẫn trả 200:
+    // không log, không lỗi phía ta, người dùng chỉ thấy màn hình đen. Đã xảy ra
+    // thật với scene/beacon.js (luật `/beacon.js` của EasyPrivacy). Sự kiện lỗi
+    // tải tài nguyên KHÔNG nổi bọt, nên phải nghe ở pha capture.
+    //
+    // Đoạn này BẮT BUỘC nội tuyến — một tệp .js riêng cũng bị chặn y như vậy.
+    // `tests/adblock-assets.test.js` lo phần phòng ngừa; đây là lưới an toàn cho
+    // luật mới hoặc danh sách lọc tự chế mà ta không biết trước.
+    addEventListener('error', function (e) {
+      var el = e.target;
+      if (!el || el === window || el.tagName !== 'SCRIPT') return;
+      var bao = document.getElementById('lumora-chan-tep') || document.createElement('div');
+      bao.id = 'lumora-chan-tep';
+      bao.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;padding:14px 18px;background:#8a3a30;color:#e8dccc;font:14px/1.6 system-ui,sans-serif;text-align:center';
+      // KHÔNG nêu el.src như "tệp bị chặn": với module, sự kiện lỗi nổi lên ở thẻ
+      // script GỐC, còn tệp bị nuốt là một import nằm sâu bên trong. Nêu sai tên
+      // còn tệ hơn không nêu. URL cất vào data- để còn truy khi cần.
+      bao.dataset.script = el.src || '';
+      bao.textContent = 'Một tiện ích mở rộng của trình duyệt đang chặn tệp script của Lumora nên trang không chạy được. Hãy tắt bộ chặn quảng cáo cho trang này rồi tải lại.';
+      if (document.body) document.body.appendChild(bao);
+      else addEventListener('DOMContentLoaded', function () { document.body.appendChild(bao); });
+    }, true);
+  </script>
 </head>
 <body class="auth-page">
   <div class="auth-ambient" aria-hidden="true">

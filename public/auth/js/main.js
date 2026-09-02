@@ -35,7 +35,16 @@ function showScreen(name) {
 function setMsg(id, text, type) {
   var el = document.getElementById(id);
   el.className = 'msg' + (type ? ' ' + type : '');
-  el.textContent = text;
+  el.textContent = '';
+  if (type === 'error' && text) {
+    // Lỗi và nút hành động chính đều thuộc họ đỏ trong bảng màu sơn mài — icon
+    // đứng trước chữ để không lẫn nhau khi chỉ phân biệt được bằng màu.
+    var icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '⚠ ';
+    el.appendChild(icon);
+  }
+  el.appendChild(document.createTextNode(text));
 }
 
 function setLoading(btnId, loading, label) {

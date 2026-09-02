@@ -7,14 +7,15 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <title>Điều khoản sử dụng — Lumora</title>
   <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/shared/css/tokens.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #06060e;
-      --accent: #8b5cf6;
-      --text: #e2e8f0;
-      --text-sub: rgba(255,255,255,0.6);
-      --border: rgba(255,255,255,0.08);
+      --bg: var(--lum-nen);
+      --accent: var(--lum-dong);
+      --text: var(--lum-trung);
+      --text-sub: var(--lum-trung-mo);
+      --border: var(--lum-vien);
     }
     body { background: var(--bg); color: var(--text); font-family: 'Jost', sans-serif; line-height: 1.7; }
     nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; border-bottom: 1px solid var(--border); }

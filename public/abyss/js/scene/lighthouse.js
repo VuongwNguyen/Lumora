@@ -1,3 +1,11 @@
+// Tên tệp là `lighthouse.js` chứ KHÔNG phải `beacon.js` — và đó là ràng buộc,
+// không phải sở thích. EasyPrivacy (bộ lọc bật mặc định của uBlock Origin) có
+// luật `/beacon.js`: không neo tên miền, khớp theo chuỗi con, nên nó chặn tệp
+// này trên MỌI máy khách có uBlock. Server vẫn trả 200, log vẫn sạch, nhưng
+// import bị chặn giết cả module gốc `abyss.js` — người dùng chỉ thấy màn đen.
+// `tests/adblock-assets.test.js` chặn việc vô tình đặt lại tên như vậy.
+// Định danh bên trong (createMemoryBeacon, BEACON_DIVE_FRACTION) giữ nguyên:
+// bộ lọc chỉ nhìn URL, không đọc nội dung.
 import * as THREE from 'three';
 import { D0, START_Z } from '../core/depth.js';
 

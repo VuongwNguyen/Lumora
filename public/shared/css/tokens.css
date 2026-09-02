@@ -1,0 +1,75 @@
+/* ---------------------------------------------------------------------------
+ * Bảng màu sơn mài — nguồn sự thật duy nhất cho VỎ ứng dụng Lumora.
+ *
+ * Sơn mài có bốn chất: đen (nền), son (đỏ chu), vàng kim, vỏ trứng (trắng ngà).
+ * Sơn ta không có màu trắng nên nghệ nhân dán vỏ trứng thật — vì vậy chữ ở đây
+ * KHÔNG BAO GIỜ dùng #fff, mà dùng --lum-trung.
+ *
+ * Bản TRẦM, không phải bản rực: đồ sơn mài cũ lên nước thì son ngả nâu, vàng
+ * xỉn thành đồng. Nền ngả ấm (#14090a) vì mắt ít nhạy với bước sóng dài nên đen
+ * ngả nâu đỡ mỏi hơn đen ngả xanh/tím.
+ *
+ * File này KHÔNG áp cho universe (abyss/aurora/fall/galaxy-moon/story) — mỗi
+ * universe có thế giới màu riêng, và vai trò của bảng màu này là làm KHUNG cho
+ * chúng, không phải làm thế giới thứ sáu.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Đen — nền */
+  /* Nền là ĐEN GẦN TRUNG TÍNH, không phải nâu đỏ.
+   *
+   * Bản đầu để nền ở bão hoà 29-38% với hue ~353 độ. Son và đồng vốn đã ấm,
+   * cộng thêm nền cũng đỏ thì cả màn hình ám cam — không còn chỗ nào cho mắt
+   * nghỉ. Sơn mài thật ngược lại: vóc đen gần như trung tính, son và vàng mới
+   * là thứ DUY NHẤT có màu, và chính sự tương phản đó làm son nổi lên.
+   *
+   * Hạ bão hoà 38% -> 9% (giữ hue 28 độ nên vẫn ấm, chỉ không còn đỏ), nâng
+   * độ sáng 6% -> 8% cho đỡ tối. Vỏ trứng trên nền mới: 13.6:1. */
+  /* Nền phải là ĐEN THẬT, mặt thẻ mới là chỗ được nâng.
+   *
+   * Bản trước nhấc cả nền lên L 11% cho đỡ tối. Đo lại trên ảnh render: 84.5%
+   * điểm ảnh dồn vào đúng một dải 16 mức, chỗ tối nhất là 15 chứ không phải 0.
+   * Đó là "đen bị nhấc" — mắt không còn điểm tựa nào, và cả trang đọc ra như
+   * nhìn qua màng đục. Sáng lên không chữa được đục; TÁCH BẠCH mới chữa được.
+   *
+   * Nên: hạ nền xuống gần đen (L 5%), NÂNG mặt thẻ lên (L 13%). Khoảng cách
+   * nền-thẻ giãn từ 10 lên 24 mức, trang có chiều sâu mà không sáng thêm. */
+  --lum-nen: #0c0b0a;
+  --lum-mat: #232120;
+  --lum-mat-noi: #302d2b;
+
+  /* Vỏ trứng — chữ */
+  --lum-trung: #e8dccc;
+  --lum-trung-mo: rgba(232, 220, 204, .62);
+  /* .40 chỉ cho 3.09:1 — đạt AA cho chữ lớn nhưng token này dùng cho nhãn
+   * viết hoa cỡ nhỏ, nơi ngưỡng là 4.5:1. .55 cho 4.89:1. */
+  --lum-trung-nhat: rgba(232, 220, 204, .55);
+
+  /* Son — hành động.
+   *
+   * VAI TRÒ LÀ NỀN, KHÔNG PHẢI CHỮ. Chữ vỏ trứng đặt TRÊN nền son cho 4.66:1
+   * (đạt AA). Nhưng dùng son LÀM MÀU CHỮ trên nền tối chỉ được 3.13:1 — trượt.
+   * Cần chữ hoặc nét có màu trên nền tối thì dùng --lum-dong (7.35:1). */
+  --lum-son: #9e4438;
+  /* Hover của nút son ĐẬM hơn, không sáng hơn. Sáng hơn (#b8564a) kéo tương
+   * phản chữ vỏ trứng xuống 3.48:1 — trượt AA, và trạng thái hover lại khó đọc
+   * hơn trạng thái thường, tức đúng chỗ người dùng đang nhắm vào. Đậm hơn cho
+   * 5.70:1, và cũng thật hơn về chất liệu: ấn vào sơn mài thì màu sâu xuống. */
+  --lum-son-tham: #8a3a30;
+  --lum-son-mo: rgba(158, 68, 56, .14);
+
+  /* Đồng — nét và nhấn */
+  --lum-dong: #b99a5e;
+  --lum-dong-mo: rgba(185, 154, 94, .16);
+
+  /* Đường nét */
+  --lum-vien: rgba(232, 220, 204, .10);
+  --lum-vien-manh: rgba(232, 220, 204, .18);
+
+  /* Trạng thái.
+   * Son là đỏ, mà đỏ cũng là màu báo lỗi. Tách bằng CẢ sắc độ LẪN cách vẽ:
+   * nút chính luôn là nền son đặc; lỗi luôn là chữ/viền --lum-loi kèm icon,
+   * trên nền tint, KHÔNG BAO GIỜ là nút đặc. Khác vai, khác cách vẽ. */
+  --lum-loi: #d9604a;
+  --lum-ok: #7d9468;
+  --lum-luuy: #c2903f;
+}

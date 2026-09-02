@@ -170,8 +170,14 @@ function renderGalaxies(grid, galaxies) {
     const header = document.createElement('div');
     header.className = 'galaxy-card-header';
 
-    const name = document.createElement('div');
+    // Tiêu đề là LIÊN KẾT THẬT, không phải <div>. Trước đây cả thẻ chỉ có
+    // card.addEventListener('click') nên bàn phím không tới được — Tab đi lướt
+    // qua toàn bộ danh sách galaxy. Dùng kiểu "stretched link": thẻ <a> phủ
+    // toàn thẻ bằng ::after, nên vẫn bấm được ở đâu cũng vào, mà không phải
+    // lồng nút trong liên kết (HTML không hợp lệ).
+    const name = document.createElement('a');
     name.className = 'galaxy-name';
+    name.href = `/portal/galaxy.html?galaxyId=${g._id}`;
     name.textContent = g.name;
 
     const viewQuick = document.createElement('button');
@@ -185,8 +191,13 @@ function renderGalaxies(grid, galaxies) {
       window.open(`/view/?galaxyId=${g._id}`, '_blank');
     });
 
+    // Cụm hành động phụ nằm cạnh tiêu đề, không chiếm thêm một hàng riêng.
+    const quick = document.createElement('div');
+    quick.className = 'galaxy-quick';
+    quick.appendChild(viewQuick);
+
     header.appendChild(name);
-    header.appendChild(viewQuick);
+    header.appendChild(quick);
 
     // ── Meta: template + status ────────────────────────
     const meta = document.createElement('div');
@@ -194,7 +205,11 @@ function renderGalaxies(grid, galaxies) {
 
     const tmpl = document.createElement('div');
     tmpl.className = 'galaxy-template-badge';
-    tmpl.textContent = g.template === 'fall' ? '🍂 Fall' : '🌌 Galaxy';
+    // Bỏ emoji khỏi nhãn: mỗi emoji tự mang bảng màu riêng của font hệ thống —
+    // 🌌 là tím, 🍂 là cam — nên chúng chọi với sơn mài và guard đo hex không
+    // bắt được (chúng là KÝ TỰ, không phải mã màu). Nhãn chữ tự nhận màu theo
+    // data-template đã có sẵn trong CSS.
+    tmpl.textContent = g.template === 'fall' ? 'Fall' : 'Galaxy';
 
     const status = document.createElement('div');
     status.className = `galaxy-status${g.status !== 'active' ? ' inactive' : ''}`;
@@ -205,34 +220,26 @@ function renderGalaxies(grid, galaxies) {
     meta.appendChild(tmpl);
     meta.appendChild(status);
 
-    // ── Actions: manage + copy link ───────────────────
-    const actions = document.createElement('div');
-    actions.className = 'galaxy-actions';
-
-    const manageBtn = document.createElement('button');
-    manageBtn.type = 'button';
-    manageBtn.className = 'btn-manage';
-    manageBtn.dataset.action = 'manage';
-    manageBtn.textContent = window.t.btnManage || 'Quản lý';
-    manageBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      window.location.href = `/portal/galaxy.html?galaxyId=${g._id}`;
-    });
-
+    // Nút "Quản lý" đã bỏ: cả thẻ vốn đã dẫn tới đúng trang đó, nên nó là một
+    // nút to chiếm trọn một hàng để làm lại việc mà bấm chỗ nào cũng làm được.
+    // Bỏ nó đi thì thẻ ngắn lại một hàng và hết ba lời mời bấm chen nhau.
     const copyBtn = document.createElement('button');
     copyBtn.type = 'button';
     copyBtn.className = 'btn-copy-link';
     copyBtn.dataset.action = 'copy';
     copyBtn.title = window.t.portalCopyLink || 'Copy share link';
     copyBtn.setAttribute('aria-label', copyBtn.title);
-    copyBtn.textContent = '🔗';
+    // SVG thay 🔗: emoji khoá màu xanh của font, SVG ăn theo currentColor nên
+    // đổi màu cùng nút khi hover/copied.
+    const LINK_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>';
+    copyBtn.innerHTML = LINK_SVG;
     copyBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const url = `${window.location.origin}/view/?galaxyId=${g._id}`;
       const onCopied = () => {
         copyBtn.textContent = '✓';
         copyBtn.classList.add('copied');
-        setTimeout(() => { copyBtn.textContent = '🔗'; copyBtn.classList.remove('copied'); }, 1800);
+        setTimeout(() => { copyBtn.innerHTML = LINK_SVG; copyBtn.classList.remove('copied'); }, 1800);
       };
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(onCopied);
@@ -250,17 +257,11 @@ function renderGalaxies(grid, galaxies) {
       }
     });
 
-    actions.appendChild(manageBtn);
-    actions.appendChild(copyBtn);
+    quick.appendChild(copyBtn);
 
     card.appendChild(visual);
     card.appendChild(header);
     card.appendChild(meta);
-    card.appendChild(actions);
-
-    card.addEventListener('click', () => {
-      window.location.href = `/portal/galaxy.html?galaxyId=${g._id}`;
-    });
 
     grid.appendChild(card);
   });
