@@ -9,7 +9,11 @@
   --legal-border: var(--lum-vien);
   --legal-text: var(--lum-trung);
   --legal-muted: var(--lum-trung-mo);
-  --legal-accent: var(--lum-son);
+  /* Đồng, KHÔNG phải son. Son là màu NỀN NÚT — chữ vỏ trứng nằm TRÊN nó cho
+   * 4.66:1. Nhưng son LÀM CHỮ trên nền tối chỉ được 3.13:1, trượt AA. Sáu
+   * trang này là trang tuân thủ pháp lý, chữ bắt buộc phải đọc được. Đồng cho
+   * 7.35:1. Nút vẫn giữ nền son (xem .legal-button bên dưới). */
+  --legal-accent: var(--lum-dong);
 }
 
 body.legal-page { margin: 0; background: var(--legal-bg); color: var(--legal-text); font-family: Jost, system-ui, sans-serif; line-height: 1.7; }

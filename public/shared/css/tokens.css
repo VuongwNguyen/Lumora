@@ -44,7 +44,11 @@
    * viết hoa cỡ nhỏ, nơi ngưỡng là 4.5:1. .55 cho 4.89:1. */
   --lum-trung-nhat: rgba(232, 220, 204, .55);
 
-  /* Son — hành động */
+  /* Son — hành động.
+   *
+   * VAI TRÒ LÀ NỀN, KHÔNG PHẢI CHỮ. Chữ vỏ trứng đặt TRÊN nền son cho 4.66:1
+   * (đạt AA). Nhưng dùng son LÀM MÀU CHỮ trên nền tối chỉ được 3.13:1 — trượt.
+   * Cần chữ hoặc nét có màu trên nền tối thì dùng --lum-dong (7.35:1). */
   --lum-son: #9e4438;
   /* Hover của nút son ĐẬM hơn, không sáng hơn. Sáng hơn (#b8564a) kéo tương
    * phản chữ vỏ trứng xuống 3.48:1 — trượt AA, và trạng thái hover lại khó đọc
