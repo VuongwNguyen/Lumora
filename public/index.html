@@ -60,7 +60,7 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       display: flex; justify-content: space-between; align-items: center;
       padding: 20px 52px;
-      background: rgba(30, 28, 26, .96);
+      background: rgba(12, 11, 10, .96);
       border-bottom: 1px solid var(--border);
     }
     .nav-logo {
@@ -109,8 +109,8 @@
       position: absolute;
       width: min(1000px, 100%); height: 700px;
       background: radial-gradient(ellipse at 50% 55%,
-        rgba(158, 68, 56, .20) 0%,
-        rgba(158, 68, 56, .07) 40%,
+        rgba(158, 68, 56, .085) 0%,
+        rgba(158, 68, 56, .03) 40%,
         transparent 70%);
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
@@ -120,7 +120,7 @@
       content: '';
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse 120% 40% at 50% 100%, rgba(158, 68, 56, .06) 0%, transparent 60%);
+      background: radial-gradient(ellipse 120% 40% at 50% 100%, rgba(158, 68, 56, .025) 0%, transparent 60%);
       pointer-events: none;
     }
     .hero-tag {
@@ -200,12 +200,12 @@
     }
     .demo-overlay {
       position: absolute; inset: 0;
-      background: rgba(30, 28, 26, .93);
+      background: rgba(12, 11, 10, .93);
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 14px; cursor: pointer;
       transition: opacity 0.3s;
     }
-    .demo-overlay:hover { background: rgba(30, 28, 26, .88); }
+    .demo-overlay:hover { background: rgba(12, 11, 10, .88); }
     .demo-overlay-emoji { font-size: 48px; }
     .demo-overlay-title { font-size: 18px; color: var(--accent-light); font-family: 'Cormorant Garamond', serif; font-size: 22px; }
     .demo-overlay-note { font-size: 13px; color: var(--text-sub); }
@@ -231,7 +231,7 @@
     /* Story Experience — featured (col 2-3) */
     .feature-card:nth-child(2) {
       grid-column: 2 / 4;
-      background: linear-gradient(135deg, var(--lum-son-mo) 0%, rgba(30, 28, 26, .5) 100%);
+      background: linear-gradient(135deg, var(--lum-son-mo) 0%, rgba(12, 11, 10, .5) 100%);
       border-color: var(--border-accent);
     }
     .feature-card:nth-child(2):hover { border-color: var(--lum-dong-mo); }
@@ -330,7 +330,7 @@
     .cta-section { position: relative; overflow: hidden; }
     .cta-section::before {
       content: ''; position: absolute; inset: 0;
-      background: radial-gradient(ellipse 80% 100% at 50% 100%, rgba(158, 68, 56, .18) 0%, transparent 65%);
+      background: radial-gradient(ellipse 80% 100% at 50% 100%, rgba(158, 68, 56, .07) 0%, transparent 65%);
       pointer-events: none;
     }
     .cta-banner {
@@ -341,7 +341,7 @@
     }
     .cta-banner::before {
       content: ''; position: absolute; inset: 0; border-radius: 24px;
-      background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(158, 68, 56, .12) 0%, transparent 70%);
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(158, 68, 56, .05) 0%, transparent 70%);
       pointer-events: none;
     }
     .cta-banner h2 {
@@ -417,7 +417,7 @@
     nav.landing-nav {
       top: 18px; left: 50%; right: auto; width: var(--page); translate: -50% 0;
       padding: 0; border: 1px solid var(--border); border-radius: 18px;
-      background: rgba(30, 28, 26, .74); box-shadow: 0 20px 50px rgba(0,0,0,.25);
+      background: rgba(12, 11, 10, .74); box-shadow: 0 20px 50px rgba(0,0,0,.25);
     }
     .nav-shell { width: 100%; min-height: 64px; padding: 9px 10px 9px 18px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .scroll-progress { position: absolute; left: 18px; right: 18px; bottom: -1px; height: 1px; overflow: hidden; border-radius: 999px; }
@@ -485,7 +485,7 @@
     .memory-card {
       position: relative; width: min(390px, 100%); padding: 17px; overflow: hidden;
       border: 1px solid var(--lum-vien-manh); border-radius: 28px;
-      background: linear-gradient(155deg, rgba(54, 51, 48, .94), rgba(30, 28, 26, .94));
+      background: linear-gradient(155deg, rgba(48, 45, 43, .94), rgba(12, 11, 10, .94));
       box-shadow: 0 45px 90px rgba(0,0,0,.48);
       transform: rotateY(calc(-5deg + var(--tilt-x, 0deg))) rotateX(calc(2deg + var(--tilt-y, 0deg))) translateZ(0);
       transform-style: preserve-3d; will-change: transform; transition: transform .18s ease-out, box-shadow .25s ease;
@@ -550,7 +550,7 @@
     .demo-live { display: inline-flex; align-items: center; gap: 6px; color: var(--text-sub); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
     .demo-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--lum-ok); }
     .demo-frame-wrap { height: min(66vw, 650px); min-height: 420px; margin: 0; border: 0; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--border); }
-    .demo-overlay { border: 0; color: var(--text); font: inherit; background: radial-gradient(circle at 50% 45%, rgba(54, 51, 48, .55), rgba(30, 28, 26, .94) 48%); }
+    .demo-overlay { border: 0; color: var(--text); font: inherit; background: radial-gradient(circle at 50% 45%, rgba(48, 45, 43, .55), rgba(12, 11, 10, .94) 48%); }
     .demo-overlay::before { content: ''; position: absolute; width: 90px; height: 90px; border: 1px solid var(--border-accent); border-radius: 50%; animation: demoPulse 2.8s ease-out infinite; }
     .demo-overlay-emoji { position: relative; z-index: 1; width: 62px; height: 62px; display: grid; place-items: center; border-radius: 50%; background: var(--lum-son-mo); border: 1px solid var(--border-accent); font-size: 25px; }
     @keyframes demoPulse { 0% { scale: .75; opacity: .7; } 100% { scale: 1.8; opacity: 0; } }
@@ -623,7 +623,7 @@
     footer .links { justify-content: center; }
 
     nav.landing-nav { transition: top .25s ease, background .25s ease, border-color .25s ease, box-shadow .25s ease; }
-    nav.landing-nav.is-scrolled { top: 10px; background: rgba(30, 28, 26, .985); border-color: var(--lum-vien-manh); box-shadow: 0 18px 55px rgba(0,0,0,.42); }
+    nav.landing-nav.is-scrolled { top: 10px; background: rgba(12, 11, 10, .985); border-color: var(--lum-vien-manh); box-shadow: 0 18px 55px rgba(0,0,0,.42); }
 
     a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 3px; }
 

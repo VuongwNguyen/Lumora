@@ -24,9 +24,18 @@
    *
    * Hạ bão hoà 38% -> 9% (giữ hue 28 độ nên vẫn ấm, chỉ không còn đỏ), nâng
    * độ sáng 6% -> 8% cho đỡ tối. Vỏ trứng trên nền mới: 13.6:1. */
-  --lum-nen: #1e1c1a;
-  --lum-mat: #292624;
-  --lum-mat-noi: #363330;
+  /* Nền phải là ĐEN THẬT, mặt thẻ mới là chỗ được nâng.
+   *
+   * Bản trước nhấc cả nền lên L 11% cho đỡ tối. Đo lại trên ảnh render: 84.5%
+   * điểm ảnh dồn vào đúng một dải 16 mức, chỗ tối nhất là 15 chứ không phải 0.
+   * Đó là "đen bị nhấc" — mắt không còn điểm tựa nào, và cả trang đọc ra như
+   * nhìn qua màng đục. Sáng lên không chữa được đục; TÁCH BẠCH mới chữa được.
+   *
+   * Nên: hạ nền xuống gần đen (L 5%), NÂNG mặt thẻ lên (L 13%). Khoảng cách
+   * nền-thẻ giãn từ 10 lên 24 mức, trang có chiều sâu mà không sáng thêm. */
+  --lum-nen: #0c0b0a;
+  --lum-mat: #232120;
+  --lum-mat-noi: #302d2b;
 
   /* Vỏ trứng — chữ */
   --lum-trung: #e8dccc;
