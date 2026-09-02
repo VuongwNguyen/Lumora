@@ -157,11 +157,21 @@ test('khoảng cách relic suy từ số ảnh để cả album đi qua được
 
   const wrap = relicWrapDistance(plan);
   const travel = plan.diveDistance + 7.2;
-  let shown = 0;
-  for (let i = 0; i < plan.relicCount; i++) {
-    for (let d = relicDistanceAt(plan, i); d < travel; d += wrap) shown += 1;
+  // CHỈ near+mid mang ảnh; far field là silhouette rỗng (mục 4.4). Đếm cả 16
+  // relic là lý do bản cũ khẳng định 45+ tấm hiện ra trong khi đo trên browser
+  // chỉ được 44/59 — test xanh mà không khoá được gì.
+  const imageRelics = plan.near + plan.mid;
+  // scene/relics.js đẩy sequence đi imageRelics mỗi lần cuộn, nên tấm thật sự
+  // hiện ra là (i + imageRelics * k) mod imageCount — đếm ô trống là chưa đủ,
+  // hai lượt khác nhau vẫn có thể rơi vào cùng một tấm.
+  const seen = new Set();
+  for (let i = 0; i < imageRelics; i++) {
+    let k = 0;
+    for (let d = relicDistanceAt(plan, i); d < travel; d += wrap, k += 1) {
+      seen.add((i + imageRelics * k) % plan.imageCount);
+    }
   }
-  assert.ok(shown >= 45, `chỉ ${shown}/59 ảnh hiện ra`);
+  assert.equal(seen.size, plan.imageCount, `chỉ ${seen.size}/${plan.imageCount} ảnh hiện ra`);
 });
 
 test('galaxy vừa pool giữ nguyên cách trải đều như cũ', async () => {
@@ -177,7 +187,12 @@ test('spacing không bao giờ nhỏ hơn sàn, dù galaxy khổng lồ', async 
   const { planContent, relicSpacing, relicDistanceAt } = await import(modulePath);
   for (const n of [59, 200, 5000]) {
     const plan = planContent(n, 16);
-    assert.ok(relicSpacing(plan) >= 9, `n=${n} cho spacing ${relicSpacing(plan)}`);
+    // Sàn hạ từ 9 xuống 6 khi relic chuyển từ dây phơi sang vòng góc vàng
+    // (scene/relics.js): hai relic liên tiếp lệch 137.5 độ quanh trục lặn nên
+    // khác cả phương lẫn cao độ, tách bạch được ở khoảng cách gần hơn hẳn. Đây
+    // là bất biến mới, không phải nới lỏng tuỳ tiện — 6 m là mức đo được cho
+    // 59/59 ảnh trên browser mà chưa thấy relic chồng nhau trong sương.
+    assert.ok(relicSpacing(plan) >= 6, `n=${n} cho spacing ${relicSpacing(plan)}`);
     // relic sâu nhất vẫn phải nằm trong quãng lặn
     const deepest = relicDistanceAt(plan, plan.relicCount - 1);
     assert.ok(deepest < plan.diveDistance, `n=${n}: relic sâu nhất ${deepest} > lặn ${plan.diveDistance}`);

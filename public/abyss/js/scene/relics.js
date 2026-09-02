@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { relicDistanceAt, relicWrapDistance } from '../core/layout.js';
+import { FLOOR_Y } from './seabed.js';
 
 // Ảnh gốc từ ImageKit có thể vài nghìn pixel. Thu nhỏ trước khi lên GPU để
 // giữ ngân sách 48 MB texture ở mục 13.7.
@@ -34,11 +35,26 @@ export function loadTexture(url, maxSize) {
 // khi radius/dz < 1.26, tức nó lớn dần khi tiến tới rồi trượt ra rìa. Với
 // radius 5.2 và khung rộng 4.9, mép trong chỉ cách trục 2.75 — camera bay sát
 // bên và tấm ảnh chiếm 156% chiều cao khung hình.
+// `rise` = phần bán kính vòng được dùng cho trục Y. Trước đây góc vàng chỉ nuôi
+// trục X (`Math.cos(angle) * radius`) còn Y là nhiễu +-spread/2, nên với near
+// spread 2.6 mọi tấm ảnh nằm trong dải cao 2.6 m giữa một khung nhìn cao ~24 m
+// ở khoảng cách 18 m: chụp ở cả 5 độ sâu đều cho một DÂY PHƠI ngang đúng tầm
+// mắt, trên và dưới trống trơn. Cho `sin(angle)` nuôi Y là biến dây phơi thành
+// vòng quanh trục lặn — có tấm trên đầu, có tấm dưới chân.
+//
+// rise < 1 vì khung 16:10 và FOV dọc 68 độ hẹp hơn FOV ngang ~103 độ; near
+// thấp nhất vì tấm gần phải đọc được, không phải để lướt qua đỉnh đầu.
 const FIELD_SIZE = {
-  near: { frame: [4.9, 6.3], image: [4.45, 5.75], radius: [8.5, 3], spread: 2.6 },
-  mid: { frame: [2.5, 3.25], image: [2.18, 2.85], radius: [13, 6], spread: 4 },
-  far: { frame: [1.4, 1.85], image: [1.2, 1.6], radius: [22, 10], spread: 6 },
+  near: { frame: [4.9, 6.3], image: [4.45, 5.75], radius: [8.5, 3], spread: 2.6, rise: 0.42 },
+  mid: { frame: [2.5, 3.25], image: [2.18, 2.85], radius: [13, 6], spread: 4, rise: 0.58 },
+  far: { frame: [1.4, 1.85], image: [1.2, 1.6], radius: [22, 10], spread: 6, rise: 0.72 },
 };
+
+// Sàn đáy biển ở y = -8.5 (scene/seabed.js) và đá nhô lên khỏi nó. Relic rơi
+// xuống dưới mốc này bị đá xuyên qua khung ảnh, nên vòng bị kẹp ở dưới —
+// lệch lên trên là có chủ đích: nhìn ngược lên phía ánh sáng là hình ảnh của
+// biển sâu, nhìn xuống bùn thì không.
+const FLOOR_CLEARANCE = 4.2;
 
 function fieldOf(plan, index) {
   if (index < plan.near) return 'near';
@@ -66,10 +82,13 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
     const angle = i * 2.399;
     const radius = size.radius[0] + Math.random() * size.radius[1];
     const frame = new THREE.Group();
+    // Góc vàng 2.399 rad nuôi CẢ HAI trục: liên tiếp hai relic lệch nhau 137.5
+    // độ quanh trục lặn nên không bao giờ xếp thành hàng hay thành nan quạt.
+    const rise = Math.sin(angle) * radius * size.rise + (Math.random() - 0.5) * size.spread;
     // Quãng đường tới relic đo bằng mét, đổi sang -Z vì camera lặn theo -Z.
     frame.position.set(
       Math.cos(angle) * radius,
-      (Math.random() - 0.5) * size.spread,
+      Math.max(rise, FLOOR_Y + FLOOR_CLEARANCE + size.frame[1] / 2),
       -relicDistanceAt(plan, i),
     );
     frame.rotation.set((Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.12);
@@ -91,7 +110,7 @@ export async function createRelics(images, captions, theme, tier, reducedMotion,
     if (field !== 'far') {
       imageMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(size.image[0], size.image[1]),
-        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: field === 'near' ? 0.94 : 0.8, side: THREE.DoubleSide }),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: field === 'near' ? 0.94 : 0.88, side: THREE.DoubleSide }),
       );
       imageMesh.position.z = 0.02;
       frame.add(imageMesh);

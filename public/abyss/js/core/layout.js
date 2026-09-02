@@ -34,7 +34,17 @@ export function buildPhaseTable(phaseIds, startDepth, endDepth) {
 
 // Khoảng cách tối thiểu giữa hai relic liên tiếp. Dưới ngưỡng này chúng chồng
 // lên nhau trong sương và mất hẳn cảm giác từng tấm một.
-const MIN_RELIC_SPACING = 9;
+// Ngưỡng 9 sinh ra hồi relic còn xếp thành DÂY PHƠI: góc vàng chỉ nuôi trục X
+// nên hai relic liền nhau chênh nhau vài mét theo z mà gần như cùng cao độ, và
+// dưới 9 m chúng chồng lên nhau trong sương. scene/relics.js giờ cho góc vàng
+// nuôi cả Y: hai relic liên tiếp lệch 137.5 độ quanh trục lặn, tức luôn khác
+// cả phương lẫn cao độ, nên chúng tách bạch ở khoảng cách gần hơn hẳn.
+const MIN_RELIC_SPACING = 6;
+
+// START_Z (5) + ngưỡng "đã lùi ra sau camera" (12) trong scene/relics.js. Hai
+// hằng số đó sống ở module khác nên con số này là bản sao có chủ đích: layout
+// không import three, và relics.js không quyết định khoảng cách.
+const RECYCLE_LAG = 17;
 
 export function planContent(imageCount, tierRelics = MAX_POOL) {
   const n = Number.isFinite(imageCount) && imageCount > 0 ? Math.floor(imageCount) : 0;
@@ -99,8 +109,25 @@ export function relicSpawnRange(plan) {
 export function relicSpacing(plan) {
   const { span } = relicSpawnRange(plan);
   const spread = plan.relicCount > 1 ? span / (plan.relicCount - 1) : span;
-  if (!plan.imageCount) return spread;
-  const needed = plan.diveDistance / plan.imageCount;
+  // Không stream thì mọi ảnh đã có mesh riêng ngay từ đầu — ép spacing hẹp lại
+  // chỉ dồn chúng vào một khúc ngắn rồi để phần còn lại của quãng lặn trống.
+  if (!plan.streamed || !plan.imageCount) return spread;
+  // `needed = diveDistance / imageCount` là SAI: nó giả định mỗi lần một relic
+  // đi qua camera là một ảnh mới, nhưng far field cố ý không mang ảnh (mục 4.4)
+  // nên chỉ near+mid đóng góp, và một vòng băng chuyền dài relicCount * spacing
+  // chứ không phải spacing. Số lượt ảnh thật ~ (dive / (spacing * relicCount))
+  // * imageRelics; đo trên galaxy 59 ảnh cho 44/59, tức 15 tấm không bao giờ
+  // hiện, trong khi test cũ vẫn xanh vì nó đếm cả 5 relic far-field rỗng.
+  const imageRelics = plan.near + plan.mid;
+  if (imageRelics <= 0) return spread;
+  // Quãng đường DÙNG ĐƯỢC cho băng chuyền, không phải cả quãng lặn: relic đầu
+  // tiên mới sinh ra ở 18% (relicSpawnRange), và scene/relics.js chỉ cuộn nó
+  // khi đã lùi ra sau camera 12 m tính từ START_Z = 5, nên 17 m cuối không đẻ
+  // thêm lượt nào. Bỏ hai số hạng này là chỗ bản trước hụt: đo trên browser cho
+  // 55/59 dù công thức tự tin là đủ 59.
+  const usable = plan.diveDistance - relicSpawnRange(plan).first - RECYCLE_LAG;
+  if (usable <= 0) return spread;
+  const needed = (usable * imageRelics) / (plan.imageCount * plan.relicCount);
   return Math.max(MIN_RELIC_SPACING, Math.min(spread, needed));
 }
 

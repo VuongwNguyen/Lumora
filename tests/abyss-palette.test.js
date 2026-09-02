@@ -97,3 +97,50 @@ test('hexToHsl và hslToHex khứ hồi không mất màu', async () => {
     assert.ok(deltaE(hslToHex(hexToHsl(hex)), hex) < 1);
   }
 });
+
+// --- Dải màu nước theo độ sâu ---
+//
+// Trước đây fog và background dùng đúng một hex ở MỌI độ sâu và chỉ đổi mật độ,
+// nên nước 40 m trông y hệt nước 620 m: #02151B bão hoà 86% nhưng độ sáng chỉ
+// 5.7%, ra màn thành xám xanh đục. Ba test dưới khoá ba tính chất của bản sửa.
+
+test('nước sáng dần khi lên gần mặt biển, không phải một màu duy nhất', async () => {
+  const { waterColorForDepth, hexToHsl } = await import(modulePath);
+  const depths = [40, 120, 210, 330, 430, 620];
+  let previous = null;
+  for (const depth of depths) {
+    const l = hexToHsl(waterColorForDepth(depth)).l;
+    if (previous !== null) {
+      assert.ok(l <= previous + 1e-9, `độ sâu ${depth} sáng hơn mốc nông hơn nó`);
+    }
+    previous = l;
+  }
+  // Không đơn điệu thôi thì chưa đủ: một hằng số phẳng cũng thoả. Nước nông
+  // phải sáng hơn rãnh sâu HẲN — đây là bất biến chống lại "nước như bị ô nhiễm".
+  const shallow = hexToHsl(waterColorForDepth(40)).l;
+  const trench = hexToHsl(waterColorForDepth(620)).l;
+  assert.ok(shallow > trench * 3, `nước nông ${shallow} không sáng hơn rãnh ${trench} đủ nhiều`);
+});
+
+test('rãnh sâu vẫn đúng deepWater — mục 13.10 không bị dải màu làm lệch', async () => {
+  const { waterColorForDepth, ABYSS_PALETTE } = await import(modulePath);
+  for (const depth of [430, 500, 620, 5000]) {
+    assert.equal(waterColorForDepth(depth).toUpperCase(), ABYSS_PALETTE.deepWater.toUpperCase());
+  }
+});
+
+test('sàn đáy biển luôn tối hơn nước cùng độ sâu', async () => {
+  const { waterColorForDepth, seabedColorForDepth, hexToHsl } = await import(modulePath);
+  for (const depth of [40, 63, 120, 210, 353, 430, 620]) {
+    const water = hexToHsl(waterColorForDepth(depth)).l;
+    const seabed = hexToHsl(seabedColorForDepth(depth)).l;
+    assert.ok(seabed < water, `độ sâu ${depth}: sàn ${seabed} không tối hơn nước ${water}`);
+  }
+});
+
+test('độ sâu vô nghĩa trả về mốc nông nhất chứ không phải NaN', async () => {
+  const { waterColorForDepth, WATER_COLOR_STOPS } = await import(modulePath);
+  for (const bad of [NaN, undefined, null, -50]) {
+    assert.equal(waterColorForDepth(bad), WATER_COLOR_STOPS[0].color);
+  }
+});
