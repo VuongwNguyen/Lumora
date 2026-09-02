@@ -20,10 +20,11 @@
     "test:visual:report": "playwright show-report tests/visual/.report",
     "test:errors": "node --test tests/error-codes.test.js",
     "test:chrome": "node --test tests/chrome-palette.test.js",
-    "test": "npm run test:database && npm run test:soundscape && npm run test:story-emotion && npm run test:upload && npm run test:activity && npm run test:tmdt && npm run test:abyss && npm run test:errors && npm run test:chrome",
+    "test": "npm run test:database && npm run test:soundscape && npm run test:story-emotion && npm run test:upload && npm run test:activity && npm run test:tmdt && npm run test:abyss && npm run test:errors && npm run test:chrome && npm run test:adblock",
     "audit:activity": "node scripts/audit-activity-coverage.js",
     "deploy": "git push origin main",
-    "redeploy": "gh workflow run deploy.yml --ref main"
+    "redeploy": "gh workflow run deploy.yml --ref main",
+    "test:adblock": "node --test tests/adblock-assets.test.js"
   },
   "dependencies": {
     "@payos/node": "^2.0.5",

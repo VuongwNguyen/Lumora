@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { easeTowards } from '../core/depth.js';
-import { BEACON_DIVE_FRACTION } from './beacon.js';
+import { BEACON_DIVE_FRACTION } from './lighthouse.js';
 import { loadTexture } from './relics.js';
 import { FLOOR_Y, terrainHeight } from './seabed.js';
 
@@ -155,7 +155,7 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     const shrimp = new THREE.Group();
     // -5.8 đi theo BEACON (y = -2.2), không theo mặt đáy: tôm là "sinh vật nhỏ
     // cạnh beacon" của mục 5, và beacon cố ý đặt ở tầm mắt chứ không neo đáy —
-    // xem chú thích trong scene/beacon.js. Neo tôm vào FLOOR_Y sẽ đẩy nó xuống
+    // xem chú thích trong scene/lighthouse.js. Neo tôm vào FLOOR_Y sẽ đẩy nó xuống
     // -26 trong khi beacon vẫn ở -2.2, tức tách rời đúng cặp phải đi cùng nhau.
     shrimp.position.set(SHRIMP_BESIDE_BEACON, -5.8, at(PLACEMENT.memoryShrimp));
     const body = new THREE.Mesh(new THREE.SphereGeometry(.24, 8, 6), new THREE.MeshBasicMaterial({ color: theme.warmMemory, transparent: true, opacity: .65, blending: THREE.AdditiveBlending }));

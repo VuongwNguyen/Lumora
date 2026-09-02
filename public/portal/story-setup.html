@@ -824,6 +824,30 @@
       #story-panel, .preview-photo-bg, .se-star, .se-pulse { transition: none; animation: none; }
     }
   </style>
+  <script>
+    // Bộ chặn quảng cáo nuốt được một tệp script trong khi server vẫn trả 200:
+    // không log, không lỗi phía ta, người dùng chỉ thấy màn hình đen. Đã xảy ra
+    // thật với scene/beacon.js (luật `/beacon.js` của EasyPrivacy). Sự kiện lỗi
+    // tải tài nguyên KHÔNG nổi bọt, nên phải nghe ở pha capture.
+    //
+    // Đoạn này BẮT BUỘC nội tuyến — một tệp .js riêng cũng bị chặn y như vậy.
+    // `tests/adblock-assets.test.js` lo phần phòng ngừa; đây là lưới an toàn cho
+    // luật mới hoặc danh sách lọc tự chế mà ta không biết trước.
+    addEventListener('error', function (e) {
+      var el = e.target;
+      if (!el || el === window || el.tagName !== 'SCRIPT') return;
+      var bao = document.getElementById('lumora-chan-tep') || document.createElement('div');
+      bao.id = 'lumora-chan-tep';
+      bao.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;padding:14px 18px;background:#8a3a30;color:#e8dccc;font:14px/1.6 system-ui,sans-serif;text-align:center';
+      // KHÔNG nêu el.src như "tệp bị chặn": với module, sự kiện lỗi nổi lên ở thẻ
+      // script GỐC, còn tệp bị nuốt là một import nằm sâu bên trong. Nêu sai tên
+      // còn tệ hơn không nêu. URL cất vào data- để còn truy khi cần.
+      bao.dataset.script = el.src || '';
+      bao.textContent = 'Một tiện ích mở rộng của trình duyệt đang chặn tệp script của Lumora nên trang không chạy được. Hãy tắt bộ chặn quảng cáo cho trang này rồi tải lại.';
+      if (document.body) document.body.appendChild(bao);
+      else addEventListener('DOMContentLoaded', function () { document.body.appendChild(bao); });
+    }, true);
+  </script>
 </head>
 <body>
 

@@ -408,7 +408,7 @@ public/abyss/js/
 ├── core/tiers.js       detect + adaptive downgrade 13.7
 ├── core/theme.js       ràng buộc theme 13.8
 ├── scene/seabed.js
-├── scene/beacon.js
+├── scene/lighthouse.js
 ├── scene/relics.js
 ├── scene/fauna.js
 └── fx/water.js         fog, caustic, bubble, marine snow
