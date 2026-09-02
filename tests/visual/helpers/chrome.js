@@ -116,6 +116,29 @@ async function seedSession(page) {
   // "unexpected token: ':'" khi trình duyệt cố parse `{"meta":{}}` như script.
 }
 
+// Ô nhập tràn khỏi khung chứa nó — lớp lỗi mà phép đo tràn theo TRANG bỏ lọt.
+// Chỉ soi input/select/textarea: chúng không bao giờ được phép lòi ra, khác với
+// vòng quỹ đạo hay thẻ trang trí vốn cố ý tràn.
+async function fieldOverflow(page) {
+  return page.evaluate(() => {
+    const xau = [];
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'absolute') return;
+      const par = el.parentElement; if (!par) return;
+      const pcs = getComputedStyle(par);
+      if (pcs.overflowX !== 'visible') return;
+      const r = el.getBoundingClientRect(), pr = par.getBoundingClientRect();
+      if (!r.width || !pr.width) return;
+      const inR = pr.right - (parseFloat(pcs.borderRightWidth) || 0) - (parseFloat(pcs.paddingRight) || 0);
+      const inL = pr.left + (parseFloat(pcs.borderLeftWidth) || 0) + (parseFloat(pcs.paddingLeft) || 0);
+      const vuot = Math.round(Math.max(r.right - inR, inL - r.left));
+      if (vuot > 2) xau.push(`${el.tagName.toLowerCase()}#${el.id || '?'} vượt ${vuot}px`);
+    });
+    return xau;
+  });
+}
+
 module.exports = {
-  VIEWPORTS, CHROME_PAGES, collectErrors, horizontalOverflow, seedSession,
+  VIEWPORTS, CHROME_PAGES, collectErrors, horizontalOverflow, fieldOverflow, seedSession,
 };

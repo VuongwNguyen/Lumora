@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const path = require('node:path');
 const {
-  VIEWPORTS, CHROME_PAGES, collectErrors, horizontalOverflow, seedSession,
+  VIEWPORTS, CHROME_PAGES, collectErrors, horizontalOverflow, fieldOverflow, seedSession,
 } = require('./helpers/chrome');
 
 const SHOTS = path.join(__dirname, '.shots');
@@ -41,6 +41,15 @@ test.describe('vỏ ứng dụng', () => {
 
         const overflow = await horizontalOverflow(page);
         expect(overflow, `tràn ngang ${overflow}px`).toBeLessThanOrEqual(1);
+
+        // Ô nhập không được tràn khỏi khung chứa nó.
+        //
+        // Phép đo tràn ở trên chỉ so với TRANG, nên nó bỏ lọt trường hợp con
+        // vượt cha mà tổng thể vẫn vừa màn hình — đúng thứ đã xảy ra: thiếu
+        // box-sizing: border-box làm width:100% cộng thêm padding và viền, ô
+        // nhập lòi ra ngoài mép thẻ 26px mà mọi test vẫn xanh.
+        const traoRaNgoai = await fieldOverflow(page);
+        expect(traoRaNgoai, `ô nhập tràn khỏi khung: ${traoRaNgoai.join(', ')}`).toEqual([]);
 
         // Chỉ chốt "không lỗi console" ở trang render được KHÔNG cần đăng nhập.
         //

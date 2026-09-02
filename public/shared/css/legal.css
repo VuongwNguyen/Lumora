@@ -35,6 +35,10 @@ body.legal-page { margin: 0; background: var(--legal-bg); color: var(--legal-tex
 .legal-field { display: grid; gap: 7px; margin-bottom: 16px; }
 .legal-field label, .legal-field legend { color: var(--legal-text); }
 .legal-field input, .legal-field select, .legal-field textarea {
+  /* box-sizing PHẢI là border-box. Mặc định của CSS là content-box, nên
+   * width:100% + padding 12px hai bên + viền 1px hai bên = rộng hơn khung cha
+   * đúng 26px, và ô nhập tràn ra ngoài mép thẻ. Đo được 26px trên /support/. */
+  box-sizing: border-box;
   width: 100%; padding: 11px 12px; border: 1px solid var(--legal-border); border-radius: 8px;
   background: rgba(232,220,204,.05); color: var(--legal-text); font: inherit;
 }
