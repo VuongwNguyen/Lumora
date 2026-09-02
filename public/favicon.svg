@@ -1,4 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" fill="#06060e"/>
-  <text x="50" y="70" font-size="60" text-anchor="middle" fill="#c4b5fd">✦</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-labelledby="lumora-mark">
+  <title id="lumora-mark">Lumora</title>
+  <!--
+    Khảm trai trên vóc sơn mài.
+
+    Bản cũ vẽ dấu ✦ bằng thẻ <text>. Hai lỗi:
+      1. Favicon render NGOÀI ngữ cảnh trang, không có font nào được bảo đảm.
+         Máy thiếu font chứa U+2726 thì ra ô vuông tofu. Icon phải là ĐƯỜNG VẼ.
+      2. ✦ là dấu hiệu "AI-powered" kinh điển, và nó trùng luôn với badge cũ
+         ở hero — cùng một ký tự làm hai việc.
+
+    Hình mới là miếng khảm trai: mảnh xà cừ hình lá cắm vào vóc đen, có ánh
+    đồng bắt vào mép. Đây là kỹ thuật đặc trưng của sơn mài Việt, đọc được ở
+    16px, và không lẫn với bất kỳ ngôi sao lấp lánh nào.
+  -->
+  <rect width="100" height="100" rx="22" fill="#0c0b0a"/>
+  <path d="M50 14 C70 33 70 67 50 86 C30 67 30 33 50 14 Z" fill="#e8dccc"/>
+  <path d="M50 14 C70 33 70 67 50 86" fill="none" stroke="#b99a5e" stroke-width="6" stroke-linecap="round"/>
 </svg>
