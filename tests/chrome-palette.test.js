@@ -76,7 +76,7 @@ test('tokens.css khai báo đủ token của spec', () => {
   const required = [
     '--lum-nen', '--lum-mat', '--lum-mat-noi',
     '--lum-trung', '--lum-trung-mo', '--lum-trung-nhat',
-    '--lum-son', '--lum-son-sang', '--lum-son-mo',
+    '--lum-son', '--lum-son-tham', '--lum-son-mo',
     '--lum-dong', '--lum-dong-mo',
     '--lum-vien', '--lum-vien-manh',
     '--lum-loi', '--lum-ok', '--lum-luuy',

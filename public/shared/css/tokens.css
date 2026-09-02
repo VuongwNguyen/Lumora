@@ -22,11 +22,17 @@
   /* Vỏ trứng — chữ */
   --lum-trung: #e8dccc;
   --lum-trung-mo: rgba(232, 220, 204, .62);
-  --lum-trung-nhat: rgba(232, 220, 204, .40);
+  /* .40 chỉ cho 3.09:1 — đạt AA cho chữ lớn nhưng token này dùng cho nhãn
+   * viết hoa cỡ nhỏ, nơi ngưỡng là 4.5:1. .55 cho 4.89:1. */
+  --lum-trung-nhat: rgba(232, 220, 204, .55);
 
   /* Son — hành động */
   --lum-son: #9e4438;
-  --lum-son-sang: #b8564a;
+  /* Hover của nút son ĐẬM hơn, không sáng hơn. Sáng hơn (#b8564a) kéo tương
+   * phản chữ vỏ trứng xuống 3.48:1 — trượt AA, và trạng thái hover lại khó đọc
+   * hơn trạng thái thường, tức đúng chỗ người dùng đang nhắm vào. Đậm hơn cho
+   * 5.70:1, và cũng thật hơn về chất liệu: ấn vào sơn mài thì màu sâu xuống. */
+  --lum-son-tham: #8a3a30;
   --lum-son-mo: rgba(158, 68, 56, .14);
 
   /* Đồng — nét và nhấn */
