@@ -1,0 +1,47 @@
+/* ---------------------------------------------------------------------------
+ * Bảng màu sơn mài — nguồn sự thật duy nhất cho VỎ ứng dụng Lumora.
+ *
+ * Sơn mài có bốn chất: đen (nền), son (đỏ chu), vàng kim, vỏ trứng (trắng ngà).
+ * Sơn ta không có màu trắng nên nghệ nhân dán vỏ trứng thật — vì vậy chữ ở đây
+ * KHÔNG BAO GIỜ dùng #fff, mà dùng --lum-trung.
+ *
+ * Bản TRẦM, không phải bản rực: đồ sơn mài cũ lên nước thì son ngả nâu, vàng
+ * xỉn thành đồng. Nền ngả ấm (#14090a) vì mắt ít nhạy với bước sóng dài nên đen
+ * ngả nâu đỡ mỏi hơn đen ngả xanh/tím.
+ *
+ * File này KHÔNG áp cho universe (abyss/aurora/fall/galaxy-moon/story) — mỗi
+ * universe có thế giới màu riêng, và vai trò của bảng màu này là làm KHUNG cho
+ * chúng, không phải làm thế giới thứ sáu.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Đen — nền */
+  --lum-nen: #14090a;
+  --lum-mat: #1f1012;
+  --lum-mat-noi: #2a1719;
+
+  /* Vỏ trứng — chữ */
+  --lum-trung: #e8dccc;
+  --lum-trung-mo: rgba(232, 220, 204, .62);
+  --lum-trung-nhat: rgba(232, 220, 204, .40);
+
+  /* Son — hành động */
+  --lum-son: #9e4438;
+  --lum-son-sang: #b8564a;
+  --lum-son-mo: rgba(158, 68, 56, .14);
+
+  /* Đồng — nét và nhấn */
+  --lum-dong: #b99a5e;
+  --lum-dong-mo: rgba(185, 154, 94, .16);
+
+  /* Đường nét */
+  --lum-vien: rgba(232, 220, 204, .10);
+  --lum-vien-manh: rgba(232, 220, 204, .18);
+
+  /* Trạng thái.
+   * Son là đỏ, mà đỏ cũng là màu báo lỗi. Tách bằng CẢ sắc độ LẪN cách vẽ:
+   * nút chính luôn là nền son đặc; lỗi luôn là chữ/viền --lum-loi kèm icon,
+   * trên nền tint, KHÔNG BAO GIỜ là nút đặc. Khác vai, khác cách vẽ. */
+  --lum-loi: #d9604a;
+  --lum-ok: #7d9468;
+  --lum-luuy: #c2903f;
+}
