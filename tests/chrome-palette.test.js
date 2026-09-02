@@ -29,7 +29,6 @@ const CHROME_FILES = [
 
 // Chưa di trú. Xoá dần theo các task sau. Khi rỗng là xong.
 const PENDING = new Set([
-  'public/admin/index.html',
   'public/terms/index.html',
   'public/privacy/index.html',
   'public/support/index.html',
@@ -38,7 +37,6 @@ const PENDING = new Set([
   'public/owner-info/index.html',
   'public/shared/css/legal.css',
   'public/shared/css/subscription.css',
-  'public/portal/js/admin.js',
 ]);
 
 // CỐ Ý giữ màu tím — đây là màu HIỂN THỊ CỦA GALAXY, không phải màu giao diện.

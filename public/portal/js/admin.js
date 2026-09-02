@@ -417,7 +417,7 @@ async function loadAdminUsers() {
         // Plan
         const tdPlan = makeEl('td', 'padding:11px 12px');
         if (u.subscription) {
-          tdPlan.appendChild(makeSpanBadge(u.subscription.plan.toUpperCase(), 'rgba(139,92,246,0.2)', '#a78bfa'));
+          tdPlan.appendChild(makeSpanBadge(u.subscription.plan.toUpperCase(), 'var(--lum-dong-mo)', 'var(--lum-dong)'));
         } else {
           tdPlan.appendChild(makeEl('span', 'color:rgba(255,255,255,0.25);font-size:12px', '—'));
         }
@@ -446,7 +446,7 @@ async function loadAdminUsers() {
 
         const btnGrant = document.createElement('button');
         btnGrant.className = 'btn-view';
-        btnGrant.style.cssText = 'padding:4px 10px;font-size:12px;background:rgba(124,58,237,0.2)';
+        btnGrant.style.cssText = 'padding:4px 10px;font-size:12px;background:var(--lum-son-mo)';
         btnGrant.textContent = 'Cấp sub';
         btnGrant.addEventListener('click', () => openAuGrant(u._id, u.email));
 
@@ -515,7 +515,7 @@ function openAuGrant(userId, email) {
 
     const info = makeEl('div', 'font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:14px');
     info.appendChild(document.createTextNode('User: '));
-    const emailStrong = makeEl('strong', 'color:#c4b5fd');
+    const emailStrong = makeEl('strong', 'color:var(--lum-dong)');
     emailStrong.id = 'au-grant-email';
     info.appendChild(emailStrong);
 
@@ -581,7 +581,7 @@ function openAuDetail(userId, email) {
     box.className = 'modal';
     box.style.cssText = 'width:480px;max-height:85vh;overflow-y:auto';
 
-    const title = makeEl('h3', 'color:#c4b5fd;font-size:15px;margin-bottom:18px');
+    const title = makeEl('h3', 'color:var(--lum-dong);font-size:15px;margin-bottom:18px');
     title.id = 'au-detail-title';
 
     const body = makeEl('div');
@@ -687,7 +687,7 @@ function openAuDetail(userId, email) {
     // ── Subscription section ──
     const subSec = makeSection('Subscription hiện tại');
     if (subscription) {
-      subSec.appendChild(makeDetailRow('Plan', makeSpanBadge(subscription.plan.toUpperCase(), 'rgba(139,92,246,0.2)', '#a78bfa')));
+      subSec.appendChild(makeDetailRow('Plan', makeSpanBadge(subscription.plan.toUpperCase(), 'var(--lum-dong-mo)', 'var(--lum-dong)')));
       subSec.appendChild(makeDetailRow(window.t.adminExpiry, makeEl('span', null, fmtDate(subscription.expiredAt))));
       const revokeBtn = document.createElement('button');
       revokeBtn.className = 'btn-delete-row';
@@ -801,7 +801,7 @@ async function loadAnalytics() {
 
       tr.appendChild(makeEl('td', 'padding:11px 12px;font-size:13px', p.buyerEmail));
       const tdPlan = makeEl('td', 'padding:11px 12px');
-      tdPlan.appendChild(makeSpanBadge(p.plan.toUpperCase(), 'rgba(139,92,246,0.2)', '#a78bfa'));
+      tdPlan.appendChild(makeSpanBadge(p.plan.toUpperCase(), 'var(--lum-dong-mo)', 'var(--lum-dong)'));
       if (p.isSimulation) tdPlan.appendChild(makeSpanBadge('ADMIN TEST', 'rgba(16,185,129,0.15)', '#6ee7b7'));
       const bg = p.status === 'paid' ? 'rgba(34,197,94,0.15)' : p.status === 'cancelled' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)';
       const color = p.status === 'paid' ? '#4ade80' : p.status === 'cancelled' ? '#f87171' : '#fbbf24';
