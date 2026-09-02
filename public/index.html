@@ -355,10 +355,26 @@
     .cta-banner .btn-primary { display: inline-block; position: relative; }
 
     /* ── Footer ──────────────────────── */
+    /* Hai hàng, không phải một.
+     *
+     * Trước đây là flex + space-between với BỐN khối (logo, links, địa chỉ,
+     * bản quyền) dàn đều trên một hàng: khoảng cách giữa chúng do thuật toán
+     * chia chứ không do ý đồ, nên trông như bị rớt. Lưới hai hàng cho mỗi thứ
+     * một chỗ: nhận diện + điều hướng ở trên, thông tin pháp lý ở dưới. */
     footer {
       border-top: 1px solid var(--border); padding: 40px 52px;
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        "logo  links"
+        "owner copy";
+      align-items: center;
+      gap: 20px 40px;
     }
+    footer .logo { grid-area: logo; }
+    footer .links { grid-area: links; justify-content: flex-end; }
+    footer .legal-footer-owner { grid-area: owner; }
+    footer .copy { grid-area: copy; justify-self: end; }
     footer .logo { font-family: 'Cormorant Garamond', serif; font-size: 18px; color: var(--accent-light); }
     footer .links { display: flex; flex-wrap: wrap; gap: 12px 28px; }
     footer .links a { font-size: 13px; color: var(--text-sub); text-decoration: none; transition: color 0.2s; }
@@ -388,7 +404,11 @@
       .pricing-grid { grid-template-columns: 1fr; }
 
       .cta-banner { padding: 52px 24px; }
-      footer { padding: 32px 20px; flex-direction: column; align-items: flex-start; gap: 12px; }
+      /* Hẹp thì xếp dọc: bốn khối trên một cột, mỗi cái một hàng. */
+      footer { padding: 32px 20px; grid-template-columns: 1fr;
+        grid-template-areas: "logo" "links" "owner" "copy"; align-items: start; gap: 14px; }
+      footer .links { justify-content: flex-start; }
+      footer .copy { justify-self: start; }
     }
 
     @media (max-width: 480px) {

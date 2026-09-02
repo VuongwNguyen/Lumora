@@ -88,6 +88,34 @@ test('file giữ màu galaxy vẫn còn nguyên — không bị di trú nhầm',
   }
 });
 
+// Phép đo tím KHÔNG bắt được nền đen-lạnh cũ: #06060e là rgb(6,6,14) — lam chỉ
+// hơn đỏ 8, dưới ngưỡng 20, nên nó lọt. Mà chính nó là thứ người dùng nhìn thấy
+// đầu tiên: chân trang legal hiện trên MỌI trang, và nó lạc hẳn tông so với nền
+// ấm — trông như layout bị rớt chứ không như sai màu.
+//
+// Nên chốt riêng: danh sách nền cũ tường minh, và bỏ comment trước khi soi để
+// chú thích nhắc lại giá trị cũ không bị tính là vi phạm.
+const NEN_CU = ['06060e', '060610', '020207', '05050d', '04040c', '0b0a15', '100d1e', '0d0d1e', '0a0015', '090712', '010a18'];
+
+// .theme-preview trong galaxy-setup.html cố ý giữ #05050d: đó là đuôi gradient
+// của khung XEM TRƯỚC GALAXY, tức màu kỷ vật người dùng, không phải màu vỏ.
+const NEN_CU_GIU = { 'public/portal/galaxy-setup.html': 'đuôi gradient của .theme-preview — màu galaxy' };
+
+function boComment(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+}
+
+test('không còn nền đen-lạnh cũ trong file vỏ', () => {
+  const conSot = [];
+  for (const file of CHROME_FILES) {
+    if (PENDING.has(file) || NEN_CU_GIU[file]) continue;
+    const src = boComment(read(file));
+    const hit = NEN_CU.filter(h => new RegExp('#' + h, 'i').test(src));
+    if (hit.length) conSot.push(`${file} (${hit.map(h => '#' + h).join(', ')})`);
+  }
+  assert.deepEqual(conSot, [], `còn nền lạnh cũ:\n  ${conSot.join('\n  ')}`);
+});
+
 test('phép đo màu tím tự kiểm — không bắt nhầm bảng sơn mài', () => {
   // Test rỗng thì vô dụng: chốt lại cả hai chiều của laTim().
   for (const tim of [[139, 92, 246], [196, 181, 253], [167, 139, 250], [109, 40, 217], [192, 132, 252]]) {

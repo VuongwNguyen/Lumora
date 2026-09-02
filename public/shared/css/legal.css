@@ -46,7 +46,7 @@ body.legal-page { margin: 0; background: var(--legal-bg); color: var(--legal-tex
 .legal-status { min-height: 26px; margin-top: 14px; }
 .legal-status.error { color: #fca5a5; }
 .legal-status.success { color: #6ee7b7; }
-.lumora-legal-footer { padding: 32px clamp(20px, 5vw, 56px); border-top: 1px solid var(--legal-border); background: #06060e; color: var(--legal-muted); font-family: Jost, system-ui, sans-serif; }
+.lumora-legal-footer { padding: 32px clamp(20px, 5vw, 56px); border-top: 1px solid var(--legal-border); background: var(--lum-nen); color: var(--legal-muted); font-family: Jost, system-ui, sans-serif; }
 .lumora-legal-footer .legal-footer-inner { max-width: 1100px; margin: auto; display: grid; gap: 14px; }
 .lumora-legal-footer .legal-footer-links { display: flex; flex-wrap: wrap; gap: 10px 20px; }
 .lumora-legal-footer a { color: var(--legal-muted); text-decoration: none; }
