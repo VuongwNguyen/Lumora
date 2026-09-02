@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { easeTowards } from '../core/depth.js';
 import { BEACON_DIVE_FRACTION } from './beacon.js';
 import { loadTexture } from './relics.js';
+import { FLOOR_Y, terrainHeight } from './seabed.js';
 
 // Vị trí sinh vật đo theo PHẦN của quãng đường lặn, không phải z tuyệt đối.
 // plan.diveDistance chạy từ 180 m tới 620 m theo số ảnh (mục 13.11), nên hằng
@@ -64,7 +66,12 @@ const SILHOUETTE_DRIFT = 16;    // biên độ trôi ngang, đủ để cắt qu
 // trượt 1 lần, 2 vòng đạt tối thiểu 0.813, 3 vòng tụt lại còn 0.782 và trôi
 // nhanh hơn (1.6 m/s so với 1.1 m/s).
 const SILHOUETTE_SWEEPS = 2;    // số vòng quét trọn trên cả quãng lặn
-const SHAFT_HALF_WIDTH = 5.5;   // PlaneGeometry(11, 52) -> cột sáng rộng 11 m
+// Nửa bề rộng cột sáng của fx/water.js. Cột đã nở 11 -> 13 -> 19 m khi làm mềm
+// mép (mục 5 vòng refinement), nhưng hằng số này còn kẹt ở 5.5 nên phép đo
+// "silhouette có nằm trong cột sáng không" hụt 1.7 lần: con vật phải trôi vào
+// gần trục cột hơn thực tế mới được tính, và mục 14.5 lộ diện thưa hơn thiết kế.
+// Số này PHẢI khớp PlaneGeometry(19, 78) trong fx/water.js.
+const SHAFT_HALF_WIDTH = 9.5;
 
 // Memory pool là hình ảnh kết bài (mục 14.6): nó phải nằm PHÍA TRƯỚC chỗ camera
 // dừng hẳn, không phải chỗ camera bơi qua. Release bắt đầu ở đúng cuối quãng
@@ -74,6 +81,24 @@ const SHAFT_HALF_WIDTH = 5.5;   // PlaneGeometry(11, 52) -> cột sáng rộng 1
 const POOL_BEYOND_DIVE = 20;
 
 const DEFAULT_DIVE = 500;
+
+// Đàn cá 18 con, hải quỳ 10 cụm x 7 tua, sứa 4 tua, xác cá voi 7 xương: mỗi
+// phần là một Mesh riêng, nên fauna một mình chiếm 114 mesh / 108 material
+// trong 196 draw call đo được ở first_glow — ngân sách mục 13.7 là <= 60.
+//
+// Không phần nào trong số đó động đậy riêng: update() chỉ xoay/dịch CẢ actor
+// (rotation.z của hải quỳ, position.x của đàn cá), nên nướng transform vào
+// geometry rồi gộp không mất một nhịp chuyển động nào.
+//
+// Chỉ gộp TRONG PHẠM VI MỘT ACTOR. applyFade cache baseOpacity trên VẬT LIỆU
+// rồi nhân theo `reveal` của từng actor, nên gộp chéo actor sẽ làm hai con
+// ghi đè fade của nhau — 10 cụm hải quỳ vào cùng lúc chỉ là trùng hợp của
+// startPhaseId, không phải bất biến.
+function mergedMesh(geometries, material) {
+  const merged = mergeGeometries(geometries, false);
+  geometries.forEach(geometry => geometry.dispose());
+  return new THREE.Mesh(merged, material);
+}
 
 export function createFauna(theme, tier, reducedMotion, plan) {
   const dive = Number.isFinite(plan?.diveDistance) && plan.diveDistance > 0 ? plan.diveDistance : DEFAULT_DIVE;
@@ -90,25 +115,54 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     const g = new THREE.Group(); g.position.set(x, 3, z); g.scale.setScalar(scale);
     const bell = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: theme.rareViolet, transparent: true, opacity: .22, blending: THREE.AdditiveBlending }));
     bell.scale.y = .65; g.add(bell);
-    for (let i = 0; i < 4; i++) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(.025, .06, 1.8, 5), new THREE.MeshBasicMaterial({ color: theme.bioluminescent, transparent: true, opacity: .4, blending: THREE.AdditiveBlending })); arm.position.set((i - 1.5) * .25, -.85, 0); g.add(arm); }
+    const arms = [];
+    for (let i = 0; i < 4; i++) arms.push(new THREE.CylinderGeometry(.025, .06, 1.8, 5).translate((i - 1.5) * .25, -.85, 0));
+    g.add(mergedMesh(arms, new THREE.MeshBasicMaterial({ color: theme.bioluminescent, transparent: true, opacity: .4, blending: THREE.AdditiveBlending })));
     g.userData.fauna = { type: 'jellyfish', baseX: x, phase: Math.random() * 6, startPhaseId: 'memory_trench' }; actors.push(g); group.add(g);
   }
   function fishSchool(z) {
     const g = new THREE.Group(); g.position.set(-9, 1, z);
-    for (let i = 0; i < Math.min(18, tier.fauna >= 8 ? 18 : 10); i++) { const fish = new THREE.Mesh(new THREE.ConeGeometry(.08, .55, 5), new THREE.MeshBasicMaterial({ color: theme.bioluminescent, transparent: true, opacity: .55, blending: THREE.AdditiveBlending })); fish.position.set((Math.random() - .5) * 5, (Math.random() - .5) * 2, (Math.random() - .5) * 3); fish.rotation.z = Math.PI / 2; g.add(fish); }
+    const bodies = [];
+    // rotateZ TRƯỚC translate: Mesh áp rotation rồi mới tới position, nướng
+    // ngược thứ tự sẽ quay cả vị trí của con cá quanh gốc cụm.
+    for (let i = 0; i < (tier.fauna >= 8 ? 18 : 10); i++) {
+      bodies.push(new THREE.ConeGeometry(.08, .55, 5)
+        .rotateZ(Math.PI / 2)
+        .translate((Math.random() - .5) * 5, (Math.random() - .5) * 2, (Math.random() - .5) * 3));
+    }
+    g.add(mergedMesh(bodies, new THREE.MeshBasicMaterial({ color: theme.bioluminescent, transparent: true, opacity: .55, blending: THREE.AdditiveBlending })));
     // baseX bắt buộc: update() đặt lại position.x theo meta.baseX, thiếu nó thì
     // đàn cá nhận NaN ngay khung hình đầu tiên nó hiện ra và biến mất hẳn.
     g.userData.fauna = { type: 'fish', baseX: -9, phase: Math.random() * 6, startPhaseId: 'living_ocean' }; actors.push(g); group.add(g);
   }
   function anemones() {
     const count = 10;
-    for (let i = 0; i < count; i++) { const g = new THREE.Group(); g.position.set((Math.random() - .5) * 30, -7.8, at(PLACEMENT.anemoneFirst + (i / (count - 1)) * (PLACEMENT.anemoneLast - PLACEMENT.anemoneFirst))); for (let j = 0; j < 7; j++) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(.025, .09, 1.1 + Math.random() * 1.6, 5), new THREE.MeshBasicMaterial({ color: theme.accent, transparent: true, opacity: .3, blending: THREE.AdditiveBlending })); arm.position.x = (Math.random() - .5) * .6; arm.position.y = .5; g.add(arm); } g.userData.fauna = { type: 'anemone', phase: Math.random() * 6, startPhaseId: 'first_glow' }; actors.push(g); group.add(g); }
+    for (let i = 0; i < count; i++) {
+      const g = new THREE.Group();
+      // Hải quỳ BÁM ĐÁY: phải theo cả cao độ đáy lẫn địa hình tại chỗ nó mọc,
+      // nếu không nó lơ lửng giữa nước hoặc chìm trong gờ.
+      const anemoneX = (Math.random() - .5) * 30;
+      const anemoneZ = at(PLACEMENT.anemoneFirst + (i / (count - 1)) * (PLACEMENT.anemoneLast - PLACEMENT.anemoneFirst));
+      g.position.set(anemoneX, FLOOR_Y + terrainHeight(anemoneX, anemoneZ) + .7, anemoneZ);
+      const arms = [];
+      for (let j = 0; j < 7; j++) arms.push(new THREE.CylinderGeometry(.025, .09, 1.1 + Math.random() * 1.6, 5).translate((Math.random() - .5) * .6, .5, 0));
+      g.add(mergedMesh(arms, new THREE.MeshBasicMaterial({ color: theme.accent, transparent: true, opacity: .3, blending: THREE.AdditiveBlending })));
+      g.userData.fauna = { type: 'anemone', phase: Math.random() * 6, startPhaseId: 'first_glow' };
+      actors.push(g); group.add(g);
+    }
   }
   function memoryShrimp() {
-    const shrimp = new THREE.Group(); shrimp.position.set(SHRIMP_BESIDE_BEACON, -5.8, at(PLACEMENT.memoryShrimp));
+    const shrimp = new THREE.Group();
+    // -5.8 đi theo BEACON (y = -2.2), không theo mặt đáy: tôm là "sinh vật nhỏ
+    // cạnh beacon" của mục 5, và beacon cố ý đặt ở tầm mắt chứ không neo đáy —
+    // xem chú thích trong scene/beacon.js. Neo tôm vào FLOOR_Y sẽ đẩy nó xuống
+    // -26 trong khi beacon vẫn ở -2.2, tức tách rời đúng cặp phải đi cùng nhau.
+    shrimp.position.set(SHRIMP_BESIDE_BEACON, -5.8, at(PLACEMENT.memoryShrimp));
     const body = new THREE.Mesh(new THREE.SphereGeometry(.24, 8, 6), new THREE.MeshBasicMaterial({ color: theme.warmMemory, transparent: true, opacity: .65, blending: THREE.AdditiveBlending }));
     body.scale.set(1.8, .7, .7); shrimp.add(body);
-    for (let i = 0; i < 3; i++) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(.018, .025, .5, 5), new THREE.MeshBasicMaterial({ color: theme.warmMemory, transparent: true, opacity: .5 })); leg.position.set((i - 1) * .18, -.18, .08); leg.rotation.z = .8; shrimp.add(leg); }
+    const legs = [];
+    for (let i = 0; i < 3; i++) legs.push(new THREE.CylinderGeometry(.018, .025, .5, 5).rotateZ(.8).translate((i - 1) * .18, -.18, .08));
+    shrimp.add(mergedMesh(legs, new THREE.MeshBasicMaterial({ color: theme.warmMemory, transparent: true, opacity: .5 })));
     shrimp.userData.fauna = { type: 'shrimp', phase: Math.random() * 6, startPhaseId: 'beacon_reveal', baseX: SHRIMP_BESIDE_BEACON }; actors.push(shrimp); group.add(shrimp);
   }
   function deepSilhouettes() {
@@ -135,9 +189,13 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     ribbon.userData.fauna = { type: 'ribbon', phase: Math.random() * 6, startPhaseId: 'living_ocean' }; actors.push(ribbon); group.add(ribbon);
   }
   function whaleFallLandmark() {
-    whaleFall = new THREE.Group(); whaleFall.position.set(0, -7.8, at(PLACEMENT.whaleFall));
+    whaleFall = new THREE.Group();
+    const whaleZ = at(PLACEMENT.whaleFall);
+    whaleFall.position.set(0, FLOOR_Y + terrainHeight(0, whaleZ) + .7, whaleZ);
     const boneMaterial = new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: .78 });
-    for (let i = 0; i < 7; i++) { const rib = new THREE.Mesh(new THREE.TorusGeometry(2 + Math.sin(i) * .25, .16, 6, 16, Math.PI), boneMaterial); rib.position.set((i - 3) * 1.5, 1.2 + Math.sin(i) * .3, 0); rib.rotation.z = Math.PI / 2; whaleFall.add(rib); }
+    const ribs = [];
+    for (let i = 0; i < 7; i++) ribs.push(new THREE.TorusGeometry(2 + Math.sin(i) * .25, .16, 6, 16, Math.PI).rotateZ(Math.PI / 2).translate((i - 3) * 1.5, 1.2 + Math.sin(i) * .3, 0));
+    whaleFall.add(mergedMesh(ribs, boneMaterial));
     // essential: whale fall là landmark MANG NỘI DUNG (ảnh cũ nhất, mục 14.3),
     // không phải sinh vật trang trí — nó không được phép biến mất chỉ vì galaxy
     // nhỏ không có living_ocean, nếu không ảnh cũ nhất không còn chỗ để treo.
@@ -145,7 +203,8 @@ export function createFauna(theme, tier, reducedMotion, plan) {
   }
   function brineMemoryPool() {
     memoryPool = new THREE.Mesh(new THREE.CircleGeometry(7, 32), new THREE.MeshBasicMaterial({ color: theme.rareViolet, transparent: true, opacity: .08, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
-    memoryPool.position.set(0, -8.25, -(dive + POOL_BEYOND_DIVE)); memoryPool.rotation.x = -Math.PI / 2; memoryPool.userData.fauna = { type: 'memoryPool', startPhaseId: 'release' }; actors.push(memoryPool); group.add(memoryPool);
+    const poolZ = -(dive + POOL_BEYOND_DIVE);
+    memoryPool.position.set(0, FLOOR_Y + terrainHeight(0, poolZ) + .25, poolZ); memoryPool.rotation.x = -Math.PI / 2; memoryPool.userData.fauna = { type: 'memoryPool', startPhaseId: 'release' }; actors.push(memoryPool); group.add(memoryPool);
   }
   if (tier.fauna >= 2) jellyfish(at(PLACEMENT.jellyfishNear), 12, 1.2);
   if (tier.fauna >= 4) jellyfish(at(PLACEMENT.jellyfishFar), -14, .8);
@@ -299,5 +358,19 @@ export function createFauna(theme, tier, reducedMotion, plan) {
     whaleFall.userData.memoryPlane = plane;
   }
 
-  return { group, update, reset, attachOldestMemory };
+  // Silhouette là BÓNG con vật, không phải lỗ thủng. Nó dùng theme.trench cố
+  // định (#01080c) — hồi nước cũng gần đen thì không ai nhận ra, nhưng khi nước
+  // ở 350 m sáng lên #041e28 thì cái nang 2.8x12 m cách camera 19 m hiện thành
+  // một mảng đen mép cứng chiếm nửa khung hình. Giữ nó tối HƠN nước cùng một
+  // tỉ lệ như sàn đáy biển thì nó đọc ra là bóng.
+  //
+  // Không đụng tới opacity: trần ~0.75 * baseOpacity của mục 14.5 vẫn là thứ
+  // quyết định "không bao giờ hiện trọn hình".
+  function setDepthColor(hex) {
+    actors.forEach(actor => {
+      if (actor.userData.fauna?.type === 'silhouette') actor.material.color.set(hex);
+    });
+  }
+
+  return { group, update, reset, attachOldestMemory, setDepthColor };
 }

@@ -26,6 +26,17 @@ export function createMemoryBeacon(theme, plan) {
   const distance = dive * BEACON_DIVE_FRACTION;
   const arriveDepth = D0 + START_Z + distance;
   const group = new THREE.Group();
+  // y = -2.2 là TẦM MẮT, không phải mặt đất — đừng "sửa" nó thành neo vào đáy.
+  //
+  // Tôi đã thử: sau khi hạ FLOOR_Y xuống -26, nhìn cái nón cụt loe xuống ở dưới
+  // (r 3.4 -> 4.6) tôi đọc nó là bệ đỡ và cho beacon bám địa hình. Chụp lại ở
+  // depth 520 thì beacon BIẾN MẤT khỏi khung: neo đáy đưa group xuống y ~ -23,
+  // lõi sáng xuống -21.7, trong khi camera ở y = 0 và FOV dọc 68 độ chỉ thấy
+  // +-2.7 m ở khoảng cách 4 m. Landmark trung tâm của mục 5 không còn ai thấy.
+  //
+  // -2.2 giữ lõi sáng gần đúng ngang mắt lúc camera bơi qua. Cái nón cụt là
+  // tạo hình, không phải chân đế; ở độ sâu này sương đã nuốt mặt đáy nên không
+  // có mâu thuẫn thị giác nào để chữa.
   group.position.set(0, -2.2, -distance);
   const base = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 4.6, 2.4, 8), new THREE.MeshBasicMaterial({ color: theme.trench, transparent: true, opacity: .95 }));
   base.position.y = -2; group.add(base);
@@ -41,7 +52,35 @@ export function createMemoryBeacon(theme, plan) {
   }
   const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 2), new THREE.MeshBasicMaterial({ color: theme.memoryGlow, transparent: true, opacity: .78, blending: THREE.AdditiveBlending }));
   core.position.y = 1.3; group.add(core);
-  const lattice = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 5.4, 18, 8, true), new THREE.MeshBasicMaterial({ color: theme.memoryGlow, wireframe: true, transparent: true, opacity: .22, blending: THREE.AdditiveBlending }));
+  // `wireframe: true` vẽ theo TAM GIÁC của geometry, nên lồng đèn ra một lưới
+  // đầy đường chéo — đúng cái vẻ "ai đó bật wireframe lên" mà CLAUDE.md mục 8
+  // gọi tên. Dựng thẳng LineSegments: 18 nan dọc + 5 vành ngang, không đường
+  // chéo nào, và vẫn đúng 1 draw call như cũ.
+  const LATTICE_RIBS = 18;
+  const LATTICE_RINGS = 5;
+  const LATTICE_RADIUS = 3;
+  const LATTICE_HEIGHT = 5.4;
+  const latticePoints = [];
+  const top = LATTICE_HEIGHT / 2;
+  for (let i = 0; i < LATTICE_RIBS; i++) {
+    const a = (i / LATTICE_RIBS) * Math.PI * 2;
+    const x = Math.cos(a) * LATTICE_RADIUS; const z = Math.sin(a) * LATTICE_RADIUS;
+    latticePoints.push(x, -top, z, x, top, z);
+  }
+  for (let r = 0; r < LATTICE_RINGS; r++) {
+    const y = -top + (r / (LATTICE_RINGS - 1)) * LATTICE_HEIGHT;
+    for (let i = 0; i < LATTICE_RIBS; i++) {
+      const a = (i / LATTICE_RIBS) * Math.PI * 2;
+      const b = ((i + 1) / LATTICE_RIBS) * Math.PI * 2;
+      latticePoints.push(
+        Math.cos(a) * LATTICE_RADIUS, y, Math.sin(a) * LATTICE_RADIUS,
+        Math.cos(b) * LATTICE_RADIUS, y, Math.sin(b) * LATTICE_RADIUS,
+      );
+    }
+  }
+  const latticeGeometry = new THREE.BufferGeometry();
+  latticeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(latticePoints, 3));
+  const lattice = new THREE.LineSegments(latticeGeometry, new THREE.LineBasicMaterial({ color: theme.memoryGlow, transparent: true, opacity: .22, blending: THREE.AdditiveBlending }));
   lattice.position.y = 1.2; lattice.rotation.z = .12; group.add(lattice);
   const aura = new THREE.Mesh(new THREE.SphereGeometry(5.6, 20, 16), new THREE.MeshBasicMaterial({ color: theme.accent, transparent: true, opacity: .07, blending: THREE.AdditiveBlending, depthWrite: false }));
   aura.position.y = 1.2; group.add(aura);

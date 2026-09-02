@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createAbyssTheme } from './core/theme.js';
+import { seabedColorForDepth, waterColorForDepth } from './core/palette.js';
 import { createPhaseDirector } from './core/phases.js';
 import { createAdaptiveTier, detectPerformanceTier } from './core/tiers.js';
 import { D0, START_Z, densityForDepth, depthFromZ, easeTowards } from './core/depth.js';
@@ -9,6 +10,11 @@ import { createSeabed } from './scene/seabed.js';
 import { createMemoryBeacon } from './scene/beacon.js';
 import { createRelics } from './scene/relics.js';
 import { createFauna } from './scene/fauna.js';
+import { patchWaterFog } from './fx/waterFog.js';
+
+// Phải chạy TRƯỚC khi bất kỳ vật liệu nào compile — ShaderChunk chỉ được đọc
+// vào lúc dựng program, nên vá ở đây là sớm nhất và chắc nhất.
+patchWaterFog();
 
 const params = new URLSearchParams(location.search);
 const galaxyId = params.get('galaxyId');
@@ -100,8 +106,26 @@ let causticsVisible = adaptiveTier.config.caustics > 0;
 
 function currentDepth() { return depthFromZ(camera.position.z, START_Z, D0); }
 
+// Đổi màu nước theo mỗi 4 m thay vì mỗi khung hình: WATER_COLOR_STOPS dựng hex
+// bằng chuỗi, gọi 60 lần/giây là 60 lần cấp phát chuỗi + parse cho một thay đổi
+// mắt không thấy nổi. 4 m ở tốc độ lặn 1.8 m/s là hơn 2 lần mỗi giây.
+const WATER_COLOR_STEP = 4;
+let lastWaterDepth = null;
+
 function updateDepthAtmosphere(depth, dt) {
   scene.fog.density = easeTowards(scene.fog.density, densityForDepth(depth), dt, 6);
+  if (lastWaterDepth !== null && Math.abs(depth - lastWaterDepth) < WATER_COLOR_STEP) return;
+  lastWaterDepth = depth;
+  const hex = waterColorForDepth(depth);
+  // fog và background phải là CÙNG một màu: lệch nhau thì đường chân trời hiện
+  // ra thành một vệt nối rõ giữa vật thể xa nhất và nền.
+  scene.fog.color.set(hex);
+  waterFX?.setVolumeColor(hex);
+  const shade = seabedColorForDepth(depth);
+  seabed?.setDepthColor(shade);
+  fauna?.setDepthColor(shade);
+  waterFX?.setSurfaceStrength(depth);
+  seabed?.setCausticStrength(depth);
 }
 
 function moveLook(dx, dy) {
@@ -259,7 +283,10 @@ async function init() {
   if (plan.empty && emptyState) emptyState.classList.add('visible');
   const theme = createAbyssTheme(data.theme);
   const renderTheme = { ...theme.scene, accent: theme.accent, accentSecondary: theme.accentSecondary };
-  scene.background = theme.scene.background;
+  // KHÔNG dùng scene.background nữa — fx/water.js dựng một khối nước có
+  // gradient theo hướng nhìn thay cho nó. Nền một màu là lý do nhìn lên, nhìn
+  // ngang và nhìn xuống đều ra cùng một thứ.
+  scene.background = null;
   scene.fog = new THREE.FogExp2(theme.scene.background, densityForDepth(D0));
   waterFX = createWaterFX(renderTheme, adaptiveTier.config, reducedMotion, plan); root.add(waterFX.group);
   seabed = createSeabed(renderTheme, adaptiveTier.config, plan); root.add(seabed.group);
@@ -281,6 +308,12 @@ async function init() {
       get phase() { return phaseDirector?.update(currentDepth())?.id ?? null; },
       get plan() { return plan; },
       seek(depth) { camera.position.z = START_Z - (depth - D0); },
+      // Hai view kiểm tra bắt buộc (nhìn lên / nhìn xuống) không kiểm được bằng
+      // cách kéo chuột: harness drag hai lần cho ra cùng một hướng vì
+      // targetPitch = -lookY, dấu ngược với trực giác. Đặt thẳng góc là cách
+      // duy nhất lặp lại được.
+      get lookPitch() { return -lookY; },
+      setLook(pitch) { lookY = THREE.MathUtils.clamp(-pitch, -Math.PI * .32, Math.PI * .32); },
     },
   });
 

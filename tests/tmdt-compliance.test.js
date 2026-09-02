@@ -938,7 +938,12 @@ test('Abyss visual implementation follows the depth-driven underwater contract',
   assert.match(water, /ShaderMaterial/);
   assert.match(fauna, /whaleFallLandmark/);
   assert.match(fauna, /memoryShrimp/);
-  assert.match(beacon, /MemoryLattice|CylinderGeometry\(3, 3, 5\.4/);
+  // Bất biến là "beacon có lồng đèn bán kính 3, cao 5.4", không phải "lồng đó
+  // dựng bằng CylinderGeometry". Lưới giờ là LineSegments dựng tay để bỏ đường
+  // chéo của wireframe mặc định (scene/beacon.js), nên assertion trỏ sang kích
+  // thước — thứ thật sự phải giữ nguyên.
+  assert.match(beacon, /MemoryLattice|CylinderGeometry\(3, 3, 5\.4|LATTICE_RADIUS = 3\b/);
+  assert.match(beacon, /MemoryLattice|5\.4/, 'lồng đèn phải giữ chiều cao 5.4');
   assert.doesNotMatch(beacon, /PointLight/);
 });
 

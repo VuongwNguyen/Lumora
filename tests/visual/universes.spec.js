@@ -47,6 +47,14 @@ async function verify(page, testInfo, { template, url, label, expectTelemetry })
     // vượt 3.4 lần, dù fps vẫn 60 trên máy dev. Ngưỡng dưới đây bắt "tệ đi",
     // không hợp thức hoá con số hiện tại. Thu hẹp dần khi tối ưu.
     expect(telemetry.calls, 'draw call tăng vọt so với mức đã đo').toBeLessThan(280);
+    // abyss đã gộp ba lần: mesh con trong từng actor fauna (114 -> 29), rừng
+    // rong thành một geometry uốn trong vertex shader (18 -> 1), và bọt thành
+    // InstancedMesh (34 -> 1). Đỉnh đo trên galaxy 59 ảnh: 196 -> 148 -> 99.
+    // Siết riêng abyss chứ không hạ ngưỡng chung, vì aurora/fall/galaxy-moon
+    // chưa được đo lần nào.
+    if (template === 'abyss') {
+      expect(telemetry.calls, 'abyss thoái lui về mức trước khi gộp mesh').toBeLessThan(150);
+    }
     expect(telemetry.triangles, 'số tam giác tăng vọt').toBeLessThan(90_000);
     expect(telemetry.textureBytes, 'vượt trần 48 MB texture của mục 13.7').toBeLessThanOrEqual(48);
   } else if (expectTelemetry) {
