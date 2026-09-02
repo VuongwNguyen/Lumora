@@ -15,9 +15,18 @@
  * ------------------------------------------------------------------------- */
 :root {
   /* Đen — nền */
-  --lum-nen: #14090a;
-  --lum-mat: #1f1012;
-  --lum-mat-noi: #2a1719;
+  /* Nền là ĐEN GẦN TRUNG TÍNH, không phải nâu đỏ.
+   *
+   * Bản đầu để nền ở bão hoà 29-38% với hue ~353 độ. Son và đồng vốn đã ấm,
+   * cộng thêm nền cũng đỏ thì cả màn hình ám cam — không còn chỗ nào cho mắt
+   * nghỉ. Sơn mài thật ngược lại: vóc đen gần như trung tính, son và vàng mới
+   * là thứ DUY NHẤT có màu, và chính sự tương phản đó làm son nổi lên.
+   *
+   * Hạ bão hoà 38% -> 9% (giữ hue 28 độ nên vẫn ấm, chỉ không còn đỏ), nâng
+   * độ sáng 6% -> 8% cho đỡ tối. Vỏ trứng trên nền mới: 13.6:1. */
+  --lum-nen: #1e1c1a;
+  --lum-mat: #292624;
+  --lum-mat-noi: #363330;
 
   /* Vỏ trứng — chữ */
   --lum-trung: #e8dccc;

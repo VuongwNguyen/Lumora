@@ -60,7 +60,7 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       display: flex; justify-content: space-between; align-items: center;
       padding: 20px 52px;
-      background: rgba(20, 9, 10, .78);
+      background: rgba(30, 28, 26, .78);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
@@ -202,12 +202,12 @@
     }
     .demo-overlay {
       position: absolute; inset: 0;
-      background: rgba(20, 9, 10, .93);
+      background: rgba(30, 28, 26, .93);
       display: flex; align-items: center; justify-content: center;
       flex-direction: column; gap: 14px; cursor: pointer;
       transition: opacity 0.3s;
     }
-    .demo-overlay:hover { background: rgba(20, 9, 10, .88); }
+    .demo-overlay:hover { background: rgba(30, 28, 26, .88); }
     .demo-overlay-emoji { font-size: 48px; }
     .demo-overlay-title { font-size: 18px; color: var(--accent-light); font-family: 'Cormorant Garamond', serif; font-size: 22px; }
     .demo-overlay-note { font-size: 13px; color: var(--text-sub); }
@@ -233,7 +233,7 @@
     /* Story Experience — featured (col 2-3) */
     .feature-card:nth-child(2) {
       grid-column: 2 / 4;
-      background: linear-gradient(135deg, var(--lum-son-mo) 0%, rgba(20, 9, 10, .5) 100%);
+      background: linear-gradient(135deg, var(--lum-son-mo) 0%, rgba(30, 28, 26, .5) 100%);
       border-color: var(--border-accent);
     }
     .feature-card:nth-child(2):hover { border-color: var(--lum-dong-mo); }
@@ -419,7 +419,7 @@
     nav.landing-nav {
       top: 18px; left: 50%; right: auto; width: var(--page); translate: -50% 0;
       padding: 0; border: 1px solid var(--border); border-radius: 18px;
-      background: rgba(20, 9, 10, .74); box-shadow: 0 20px 50px rgba(0,0,0,.25);
+      background: rgba(30, 28, 26, .74); box-shadow: 0 20px 50px rgba(0,0,0,.25);
     }
     .nav-shell { width: 100%; min-height: 64px; padding: 9px 10px 9px 18px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
     .scroll-progress { position: absolute; left: 18px; right: 18px; bottom: -1px; height: 1px; overflow: hidden; border-radius: 999px; }
@@ -487,7 +487,7 @@
     .memory-card {
       position: relative; width: min(390px, 100%); padding: 17px; overflow: hidden;
       border: 1px solid var(--lum-vien-manh); border-radius: 28px;
-      background: linear-gradient(155deg, rgba(42, 23, 25, .94), rgba(20, 9, 10, .94));
+      background: linear-gradient(155deg, rgba(54, 51, 48, .94), rgba(30, 28, 26, .94));
       box-shadow: 0 45px 90px rgba(0,0,0,.48);
       transform: rotateY(calc(-5deg + var(--tilt-x, 0deg))) rotateX(calc(2deg + var(--tilt-y, 0deg))) translateZ(0);
       transform-style: preserve-3d; will-change: transform; transition: transform .18s ease-out, box-shadow .25s ease;
@@ -552,7 +552,7 @@
     .demo-live { display: inline-flex; align-items: center; gap: 6px; color: var(--text-sub); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
     .demo-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--lum-ok); }
     .demo-frame-wrap { height: min(66vw, 650px); min-height: 420px; margin: 0; border: 0; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--border); }
-    .demo-overlay { border: 0; color: var(--text); font: inherit; background: radial-gradient(circle at 50% 45%, rgba(42, 23, 25, .55), rgba(20, 9, 10, .94) 48%); }
+    .demo-overlay { border: 0; color: var(--text); font: inherit; background: radial-gradient(circle at 50% 45%, rgba(54, 51, 48, .55), rgba(30, 28, 26, .94) 48%); }
     .demo-overlay::before { content: ''; position: absolute; width: 90px; height: 90px; border: 1px solid var(--border-accent); border-radius: 50%; animation: demoPulse 2.8s ease-out infinite; }
     .demo-overlay-emoji { position: relative; z-index: 1; width: 62px; height: 62px; display: grid; place-items: center; border-radius: 50%; background: var(--lum-son-mo); border: 1px solid var(--border-accent); font-size: 25px; }
     @keyframes demoPulse { 0% { scale: .75; opacity: .7; } 100% { scale: 1.8; opacity: 0; } }
@@ -625,7 +625,7 @@
     footer .links { justify-content: center; }
 
     nav.landing-nav { transition: top .25s ease, background .25s ease, border-color .25s ease, box-shadow .25s ease; }
-    nav.landing-nav.is-scrolled { top: 10px; background: rgba(20, 9, 10, .92); border-color: var(--lum-vien-manh); box-shadow: 0 18px 55px rgba(0,0,0,.42); }
+    nav.landing-nav.is-scrolled { top: 10px; background: rgba(30, 28, 26, .92); border-color: var(--lum-vien-manh); box-shadow: 0 18px 55px rgba(0,0,0,.42); }
 
     a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 3px; }
 
@@ -1271,7 +1271,9 @@
       layer.className = 'demo-particle-layer';
       demoOverlay.parentElement.appendChild(layer);
       const total = compactMotion ? 22 : 42;
-      const colors = ['#b99a5e', '#9e4438', '#e8dccc', '#7d9468'];
+      // Bớt son trong đám hạt: son là màu HÀNH ĐỘNG, rải nó khắp nền thì nút
+      // bấm mất đi tính duy nhất, và cả vùng bị ám cam.
+      const colors = ['#b99a5e', '#e8dccc', '#7d9468', '#b99a5e', '#9e4438'];
       for (let index = 0; index < total; index++) {
         const particle = document.createElement('span');
         particle.className = 'demo-particle';
@@ -1335,7 +1337,11 @@
       const positions = new Float32Array(COUNT * 3);
       const colors = new Float32Array(COUNT * 3);
       const inside = new THREE.Color('#d8bd85');
-      const outside = new THREE.Color('#5a2721');
+      // Nhánh ngoài TAN vào nền, không phát sáng: #5a2721 bão hoà 46% làm cả
+      // đám bụi ra màu cá hồi và phủ ám cam lên nửa khung hình. Hạ về gần màu
+      // nền (bão hoà 16%) thì chỉ lõi vàng còn sáng, còn rìa chìm đi — đúng
+      // cách bụi vàng trên vóc sơn mài hoạt động.
+      const outside = new THREE.Color('#3a302a');
 
       for (let i = 0; i < COUNT; i++) {
         const i3 = i * 3;
