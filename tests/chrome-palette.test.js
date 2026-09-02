@@ -53,20 +53,62 @@ const KEEP_VIOLET = {
   'public/portal/js/galaxy-viewer.js': 'màu tinh vân của bản xem trước galaxy',
 };
 
-const VIOLET = /#(?:8b5cf6|7c3aed|a78bfa|c4b5fd|6d28d9|c8b8ff|9a70ff)|rgba\(\s*139\s*,\s*92\s*,\s*246|rgba\(\s*154\s*,\s*112\s*,\s*255|rgba\(\s*124\s*,\s*58\s*,\s*237/i;
+// ĐO màu, không liệt kê màu.
+//
+// Bản đầu của guard này liệt kê tay 7 mã hex và 3 dạng rgba. Nó bỏ lọt 90 chỗ
+// tím trong các file chưa di trú — cùng một màu viết ở dạng khác là thoát:
+// #c4b5fd bị bắt nhưng rgba(196,181,253) thì không, dù là đúng một màu. Cộng
+// thêm #c084fc, rgba(126,58,242), rgba(124,92,252)… mà danh sách không có.
+//
+// Danh sách liệt kê tay không bao giờ đủ. Đọc RGB ra số rồi hỏi "đây có phải
+// họ tím không" thì bắt được cả những sắc chưa ai từng thấy.
+function docMau(source) {
+  const mau = [];
+  const hex = /#([0-9a-f]{6})\b/gi;
+  for (let m; (m = hex.exec(source)); ) {
+    const n = parseInt(m[1], 16);
+    mau.push([n >> 16 & 255, n >> 8 & 255, n & 255]);
+  }
+  const rgb = /rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/gi;
+  for (let m; (m = rgb.exec(source)); ) mau.push([+m[1], +m[2], +m[3]]);
+  return mau;
+}
 
-test('file vỏ đã di trú không còn hex tím nào', () => {
+// Tím = lam trội hẳn so với đỏ, và đỏ vẫn trên lục. Ngưỡng 20 để lọc màu xám.
+// Kiểm ngược trên chính bảng sơn mài: son (158,68,56), đồng (185,154,94), vỏ
+// trứng (232,220,204) và nền (20,9,10) đều KHÔNG khớp. Xanh lam thật như
+// (57,182,255) cũng không, vì ở đó lục vượt đỏ.
+function laTim([r, g, b]) {
+  return b > r + 20 && r > g;
+}
+
+function timConSot(source) {
+  return docMau(source).filter(laTim);
+}
+
+test('file vỏ đã di trú không còn màu họ tím nào', () => {
   const conSot = [];
   for (const file of CHROME_FILES) {
     if (PENDING.has(file)) continue;
-    if (VIOLET.test(read(file))) conSot.push(file);
+    const found = timConSot(read(file));
+    if (found.length) conSot.push(`${file} (${found.length} chỗ, vd rgb(${found[0]}))`);
   }
-  assert.deepEqual(conSot, [], `còn màu tím trong: ${conSot.join(', ')}`);
+  assert.deepEqual(conSot, [], `còn màu tím trong:\n  ${conSot.join('\n  ')}`);
 });
 
 test('file giữ màu galaxy vẫn còn nguyên — không bị di trú nhầm', () => {
   for (const [file, lyDo] of Object.entries(KEEP_VIOLET)) {
-    assert.ok(VIOLET.test(read(file)), `${file} mất màu tím nhưng phải giữ: ${lyDo}`);
+    assert.ok(timConSot(read(file)).length > 0, `${file} mất màu tím nhưng phải giữ: ${lyDo}`);
+  }
+});
+
+test('phép đo màu tím tự kiểm — không bắt nhầm bảng sơn mài', () => {
+  // Test rỗng thì vô dụng: chốt lại cả hai chiều của laTim().
+  for (const tim of [[139, 92, 246], [196, 181, 253], [167, 139, 250], [109, 40, 217], [192, 132, 252]]) {
+    assert.ok(laTim(tim), `rgb(${tim}) phải bị coi là tím`);
+  }
+  for (const khong of [[158, 68, 56], [185, 154, 94], [232, 220, 204], [20, 9, 10], [217, 96, 74], [57, 182, 255]]) {
+    assert.ok(!laTim(khong), `rgb(${khong}) KHÔNG được coi là tím`);
   }
 });
 
