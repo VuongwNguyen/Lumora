@@ -210,6 +210,31 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      text-decoration: none;
+    }
+    /* Stretched link: liên kết phủ toàn thẻ nên bấm chỗ nào cũng vào, mà DOM
+     * vẫn chỉ có MỘT liên kết thật để bàn phím Tab tới. Trước đây thẻ là <div>
+     * chỉ có click nên bàn phím đi lướt qua cả danh sách galaxy. */
+    .galaxy-name::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+    }
+    .galaxy-name:focus-visible, .galaxy-name:focus {
+      outline: none;
+    }
+    .galaxy-name:focus-visible::after, .galaxy-name:focus::after {
+      outline: 2px solid var(--lum-dong);
+      outline-offset: 2px;
+    }
+    /* Nút phụ phải nổi TRÊN lớp phủ, nếu không stretched link nuốt mất cú bấm. */
+    .galaxy-quick {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
     }
     .btn-view-quick {
       background: var(--surface-2);
@@ -281,26 +306,6 @@
     }
 
     /* Actions */
-    .galaxy-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 4px;
-    }
-    .btn-manage {
-      background: var(--accent);
-      border: none;
-      color: var(--lum-trung);
-      flex: 1;
-      padding: 6px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: 'Jost', sans-serif;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      transition: background 0.15s;
-    }
-    .btn-manage:hover { background: var(--accent-dark); }
     .btn-copy-link {
       background: var(--surface-2);
       border: 1px solid var(--border);
@@ -1160,6 +1165,7 @@
     .galaxy-count { color: var(--text-sub); font-size: 11px; }
     .portal-page .galaxy-grid { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
     .portal-page .galaxy-card {
+      position: relative;
       gap: 13px;
       padding: 0 17px 17px;
       border-color: rgba(232,220,204,.075);
@@ -1175,7 +1181,7 @@
     }
     .galaxy-card-visual {
       position: relative;
-      height: 112px;
+      height: 92px;
       margin: 0 -17px 2px;
       overflow: hidden;
       border-bottom: 1px solid rgba(232,220,204,.06);
@@ -1209,9 +1215,6 @@
     }
     .portal-page .galaxy-name { font-size: 16px; }
     .portal-page .btn-view-quick { border-radius: 9px; }
-    .portal-page .galaxy-actions { margin-top: 2px; }
-    .portal-page .btn-manage { min-height: 38px; border-radius: 9px; background: var(--lum-son-mo); color: var(--accent-light); }
-    .portal-page .btn-manage:hover { background: var(--accent); color: var(--lum-trung); }
     .portal-page .btn-copy-link { width: 38px; height: 38px; border-radius: 9px; }
     .empty-state {
       grid-column: 1 / -1;
