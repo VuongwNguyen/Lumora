@@ -29,10 +29,6 @@ const CHROME_FILES = [
 
 // Chưa di trú. Xoá dần theo các task sau. Khi rỗng là xong.
 const PENDING = new Set([
-  'public/portal/index.html',
-  'public/portal/galaxy.html',
-  'public/portal/galaxy-setup.html',
-  'public/portal/story-setup.html',
   'public/admin/index.html',
   'public/terms/index.html',
   'public/privacy/index.html',
