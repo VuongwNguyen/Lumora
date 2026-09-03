@@ -1,12 +1,7 @@
-export function detectPerformanceTier() {
-  const cores = navigator.hardwareConcurrency || 4;
-  const memory = navigator.deviceMemory || 4;
-  const pixelRatio = window.devicePixelRatio || 1;
-  const lowPower = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') && (cores <= 4 || memory <= 4);
-  if (lowPower || cores <= 2 || memory <= 2) return 'low';
-  if (pixelRatio > 1.5 || cores >= 8 || memory >= 8) return 'high';
-  return 'mid';
-}
+// Phép dò thiết bị nằm ở /shared/js/deviceTier.js vì `fall` cũng cần đúng phép
+// đó. Chỉ TIER_CONFIG dưới đây là của riêng abyss — số hạt, số relic, số tia
+// caustics đều gắn với hình học của cảnh này.
+export { detectPerformanceTier } from '/shared/js/deviceTier.js';
 
 // texture: cạnh dài nhất sau khi relics.js thu nhỏ ảnh. Ngân sách mục 13.7 là
 // 48 MB. RGBA8 + mipmap = w*h*4*4/3. Worst case là ảnh vuông, và số texture là

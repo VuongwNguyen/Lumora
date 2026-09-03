@@ -1,4 +1,29 @@
 import * as THREE from 'three';
+import { detectPerformanceTier, sizedImageUrl } from '/shared/js/deviceTier.js';
+
+// ── Ngân sách theo sức mạnh thiết bị ───────────────────────────────────────
+// `texture` là cạnh dài nhất của ảnh polaroid, và nó ĐƯỢC ĐO chứ không chọn
+// bừa. Theo dõi 45 giây bay ở đệm 1920×1080: tấm polaroid to nhất từng đạt
+// 474 px chiều cao. Quy sang từng tier — chiều cao đệm chia 1080, nhân 474:
+//
+//   low   390×844 dpr 1    -> đệm  844 cao -> cần 370 px, cấp 448  (dư 1.21x)
+//   mid  1280×800 dpr 1.5  -> đệm 1200 cao -> cần 527 px, cấp 640  (dư 1.21x)
+//   high 1920×1080 dpr 2   -> đệm 2160 cao -> cần 948 px, cấp 832  (hụt 1.14x)
+//
+// high cố ý hụt: 832 vs 948 là phóng to 1.14 lần trên ĐÚNG một tấm ở khoảnh
+// khắc nó lướt sát camera nhất, mắt không thấy, mà nâng lên 960 thì texture
+// nhảy từ 88 lên 117 MB. Đây là đánh đổi có chủ ý, không phải quên.
+//
+// Trước khi có bảng này: mọi thiết bị tải ảnh NGUYÊN GỐC (trung bình cạnh
+// 1368 px, lớn nhất 1242×2145) và giữ 489 MB texture cho 49 tấm — gấp 10 lần
+// ngân sách 48 MB ở mục 13.7. fps trên máy dev vẫn 60 vì cảnh chỉ có 468 tam
+// giác; chỗ chết là RAM và công giải nén trên điện thoại.
+const TIER = detectPerformanceTier();
+const BUDGET = {
+  low:  { texture: 448, pixelRatio: 1,   antialias: false },
+  mid:  { texture: 640, pixelRatio: 1.5, antialias: true  },
+  high: { texture: 832, pixelRatio: 2,   antialias: true  },
+}[TIER];
 
 // ── Fetch galaxy data ──────────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
@@ -35,13 +60,17 @@ const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 20
 camera.position.set(0, 0, 0);
 camera.rotation.order = 'YXZ';
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: BUDGET.antialias });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, BUDGET.pixelRatio));
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
 // Telemetry cho QA tự động — chỉ bật khi ?debug=1 (public/shared/js/lumoraDebug.js).
-window.LumoraDebug?.attach({ template: 'fall', scene, camera, renderer });
+window.LumoraDebug?.attach({ template: 'fall', scene, camera, renderer, extra: {
+  get tier() { return TIER; },
+  get textureCap() { return BUDGET.texture; },
+  get texturesLoaded() { return textures.length; },
+} });
 
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -549,6 +578,9 @@ const upperNebula = buildUpperNebula();
 // ── Polaroid factory ───────────────────────────────────────────────────────
 const loader = new THREE.TextureLoader();
 const polaroids = [];
+// Phạm vi module chứ không phải trong init(): telemetry ở đầu file đọc độ dài
+// của nó, và mảng này LỚN DẦN trong lúc chạy nên không thể là hằng cục bộ.
+const textures = [];
 
 function makePolaroidFromTex(tex, col, colOffsets, zPos) {
   const group = new THREE.Group();
@@ -796,10 +828,30 @@ async function init() {
   const COL_SPACING = 8.5;
   const colOffsets = Array.from({ length: COLS }, (_, c) => (c - (COLS - 1) / 2) * COL_SPACING);
 
-  // Pre-load all textures once
-  const textures = await Promise.all(images.map(url => new Promise(res => {
-    loader.load(url, tex => { tex.colorSpace = THREE.SRGBColorSpace; res(tex); }, undefined, () => res(null));
-  })));
+  // Nạp ảnh với trần kích thước theo tier.
+  //
+  // Bản cũ `await Promise.all(images.map(...))` chặn màn hình chờ tới khi tấm
+  // thứ 57 xong — đo được 3140 ms tới khung hình đầu trên máy dev, và trên điện
+  // thoại thì đó là 57 lần giải nén JPEG 2 megapixel trên luồng chính. Giờ chỉ
+  // chờ đủ số ảnh cho những hàng dựng sẵn, phần còn lại chảy vào `textures` ở
+  // nền; spawnRow() bốc ngẫu nhiên nên hàng dựng sau tự có nhiều lựa chọn hơn.
+  const nap = url => new Promise(res => {
+    loader.load(sizedImageUrl(url, BUDGET.texture),
+      tex => { tex.colorSpace = THREE.SRGBColorSpace; res(tex); },
+      undefined,
+      // Trần kích thước là chuyện tối ưu, không phải chuyện đúng sai: nếu URL đã
+      // co lại mà hỏng thì thử lại bản gốc trước khi chịu thua.
+      () => loader.load(url, tex => { tex.colorSpace = THREE.SRGBColorSpace; res(tex); }, undefined, () => res(null)));
+  });
+
+  const DOT_DAU = Math.min(12, images.length);
+  const dauTien = await Promise.all(images.slice(0, DOT_DAU).map(nap));
+  for (const tex of dauTien) if (tex) textures.push(tex);
+  if (!textures.length) { enterUniverse(); return; }
+
+  for (const url of images.slice(DOT_DAU)) {
+    nap(url).then(tex => { if (tex) textures.push(tex); });
+  }
 
   // Pool: COLS * VISIBLE_ROWS polaroids
   const VISIBLE_ROWS = 6;
