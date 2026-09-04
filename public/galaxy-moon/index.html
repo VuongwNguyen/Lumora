@@ -92,6 +92,16 @@
     addEventListener('error', function (e) {
       var el = e.target;
       if (!el || el === window || el.tagName !== 'SCRIPT') return;
+      // CHỈ script CÙNG NGUỒN. Cloudflare tự chèn
+      // static.cloudflareinsights.com/beacon.min.js vào mọi trang, và CSP của
+      // chính ta chặn nó — không liên quan gì tới Lumora, nhưng bản đầu của
+      // đoạn này vẫn hô hoán "hãy tắt bộ chặn quảng cáo" với MỌI khách trên
+      // production. Cảnh báo sai còn tệ hơn không cảnh báo: nó dạy người dùng
+      // bỏ qua cảnh báo thật.
+      //
+      // Script cùng nguồn hỏng thì mới thật sự giết trang, vì đó là mã của ta.
+      try { if (new URL(el.src, location.href).origin !== location.origin) return; }
+      catch (err) { return; }
       var bao = document.getElementById('lumora-chan-tep') || document.createElement('div');
       bao.id = 'lumora-chan-tep';
       bao.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;padding:14px 18px;background:#8a3a30;color:#e8dccc;font:14px/1.6 system-ui,sans-serif;text-align:center';
