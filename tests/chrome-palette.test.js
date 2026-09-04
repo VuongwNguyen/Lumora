@@ -93,9 +93,23 @@ test('file giữ màu galaxy vẫn còn nguyên — không bị di trú nhầm',
 // đầu tiên: chân trang legal hiện trên MỌI trang, và nó lạc hẳn tông so với nền
 // ấm — trông như layout bị rớt chứ không như sai màu.
 //
-// Nên chốt riêng: danh sách nền cũ tường minh, và bỏ comment trước khi soi để
-// chú thích nhắc lại giá trị cũ không bị tính là vi phạm.
+// Trước đây chốt bằng DANH SÁCH nền cũ tường minh — và danh sách đã bỏ lọt
+// thật: #0e0d1a (nền hộp thoại rà soát đơn hàng trong subscription.css) không
+// có trong danh sách, cũng không qua ngưỡng laTim (lam 26 chỉ hơn đỏ 12). Nó
+// sống sót qua mọi lần chạy cho tới khi người dùng tự nhìn thấy hộp thoại lạc
+// tông xanh giữa nền ấm.
+//
+// Nên ĐO thay vì liệt kê: bảng sơn mài ấm ở mọi mức độ sáng — nền #0c0b0a có
+// r12 > g11 > b10, mặt thẻ #232120 có r35 > g33 > b32. Mọi màu TỐI mà lam vượt
+// đỏ đều là tàn dư của bảng tím-đen cũ. Danh sách dưới đây chỉ còn để bắt thêm
+// những mã đã biết mà không tối (phòng khi ai đó dùng chúng làm màu chữ).
 const NEN_CU = ['06060e', '060610', '020207', '05050d', '04040c', '0b0a15', '100d1e', '0d0d1e', '0a0015', '090712', '010a18'];
+
+// Tối = kênh sáng nhất <= 64. Trên ngưỡng đó thì lam vượt đỏ là màu xanh có
+// chủ đích (trạng thái, link), không phải nền lạc tông.
+function laNenLanh([r, g, b]) {
+  return Math.max(r, g, b) <= 64 && b > r;
+}
 
 // .theme-preview trong galaxy-setup.html cố ý giữ #05050d: đó là đuôi gradient
 // của khung XEM TRƯỚC GALAXY, tức màu kỷ vật người dùng, không phải màu vỏ.
@@ -105,15 +119,46 @@ function boComment(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
 }
 
+// Story Emotion preview trong story-setup.html vẽ lại CHÍNH cảnh mà người xem
+// sẽ thấy — nó là nội dung của người dùng, không phải vỏ ứng dụng, cùng loại
+// với .theme-preview đã miễn ở NEN_CU_GIU.
+//
+// Miễn theo DANH SÁCH TRẮNG chứ không miễn cả file: danh sách đen hỏng khi có
+// màu lạ (đúng thứ vừa xảy ra với #0e0d1a), còn danh sách trắng hỏng theo chiều
+// AN TOÀN — thêm bất kỳ màu lạnh nào ngoài tám mã này là đỏ ngay. #panel-toggle
+// trong chính file đó từng lọt qua vì miễn cả file thì sẽ không bao giờ bị bắt.
+const NEN_LANH_GIU = {
+  'public/portal/story-setup.html': [
+    '3,3,9', '37,25,44', '10,7,15', '1,4,12', '4,12,12', '4,4,12', '5,5,13', '11,8,24',
+  ],
+};
+
 test('không còn nền đen-lạnh cũ trong file vỏ', () => {
   const conSot = [];
   for (const file of CHROME_FILES) {
     if (PENDING.has(file) || NEN_CU_GIU[file]) continue;
     const src = boComment(read(file));
     const hit = NEN_CU.filter(h => new RegExp('#' + h, 'i').test(src));
-    if (hit.length) conSot.push(`${file} (${hit.map(h => '#' + h).join(', ')})`);
+    // Phép ĐO là chốt chính; danh sách chỉ bổ sung.
+    const duocGiu = new Set(NEN_LANH_GIU[file] || []);
+    const doDuoc = docMau(src).filter(laNenLanh)
+      .filter(c => !duocGiu.has(c.join(',')))
+      .map(c => `rgb(${c})`);
+    const tatCa = [...new Set([...hit.map(h => '#' + h), ...doDuoc])];
+    if (tatCa.length) conSot.push(`${file} (${tatCa.join(', ')})`);
   }
   assert.deepEqual(conSot, [], `còn nền lạnh cũ:\n  ${conSot.join('\n  ')}`);
+});
+
+test('phép đo nền lạnh tự kiểm — không bắt nhầm bảng sơn mài', () => {
+  for (const lanh of [[14, 13, 26], [6, 6, 14], [13, 13, 30], [10, 0, 21]]) {
+    assert.ok(laNenLanh(lanh), `rgb(${lanh}) phải bị coi là nền lạnh cũ`);
+  }
+  for (const am of [[12, 11, 10], [35, 33, 32], [48, 45, 43], [158, 68, 56], [185, 154, 94], [232, 220, 204]]) {
+    assert.ok(!laNenLanh(am), `rgb(${am}) là bảng sơn mài, KHÔNG được báo động`);
+  }
+  // Xanh có chủ đích, đủ sáng để thấy rõ là màu chứ không phải nền lạc tông.
+  assert.ok(!laNenLanh([57, 182, 255]), 'xanh lam sáng không phải nền lạnh');
 });
 
 test('phép đo màu tím tự kiểm — không bắt nhầm bảng sơn mài', () => {

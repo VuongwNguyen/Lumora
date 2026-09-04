@@ -143,7 +143,7 @@
     overlay = el('div', 'checkout-overlay'); overlay.id = 'checkout-overlay'; overlay.hidden = true;
     overlay.innerHTML = '<section class="checkout-dialog" role="dialog" aria-modal="true" aria-labelledby="checkout-title">' +
       '<h2 id="checkout-title">Rà soát đơn hàng</h2><p class="checkout-intro">Kiểm tra thông tin trước khi chuyển sang PayOS.</p>' +
-      '<dl class="checkout-summary" id="checkout-summary"></dl><ul class="checkout-benefits" id="checkout-benefits"></ul>' +
+      '<dl class="checkout-summary" id="checkout-summary"></dl><p class="checkout-tax" id="checkout-tax"></p><ul class="checkout-benefits" id="checkout-benefits"></ul>' +
       '<div class="checkout-links"><a href="/terms/" target="_blank">Điều khoản</a><a href="/payment-policy/" target="_blank">Chính sách thanh toán</a><a href="/refund-policy/" target="_blank">Chính sách hoàn tiền</a></div>' +
       '<label class="checkout-consent"><input id="checkout-consent" type="checkbox"><span>Tôi đã đọc và đồng ý với Điều khoản sử dụng, Chính sách thanh toán và Chính sách hoàn tiền.</span></label>' +
       '<div class="checkout-error" id="checkout-error" role="alert"></div><div class="checkout-actions"><button type="button" class="checkout-back">Quay lại / sửa lựa chọn</button><button type="button" class="checkout-confirm" disabled></button></div></section>';
@@ -178,7 +178,17 @@
       : (adminPayOSAllowed ? 'ADMIN TEST · Kiểm tra thông tin trước khi tạo checkout thật trên PayOS.' : 'Kiểm tra thông tin trước khi chuyển sang PayOS.');
     const activation = checkoutState.simulated ? 'Ngay sau khi admin xác nhận mô phỏng' : 'Ngay sau khi PayOS xác nhận thanh toán';
     const tax = checkoutState.simulated ? 'Không áp dụng cho giao dịch mô phỏng admin' : taxNotice;
-    const rows = [['Gói', plan.label], ['Chu kỳ', selectedPeriod === 'monthly' ? '1 tháng' : '1 năm'], ['Số tiền', fmtVND(plan[selectedPeriod])], ['Kích hoạt dự kiến', activation], ['Có hiệu lực đến', dates.end.toLocaleDateString('vi-VN')], ['Gia hạn', 'Không tự động gia hạn'], ['Thuế / phí', tax]];
+    const rows = [['Gói', plan.label], ['Chu kỳ', selectedPeriod === 'monthly' ? '1 tháng' : '1 năm'], ['Số tiền', fmtVND(plan[selectedPeriod])], ['Kích hoạt dự kiến', activation], ['Có hiệu lực đến', dates.end.toLocaleDateString('vi-VN')], ['Gia hạn', 'Không tự động gia hạn']];
+    // Câu thuế là ĐOẠN CHÚ THÍCH chứ không phải cặp nhãn-giá trị: nó dài
+    // ~150 ký tự, nhét vào <dl> thì bị canh phải trong cột hẹp, và nhãn
+    // "Thuế / phí" bị bóp xuống ba dòng một chữ.
+    const taxNode = overlay.querySelector('#checkout-tax');
+    taxNode.replaceChildren();
+    if (tax) {
+      const nhan = document.createElement('strong'); nhan.textContent = 'Thuế / phí';
+      taxNode.append(nhan, document.createTextNode(tax));
+    }
+    taxNode.hidden = !tax;
     const summary = overlay.querySelector('#checkout-summary'); summary.replaceChildren();
     rows.forEach(function (row) { const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = row[0]; dd.textContent = row[1]; summary.append(dt, dd); });
     const list = overlay.querySelector('#checkout-benefits'); list.replaceChildren();

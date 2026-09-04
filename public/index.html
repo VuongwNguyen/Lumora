@@ -95,6 +95,26 @@
       pointer-events: none; z-index: 0;
     }
 
+    /* Màn hạ nền sau cột chữ.
+     *
+     * Dải bụi vàng của #hero-canvas chạy ngang qua đúng chỗ đặt câu giải thích
+     * — câu duy nhất nói Lumora LÀ CÁI GÌ. Đo trên ảnh chụp (ẩn chữ đi rồi lấy
+     * đúng vùng đó): nền trung vị L=0.004 nhưng 1% điểm sáng nhất lên L=0.199,
+     * kéo chữ rgba(...,.62) xuống 1.34:1 — biến mất. Làm chữ sáng hết cỡ cũng
+     * chỉ được 3.12:1, vẫn trượt AA, nên phải hạ NỀN chứ không nâng chữ.
+     *
+     * Phủ TRỌN .hero chứ không bọc riêng .hero-copy: bản bọc riêng để lại một
+     * cạnh thẳng đứng ở mép trái hộp — đo được bước nhảy 11.01 -> 11.44 ở
+     * x=57 và giữ nguyên mức đó, khác hẳn hạt sáng vốn nhảy lên rồi tụt ngay.
+     * Phủ trọn thì chỗ gradient bị cắt trùng với mép màn hình, không ai thấy.
+     * Bán kính dọc fade hết BÊN TRONG khung (0.78 x 46% x cao < 50%), nên
+     * không có cạnh ngang. z-index 2: trên canvas (0), dưới .hero-inner (3). */
+    .hero-scrim {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
+      background: radial-gradient(78% 42% at 50% 44%,
+        rgba(12, 11, 10, .92) 0%, rgba(12, 11, 10, .78) 45%, rgba(12, 11, 10, 0) 78%);
+    }
+
     /* ── Hero ────────────────────────── */
     .hero {
       min-height: 100svh;
@@ -172,6 +192,20 @@
       transition: background 0.2s, color 0.2s, border-color 0.2s;
     }
     .btn-ghost:hover { background: rgba(232, 220, 204, 0.09); color: var(--text); border-color: rgba(232, 220, 204, 0.12); }
+
+    /* Nút demo ở hero là NGOẠI LỆ, không dùng .btn-ghost thường.
+     *
+     * Khách phản hồi rằng nhìn trang chủ không biết Lumora là gì. Với người
+     * chưa hiểu sản phẩm thì "xem thử" mới là hành động đúng, chứ không phải
+     * "đăng ký" — mà nó đang là nút mờ nhất trong hero: chữ rgba(...,.62) cho
+     * 5.80:1, trong khi chữ đầy đủ cho 13.47:1 trên cùng nền. Nâng lên đủ để
+     * đọc như một lựa chọn thật, nhưng vẫn để nền son giữ vai trò chính. */
+    .hero-cta .btn-ghost {
+      color: var(--text);
+      border-color: var(--lum-vien-manh);
+      font-weight: 500;
+    }
+    .hero-cta .btn-ghost:hover { background: rgba(232, 220, 204, 0.11); border-color: rgba(232, 220, 204, 0.3); }
 
     /* ── Section base ────────────────── */
     section { padding: 112px 24px; }
@@ -477,6 +511,9 @@
       min-height: 100svh; padding: 146px 32px 84px; text-align: left; align-items: stretch;
     }
     .hero::before { width: 820px; height: 820px; left: 72%; top: 48%; opacity: .72; }
+    /* Desktop cột chữ dạt về trái, tâm màn hạ nền đi theo. */
+    .hero-scrim { background: radial-gradient(58% 46% at 27% 52%,
+      rgba(12, 11, 10, .93) 0%, rgba(12, 11, 10, .80) 45%, rgba(12, 11, 10, 0) 78%); }
     .hero::after { background: linear-gradient(to bottom, transparent 72%, var(--bg)); }
     .hero-inner {
       position: relative; z-index: 3; width: var(--page); margin: auto;
@@ -756,14 +793,15 @@
     <canvas id="hero-canvas"></canvas>
     <div class="stars" id="stars"></div>
     <span class="gravity-lens" aria-hidden="true"></span>
+    <span class="hero-scrim" aria-hidden="true"></span>
     <div class="hero-inner">
       <div class="hero-copy">
-        <div class="hero-tag">Gửi đến người bạn muốn</div>
+        <div class="hero-tag">Tặng bằng một đường link</div>
         <h1 id="hero-title">Có ai đó bạn<br/><span>chưa nói hết lời.</span></h1>
-        <p>Lumora là không gian để bạn nói điều đó — và để họ thật sự cảm nhận được.</p>
+        <p>Tải ảnh lên — Lumora dựng thành một vũ trụ 3D có nhạc và lời nhắn. Gửi đi bằng một link.</p>
         <div class="hero-cta">
-          <a href="/auth/" class="btn-primary" data-track-action="Landing Hero Start Click" data-track-id="hero_start">Tạo khoảnh khắc của bạn</a>
-          <a href="#demo" class="btn-ghost" data-track-action="Landing Hero Demo Click" data-track-id="hero_demo">Xem demo</a>
+          <a href="/auth/" class="btn-primary" data-track-action="Landing Hero Start Click" data-track-id="hero_start">Tạo vũ trụ miễn phí</a>
+          <a href="#demo" class="btn-ghost" data-track-action="Landing Hero Demo Click" data-track-id="hero_demo">Xem thử 30 giây</a>
         </div>
         <div class="hero-proof" aria-label="Điểm nổi bật">
           <span>Story dẫn lối</span><span>Vũ trụ 3D</span><span>Một link để sẻ chia</span>
