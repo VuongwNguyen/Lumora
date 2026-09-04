@@ -27,7 +27,8 @@
     "test:adblock": "node --test tests/adblock-assets.test.js",
     "test:tier": "node --test tests/device-tier.test.js",
     "test:landing": "node --test tests/landing-copy.test.js",
-    "test:env": "node --test tests/env-example.test.js"
+    "test:env": "node --test tests/env-example.test.js",
+    "check:payments": "node scripts/check-payments.js"
   },
   "dependencies": {
     "@payos/node": "^2.0.5",

@@ -99,3 +99,34 @@ test('.env.example không lỡ chứa giá trị thật', () => {
       `.env.example có vẻ chứa khoá bí mật ở ${khoa} — bản mẫu phải để trống`);
   }
 });
+
+// scripts/check-payments.js chép lại hai regex của config/compliance.js để nói
+// cho người dùng biết định dạng cần điền. Chép thì sẽ trôi, mà một script chẩn
+// đoán nói sai còn tệ hơn không có script: nó bảo "ok" trong khi compliance.js
+// vẫn loại giá trị đó.
+test('regex trong check-payments.js khớp config/compliance.js', () => {
+  const kiem = fs.readFileSync(path.join(GOC, 'scripts/check-payments.js'), 'utf8');
+  const nguon = fs.readFileSync(path.join(GOC, 'config/compliance.js'), 'utf8');
+  for (const [ten, re] of [
+    ['SUPPORT_EMAIL', String.raw`/\^\[\^\\s@\]\+@\[\^\\s@\]\+\\\.\[\^\\s@\]\+\$/`],
+    ['SUPPORT_PHONE', String.raw`/\^\\\+\?\[0-9 \(\)\.-\]\{8,25\}\$/`],
+  ]) {
+    const mau = new RegExp(re);
+    assert.match(nguon, mau, `config/compliance.js đổi regex ${ten} — cập nhật cả check-payments.js`);
+    assert.match(kiem, mau, `scripts/check-payments.js lệch regex ${ten} so với compliance.js`);
+  }
+});
+
+test('check-payments.js soi đủ mọi điều kiện của configurationComplete', () => {
+  const kiem = fs.readFileSync(path.join(GOC, 'scripts/check-payments.js'), 'utf8');
+  // Lấy danh sách từ chính compliance.js chứ không gõ tay lại.
+  const nguon = fs.readFileSync(path.join(GOC, 'config/compliance.js'), 'utf8');
+  const canSoi = new Set([
+    ...[...nguon.matchAll(/env\.([A-Z0-9_]+)/g)].map(m => m[1]),
+    ...[...(nguon.match(/const OWNER_FIELDS = \[[^\]]+\]/s) || [''])[0]
+      .matchAll(/'([A-Z0-9_]+)'/g)].map(m => m[1]),
+  ]);
+  const thieu = [...canSoi].filter(k => !kiem.includes(k)).sort();
+  assert.deepStrictEqual(thieu, [],
+    `check-payments.js không soi những biến này, nên sẽ báo "đủ" trong khi thanh toán vẫn tắt:\n  ${thieu.join('\n  ')}`);
+});
